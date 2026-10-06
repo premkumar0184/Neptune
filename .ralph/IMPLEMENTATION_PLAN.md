@@ -110,12 +110,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate tonal range color shifts, preserve luminosity stability, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-map` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`.
-- [ ] Create dedicated non-destructive Gradient Map adjustment layer powered by GEGL `gegl:gradient-map`.
-- [ ] Map luminance tones of active image to curated photographic and cinematic palettes (Teal & Orange, Sepia Vintage, Cyberpunk Neon, Copper Patina, Fine Art Monochrome, Custom colors).
-- [ ] Support configurable blend modes (Soft Light, Overlay, Color, Normal), layer opacity, and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Gradient Map...` and `<Image>/Filters/Retouching/Gradient Map...`.
-- [ ] Validate tonal luminance mapping, smooth multi-stop color transitions, blend mode interaction, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `gradient-map` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`.
+- [x] Create dedicated non-destructive Gradient Map adjustment layer powered by GEGL `gegl:gradient-map`.
+- [x] Map luminance tones of active image to curated photographic and cinematic palettes (Teal & Orange, Sepia Vintage, Cyberpunk Neon, Copper Patina, Fine Art Monochrome, Golden Sunset, Custom Two-Tone).
+- [x] Support configurable blend modes (Soft Light, Overlay, Color, Normal), layer opacity, gradient reversal, and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Gradient Map...` and `<Image>/Filters/Retouching/Gradient Map...`.
+- [x] Validate tonal luminance mapping, smooth multi-stop color transitions, blend mode interaction, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `channel-mixer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/channel-mixer/channel-mixer.py`.
+- [ ] Create dedicated non-destructive Channel Mixer adjustment layer powered by GEGL `gegl:channel-mixer`.
+- [ ] Support rebalancing RGB channels, cross-channel gains, and fine-art monochrome/infrared photography simulation presets (Infrared Look, Color Swap, B&W High-Contrast Film, Custom gains).
+- [ ] Support preserve luminosity toggle, layer opacity control, and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Channel Mixer...` and `<Image>/Filters/Retouching/Channel Mixer...`.
+- [ ] Validate cross-channel gain shifts, infrared color inversion, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
 
 
 

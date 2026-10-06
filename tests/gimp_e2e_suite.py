@@ -77,6 +77,7 @@ def test_pdb_registration():
         ("python-fu-photo-filter", "Photo Filter Optical Lens Effect"),
         ("python-fu-vibrance", "Vibrance & Smart Saturation Helper"),
         ("python-fu-color-balance", "Color Balance & Tonal Grading Helper"),
+        ("python-fu-gradient-map", "Gradient Map & Cinematic Grading Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1340,6 +1341,159 @@ def test_color_balance():
 
 
 # ==============================================================================
+# TEST 14: Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin (Phase 19)
+# ==============================================================================
+def test_gradient_map():
+    print("\n--- Test Suite 14: Gradient Map & Cinematic Grading Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-gradient-map")
+    if proc is None:
+        record_fail("GM-01", "Procedure lookup", "Procedure python-fu-gradient-map not found")
+        return
+
+    image = Gimp.Image.new(120, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Subject", 120, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Create distinct tonal bands:
+        # Shadows (x: 10..40, y: 10..90) = pure black deep shadow (0.00)
+        # Midtones (x: 45..75, y: 10..90) = neutral gray (0.50)
+        # Highlights (x: 80..110, y: 10..90) = pure white highlight (1.00)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.00, 0.00, 0.00)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 30, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.50, 0.50, 0.50)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 45, 10, 30, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.00, 1.00, 1.00)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 80, 10, 30, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_sh = base.get_pixel(25, 50).get_rgba()
+        p_base_mid = base.get_pixel(60, 50).get_rgba()
+        p_base_hl = base.get_pixel(95, 50).get_rgba()
+
+        # 14a: Run Teal & Orange preset in Normal mode, opacity 100%, add-mask=True
+        cfg_to = proc.create_config()
+        cfg_to.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_to.set_property("image", image)
+        cfg_to.set_property("preset", "teal-orange")
+        cfg_to.set_property("blend-mode", "normal")
+        cfg_to.set_property("opacity", 100.0)
+        cfg_to.set_property("reverse", False)
+        cfg_to.set_property("add-mask", True)
+
+        res = proc.run(cfg_to)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GM-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("GM-01", "Execution status", "SUCCESS")
+
+        gm_layer = image.get_layers()[0]
+        if gm_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("GM-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {gm_layer.get_mode()}")
+            return
+        record_pass("GM-02", "Layer mode & name", f"{gm_layer.get_name()} ({gm_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = gm_layer.get_mask()
+        if mask is None:
+            record_fail("GM-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("GM-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Shadows mapped to Teal (Blue > Red)
+        p_sh = gm_layer.get_pixel(25, 50).get_rgba()
+        if not (p_sh[2] > p_sh[0]):
+            record_fail("GM-04", "Shadows teal mapping", f"Expected Blue > Red, got R={p_sh[0]:.3f}, B={p_sh[2]:.3f}")
+            return
+        record_pass("GM-04", "Shadows teal mapping", f"Teal shadows: B={p_sh[2]:.3f} > R={p_sh[0]:.3f}")
+
+        # Midtones mapped to Warm Coral (Red > Blue)
+        p_mid = gm_layer.get_pixel(60, 50).get_rgba()
+        if not (p_mid[0] > p_mid[2]):
+            record_fail("GM-05", "Midtones coral mapping", f"Expected Red > Blue, got R={p_mid[0]:.3f}, B={p_mid[2]:.3f}")
+            return
+        record_pass("GM-05", "Midtones coral mapping", f"Coral midtones: R={p_mid[0]:.3f} > B={p_mid[2]:.3f}")
+
+        # Highlights mapped to Warm Ivory (Red > Blue, bright)
+        p_hl = gm_layer.get_pixel(95, 50).get_rgba()
+        if not (p_hl[0] > p_hl[2] and p_hl[0] > 0.85):
+            record_fail("GM-06", "Highlights ivory mapping", f"Expected bright ivory R>B, got R={p_hl[0]:.3f}, B={p_hl[2]:.3f}")
+            return
+        record_pass("GM-06", "Highlights ivory mapping", f"Ivory highlights: R={p_hl[0]:.3f} > B={p_hl[2]:.3f}")
+
+        # 14b: Test Soft Light blend mode and opacity
+        image.remove_layer(gm_layer)
+        cfg_sl = proc.create_config()
+        cfg_sl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sl.set_property("image", image)
+        cfg_sl.set_property("preset", "teal-orange")
+        cfg_sl.set_property("blend-mode", "soft-light")
+        cfg_sl.set_property("opacity", 75.0)
+        cfg_sl.set_property("reverse", False)
+        cfg_sl.set_property("add-mask", False)
+
+        proc.run(cfg_sl)
+        sl_layer = image.get_layers()[0]
+        if sl_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT or abs(sl_layer.get_opacity() - 75.0) > 0.01:
+            record_fail("GM-07", "Soft Light mode & opacity", f"Expected mode {int(Gimp.LayerMode.SOFTLIGHT)} and 75.0 opacity, got {sl_layer.get_mode()} and {sl_layer.get_opacity()}")
+            return
+        record_pass("GM-07", "Soft Light mode & opacity", f"Soft Light ({sl_layer.get_mode()}), opacity {sl_layer.get_opacity():.1f}%")
+
+        # 14c: Test Reverse Gradient Mapping with Custom Two-Tone
+        image.remove_layer(sl_layer)
+        cfg_rev = proc.create_config()
+        cfg_rev.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rev.set_property("image", image)
+        cfg_rev.set_property("preset", "custom")
+        cfg_rev.set_property("blend-mode", "normal")
+        cfg_rev.set_property("opacity", 100.0)
+        cfg_rev.set_property("reverse", True)
+        cfg_rev.set_property("add-mask", False)
+        cfg_rev.set_property("custom-start-red", 0.0)
+        cfg_rev.set_property("custom-start-green", 0.8)
+        cfg_rev.set_property("custom-start-blue", 0.0)
+        cfg_rev.set_property("custom-end-red", 0.9)
+        cfg_rev.set_property("custom-end-green", 0.0)
+        cfg_rev.set_property("custom-end-blue", 0.7)
+
+        proc.run(cfg_rev)
+        rev_layer = image.get_layers()[0]
+        p_rev_sh = rev_layer.get_pixel(25, 50).get_rgba()
+        p_rev_hl = rev_layer.get_pixel(95, 50).get_rgba()
+
+        if not (p_rev_sh[0] > p_rev_sh[1] and p_rev_hl[1] > p_rev_hl[0]):
+            record_fail("GM-08", "Reverse gradient mapping", f"Expected shadow magenta (R={p_rev_sh[0]:.3f}>G={p_rev_sh[1]:.3f}) and highlight green (G={p_rev_hl[1]:.3f}>R={p_rev_hl[0]:.3f})")
+            return
+        record_pass("GM-08", "Reverse gradient mapping", f"Inverted: Shadows magenta (R={p_rev_sh[0]:.3f}>G={p_rev_sh[1]:.3f}), Highlights green (G={p_rev_hl[1]:.3f}>R={p_rev_hl[0]:.3f})")
+
+        # 14d: Non-destructive base layer invariance
+        p_base_after_sh = base.get_pixel(25, 50).get_rgba()
+        p_base_after_mid = base.get_pixel(60, 50).get_rgba()
+        p_base_after_hl = base.get_pixel(95, 50).get_rgba()
+        diff_sh = max(abs(p_base_after_sh[i] - p_base_sh[i]) for i in range(3))
+        diff_mid = max(abs(p_base_after_mid[i] - p_base_mid[i]) for i in range(3))
+        diff_hl = max(abs(p_base_after_hl[i] - p_base_hl[i]) for i in range(3))
+        max_base_diff = max(diff_sh, diff_mid, diff_hl)
+        if max_base_diff > 0.000001:
+            record_fail("GM-09", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("GM-09", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("GM-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1362,6 +1516,7 @@ def run_all_tests():
     test_photo_filter()
     test_vibrance()
     test_color_balance()
+    test_gradient_map()
 
 
     elapsed = time.time() - start_time

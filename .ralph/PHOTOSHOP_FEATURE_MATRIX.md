@@ -221,6 +221,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Gradient Map & Cinematic Color Grading Helper
+- **Source topic**: Adjust image color and tone - Apply a gradient fill / Edit a gradient (`Topics.txt` line 342, `photoshop_docs.md` Section 3081 & 3225: "Gradient Map: Maps tones to gradient colors")
+- **Photoshop behavior**: Maps the equivalent grayscale range of the image to the colors of a designated gradient fill, allowing sophisticated color grading (such as Teal & Orange or duotone toning) without altering source pixels.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-gradient-map` in `<Image>/Colors/Gradient Map...` and `<Image>/Filters/Retouching/Gradient Map...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable and applies GEGL `gegl:gradient-map` across luminance tones. Features curated photographic and cinematic presets (Teal & Orange, Sepia Vintage, Cyberpunk Neon, Copper & Patina, Fine Art B&W, Golden Sunset, Custom Two-Tone), blend mode selection (Soft Light, Overlay, Color, Normal), layer opacity slider, gradient reversal toggle (`reverse=True`), attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:gradient-map`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 19).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Shadows teal mapping (B > R), Midtones warm coral mapping (R > B), Highlights ivory mapping (R > B), Soft Light mode 45 at 75.0% opacity, reverse mapping inversion, and base layer preservation.
+- **Verification evidence** (Iteration 21):
+  1. `verify_config.py`: Section 6 passed with 13 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Teal & Orange preset verified with Teal shadows (B=0.202 > R=0.020), Warm coral midtones (R=0.847 > B=0.223), Warm ivory highlights (R=1.000 > B=0.847), Soft Light mode 45 at 75.0% opacity, inverted mapping with shadow magenta (R=0.896) and highlight green (G=0.799), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 21).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

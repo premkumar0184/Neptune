@@ -445,7 +445,32 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (12 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 85 tests across 13 test suites in 4.50s.
     - Final quality gate: SUCCESS across all stages in 15.19s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `6e26538`.
-- **Result**: Success.
 - **Next**: Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin.
+
+## Iteration 21 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Gradient Map & Cinematic Color Grading Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 342, `photoshop_docs.md` Section 3081 & 3225: "Gradient Map: Maps tones to gradient colors"). Replaces destructive gradient mapping with an isolated non-destructive layer applying GEGL `gegl:gradient-map` across luminance tones with curated photographic and cinematic presets (Teal & Orange, Sepia Vintage, Cyberpunk Neon, Copper & Patina, Fine Art B&W, Golden Sunset, Custom Two-Tone), blend mode choice (Soft Light, Overlay, Color, Normal), layer opacity, gradient reversal, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-gradient-map` with multi-stop GEGL gradient mapping, 7 presets, 4 blend modes, reversal option, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `gradient-map`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 14 (asserting PDB registration, layer modes, mask attachment, Teal & Orange mapping with Shadows B=0.202>R=0.020, Midtones R=0.847>B=0.223, Highlights R=1.000>B=0.847, Soft Light mode 45 at 75.0% opacity, reverse mapping inversion, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Gradient Map & Cinematic Color Grading Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 19 complete and scheduled Phase 20 (Channel Mixer & Infrared Look).
+- **Technical discoveries**:
+  - In GEGL `gegl:gradient-map`, setting `srgb=False` ensures linear luminance interpolation directly respecting artist-defined stop positions (0.0 Shadows, 0.5 Midtones, 1.0 Highlights), whereas `srgb=True` applies gamma pre-conversion that skews midtones toward highlights.
+  - Using Soft Light blend mode (`Gimp.LayerMode.SOFTLIGHT`, mode 45) in combination with a multi-stop gradient map replicates high-end Hollywood split-toning (e.g., Teal & Orange) while naturally preserving underlying subject luminance and skin texture.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 13 plugins verified).
+    - Stage 2: `install.sh --batch` passed (13 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 95 tests across 14 test suites in 4.91s.
+    - Final quality gate: SUCCESS across all stages in 15.46s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `0c796ad`.
+- **Result**: Success.
+- **Next**: Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin.
+
 

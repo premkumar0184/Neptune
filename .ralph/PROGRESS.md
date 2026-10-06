@@ -345,6 +345,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 15 — Professional Black & White Conversion & Tonal Toning Helper Plugin.
 
+## Iteration 17 — Professional Black & White Conversion & Tonal Toning Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Professional Black & White Conversion & Tonal Toning Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/black-and-white/black-and-white.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 341 & 668 and `photoshop_docs.md`: "Convert a color image to black and white"). Replaces destructive whole-image grayscale conversion with an isolated, non-destructive monochrome layer with custom Red/Green/Blue channel weighting (`gegl:mono-mixer`), photographic presets (Neutral, High Contrast Red filter, Infrared, Landscape, Portrait, Custom), and archival warm Sepia toning (`gegl:sepia`), with an attached reveal-all layer mask and 100% source pixel preservation.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/black-and-white/black-and-white.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-black-and-white` supporting presets, custom channel sliders, preserve-luminosity toggle, photographic sepia toning, layer opacity, and attached reveal-all layer mask. Robust target layer resolution ensures layer masks are never passed as drawable targets.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `black-and-white`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 10 (asserting PDB registration, layer modes, mask attachment, exact monochrome neutrality diff 0.000000, red filter contrast delta +0.497, photographic warm sepia split R=0.847 > G=0.694 > B=0.451, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Black & White Conversion & Tonal Toning Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 15 complete and scheduled Phase 16 (Photo Filter).
+- **Technical discoveries**:
+  - In GIMP 3 PyGObject, when a layer with an attached mask is currently active, `image.get_selected_drawables()` returns the `Gimp.LayerMask` instead of `Gimp.Layer`. Because layer masks cannot be directly queried with `image.get_item_position()`, querying `image.get_selected_layers()` instead guarantees safe, reliable resolution of the parent `Gimp.Layer`.
+  - `gegl:mono-mixer` produces exact mathematical channel neutrality (`r == g == b`, diff 0.000000) when converting RGB to monochrome.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 9 plugins verified).
+    - Stage 2: `install.sh --batch` passed (9 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 59 tests across 10 test suites in 3.67s.
+    - Final quality gate: SUCCESS across all stages in 20.59s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `691b4a1`.
+- **Result**: Success.
+- **Next**: Phase 16 — Photo Filter Optical Warming & Cooling Helper Plugin.
+
+
 
 
 

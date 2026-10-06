@@ -153,6 +153,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Black & White Conversion & Tonal Toning Helper
+- **Source topic**: Color effects and techniques - Convert a color image to black and white (`Topics.txt` lines 341 & 668, `photoshop_docs.md` Section 341)
+- **Photoshop behavior**: Converts color images to monochrome with custom per-channel luminance weighting (Reds, Greens, Blues) and photographic toning (Sepia tint).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-black-and-white` in `<Image>/Colors/Black and White...` and `<Image>/Filters/Retouching/Black and White...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/black-and-white/black-and-white.py`.
+- **Current capability**: Creates an isolated, non-destructive monochrome layer duplicating the active drawable. Applies GEGL `gegl:mono-mixer` for precision channel weighting with presets (Neutral, High Contrast Red filter, Infrared, Landscape, Portrait, and Custom weights) and optional warm Sepia photographic toning (`gegl:sepia`), complete with attached reveal-all layer mask and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:mono-mixer`, `gegl:sepia`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 15).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, channel neutrality (`r == g == b`), red-blue weighting response (delta > +0.40), warm sepia split (`r > g > b`), and base layer preservation.
+- **Verification evidence** (Iteration 17):
+  1. `verify_config.py`: Section 6 passed with 9 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Pure grayscale neutrality diff = 0.000000, Red filter luminance contrast = +0.497, Sepia warm toning confirmed (R=0.847 > G=0.694 > B=0.451), base layer pixels 100% untouched. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 17).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

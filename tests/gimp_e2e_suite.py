@@ -73,6 +73,7 @@ def test_pdb_registration():
         ("python-fu-vignette-lighting", "Vignette Lighting Layer"),
         ("python-fu-depth-blur", "Depth Defocus / Background Blur"),
         ("python-fu-shadow-highlight", "Shadows & Highlights Recovery"),
+        ("python-fu-black-and-white", "Black & White Conversion & Toning"),
     ]
 
     for proc_name, label in required_procs:
@@ -837,6 +838,124 @@ def test_shadow_highlight():
 
 
 # ==============================================================================
+# TEST 10: Professional Black & White Conversion & Tonal Toning (Phase 15)
+# ==============================================================================
+def test_black_and_white():
+    print("\n--- Test Suite 10: Professional Black & White Conversion & Tonal Toning ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-black-and-white")
+    if proc is None:
+        record_fail("BW-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with pure red on left (10..90) and pure blue on right (110..190)
+        base = Gimp.Layer.new(image, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.0, 0.0)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 80, 180)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 1.0)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 110, 10, 80, 180)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_red = base.get_pixel(50, 100).get_rgba()
+        p_base_blue = base.get_pixel(150, 100).get_rgba()
+
+        # 10a: High Contrast Red Filter Preset (tone="none")
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", image)
+        cfg.set_property("preset", "high-contrast")
+        cfg.set_property("tone", "none")
+        cfg.set_property("opacity", 100.0)
+        cfg.set_property("add-mask", True)
+
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("BW-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("BW-01", "Execution status", "SUCCESS")
+
+        bw_layer = image.get_layers()[0]
+        if bw_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("BW-02", "Layer mode", f"Expected NORMAL, got {bw_layer.get_mode()}")
+            return
+        record_pass("BW-02", "Layer mode & name", f"{bw_layer.get_name()} ({bw_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = bw_layer.get_mask()
+        if mask is None:
+            record_fail("BW-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("BW-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 10b: Exact monochrome neutrality (r == g == b)
+        flat = image.duplicate().flatten()
+        p_mono_red = flat.get_pixel(50, 100).get_rgba()
+        p_mono_blue = flat.get_pixel(150, 100).get_rgba()
+        flat.delete()
+
+        neutrality_diff = max(abs(p_mono_red[0] - p_mono_red[1]), abs(p_mono_red[1] - p_mono_red[2]))
+        if neutrality_diff > 0.000001:
+            record_fail("BW-04", "Monochrome neutrality", f"Color cast detected: max channel diff {neutrality_diff:.6f} > 0")
+            return
+        record_pass("BW-04", "Monochrome channel neutrality", f"R={p_mono_red[0]:.3f}, G={p_mono_red[1]:.3f}, B={p_mono_red[2]:.3f} (diff {neutrality_diff:.6f})")
+
+        # 10c: Channel weighting response (Red weight 0.60 vs Blue weight 0.10)
+        weight_contrast = p_mono_red[0] - p_mono_blue[0]
+        if weight_contrast < 0.40:
+            record_fail("BW-05", "Channel weighting response", f"Expected red-blue contrast > 0.40, got {weight_contrast:.4f}")
+            return
+        record_pass("BW-05", "Channel weighting response", f"Red filter: Red luminance {p_mono_red[0]:.3f} vs Blue {p_mono_blue[0]:.3f} (delta +{weight_contrast:.3f})")
+
+        # 10d: Warm Sepia Toning Test on separate test canvas
+        image_sepia = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+        base_sepia = Gimp.Layer.new(image_sepia, "Base", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image_sepia.insert_layer(base_sepia, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base_sepia.edit_fill(Gimp.FillType.FOREGROUND)
+
+        cfg_sepia = proc.create_config()
+        cfg_sepia.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sepia.set_property("image", image_sepia)
+        cfg_sepia.set_property("preset", "neutral")
+        cfg_sepia.set_property("tone", "sepia")
+        cfg_sepia.set_property("opacity", 100.0)
+        cfg_sepia.set_property("add-mask", False)
+
+        proc.run(cfg_sepia)
+        flat_s = image_sepia.duplicate().flatten()
+        p_sepia = flat_s.get_pixel(50, 50).get_rgba()
+        flat_s.delete()
+        image_sepia.delete()
+
+        # Authentic warm sepia tone: Red > Green > Blue
+        if not (p_sepia[0] > p_sepia[1] and p_sepia[1] > p_sepia[2]):
+            record_fail("BW-06", "Sepia toning", f"Expected Red > Green > Blue, got R={p_sepia[0]:.3f}, G={p_sepia[1]:.3f}, B={p_sepia[2]:.3f}")
+            return
+        record_pass("BW-06", "Photographic sepia toning", f"Warm split: R={p_sepia[0]:.3f} > G={p_sepia[1]:.3f} > B={p_sepia[2]:.3f}")
+
+        # 10e: Non-destructive base layer invariance
+        p_base_red_after = base.get_pixel(50, 100).get_rgba()
+        base_diff = max(abs(p_base_red_after[i] - p_base_red[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("BW-07", "Non-destructive invariance", f"Base layer altered by {base_diff:.6f} > 0")
+            return
+        record_pass("BW-07", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("BW-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -855,6 +974,7 @@ def run_all_tests():
     test_vignette_lighting()
     test_depth_blur()
     test_shadow_highlight()
+    test_black_and_white()
 
 
     elapsed = time.time() - start_time

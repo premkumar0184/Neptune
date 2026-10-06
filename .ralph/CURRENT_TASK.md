@@ -1,51 +1,55 @@
-# Current Task — Iteration 16
+# Current Task — Iteration 17
 
 ## Task
-**Phase 14 — Non-Destructive Shadows & Highlights Recovery Helper Plugin**
+**Phase 15 — Professional Black & White Conversion & Tonal Toning Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Completed Work
-1. Created native GIMP 3.x Python 3 plugin [shadow-highlight.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/.config/GIMP/3.0/plug-ins/shadow-highlight/shadow-highlight.py).
-2. Registered PDB procedure `python-fu-shadow-highlight` under:
-   - `<Image>/Colors/Shadows and Highlights...`
-   - `<Image>/Filters/Retouching/Shadows and Highlights...`
+1. Created native GIMP 3.x Python 3 plugin [black-and-white.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/.config/GIMP/3.0/plug-ins/black-and-white/black-and-white.py).
+2. Registered PDB procedure `python-fu-black-and-white` under:
+   - `<Image>/Colors/Black and White...`
+   - `<Image>/Filters/Retouching/Black and White...`
 3. Features:
-   - Non-destructive dedicated recovery layer created above active drawable.
-   - Independent Shadow Lift slider (0 to 100%) and Highlight Recovery slider (0 to 100%).
-   - Powered by GEGL `gegl:shadows-highlights` local spatial analysis.
-   - Configurable spatial radius (1 to 500px) and midtone compression (0 to 100%).
-   - Optional attached reveal-all layer mask for selective brush painting.
+   - Non-destructive dedicated monochrome layer created above active drawable.
+   - Built-in photographic style presets: Neutral, High Contrast (Red Filter), Infrared, Landscape (Green Filter), Portrait (Yellow/Orange Filter), and Custom.
+   - Powered by GEGL `gegl:mono-mixer` for custom Red, Green, and Blue channel weights.
+   - Optional `preserve-luminosity` normalization toggle.
+   - Integrated photographic toning: Pure Neutral vs Archival Warm Sepia tone (`gegl:sepia`).
+   - Attached reveal-all layer mask for selective color brushing / color splash effects.
+   - Robust target layer resolution via `image.get_selected_layers()` preventing layer mask confusion.
    - 100% preservation of source layer pixels underneath.
-4. Extended [verify_config.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/scripts/verify_config.py) to audit `shadow-highlight` as part of `REQUIRED_PLUGINS`.
+4. Extended [verify_config.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/scripts/verify_config.py) to audit `black-and-white` as part of `REQUIRED_PLUGINS`.
 5. Deployed to `~/.config/GIMP/3.2/plug-ins/` via `install.sh --batch`.
-6. Extended [tests/gimp_e2e_suite.py](file:///home/prem/Downloads/GIMP/tests/gimp_e2e_suite.py) with Test Suite 9 asserting:
-   - PDB registration (`python-fu-shadow-highlight`)
-   - Recovery layer creation and normal blend mode
+6. Extended [tests/gimp_e2e_suite.py](file:///home/prem/Downloads/GIMP/tests/gimp_e2e_suite.py) with Test Suite 10 asserting:
+   - PDB registration (`python-fu-black-and-white`)
+   - Monochrome layer creation and normal blend mode
    - Layer mask attachment
-   - Shadow tone recovery (base 0.050 -> lifted 0.418, delta +0.368)
-   - Highlight tone compression (base 0.947 -> compressed 0.723, delta -0.224)
+   - Exact monochrome channel neutrality (`r == g == b`, diff 0.000000)
+   - Red filter channel weighting response (Red luminance 0.597 vs Blue 0.100, delta +0.497)
+   - Warm Sepia toning color split (R=0.847 > G=0.694 > B=0.451)
    - Non-destructive source layer invariance (diff 0.000000)
 
 ## Acceptance Criteria — All Passed
 1. [x] Plugin file exists, has shebang, is executable (`chmod +x`), and passes bytecode compilation.
-2. [x] PDB procedure `python-fu-shadow-highlight` registered in GIMP PDB under `<Image>/Colors` and `<Image>/Filters/Retouching`.
-3. [x] Dedicated non-destructive tone recovery layer created above active drawable with chosen shadow/highlight parameters.
+2. [x] PDB procedure `python-fu-black-and-white` registered in GIMP PDB under `<Image>/Colors` and `<Image>/Filters/Retouching`.
+3. [x] Dedicated non-destructive monochrome layer created above active drawable with chosen channel weights and optional toning.
 4. [x] In headless GIMP tests:
-   - Deep shadows are significantly brightened (lift delta +0.368 > +0.10).
-   - Harsh highlights are darkened/compressed (compression delta -0.224 < -0.10).
+   - Exact monochrome channel neutrality verified (`r == g == b`, diff 0.000000).
+   - Red filter produces expected high-contrast luminance separation (delta +0.497 > +0.40).
+   - Warm sepia toning verified (R > G > B).
    - Layer mask is attached and editable.
    - Source layer pixels remain 100% untouched.
-5. [x] `verify_config.py` Section 6 passes with all 8 required plugins verified.
-6. [x] Unified runner `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (51/51 tests passing).
+5. [x] `verify_config.py` Section 6 passes with all 9 required plugins verified.
+6. [x] Unified runner `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (59/59 tests passing).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (8/8 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (8 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (9/9 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (9 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
   [PASS] PDB-REG: Frequency Separation (python-fu-frequency-separation) (registered)
   [PASS] PDB-REG: Luminosity Masks (python-fu-luminosity-masks) (registered)
@@ -56,6 +60,7 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] PDB-REG: Vignette Lighting Layer (python-fu-vignette-lighting) (registered)
   [PASS] PDB-REG: Depth Defocus / Background Blur (python-fu-depth-blur) (registered)
   [PASS] PDB-REG: Shadows & Highlights Recovery (python-fu-shadow-highlight) (registered)
+  [PASS] PDB-REG: Black & White Conversion & Toning (python-fu-black-and-white) (registered)
   [PASS] FS-01: Execution status (SUCCESS)
   [PASS] FS-02: Layer count (2 top-level layers)
   [PASS] FS-03: Group container (Frequency Separation (Portrait))
@@ -98,15 +103,22 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] SH-04: Shadow tone recovery (Base 0.050 -> Lifted 0.418 (delta +0.368))
   [PASS] SH-05: Highlight tone compression (Base 0.947 -> Compressed 0.723 (delta -0.224))
   [PASS] SH-06: Non-destructive layer preservation (Base pixels 100% untouched (diff 0.000000))
-Total Tests Executed : 51
-Tests Passed         : 51
+  [PASS] BW-01: Execution status (SUCCESS)
+  [PASS] BW-02: Layer mode & name (Black & White (High Contrast) (28))
+  [PASS] BW-03: Layer mask attachment (Reveal-all mask attached)
+  [PASS] BW-04: Monochrome channel neutrality (R=0.597, G=0.597, B=0.597 (diff 0.000000))
+  [PASS] BW-05: Channel weighting response (Red filter: Red luminance 0.597 vs Blue 0.100 (delta +0.497))
+  [PASS] BW-06: Photographic sepia toning (Warm split: R=0.847 > G=0.694 > B=0.451)
+  [PASS] BW-07: Non-destructive layer preservation (Base pixels 100% untouched (diff 0.000000))
+Total Tests Executed : 59
+Tests Passed         : 59
 Tests Failed         : 0
-Elapsed Time         : 3.46s
-FINAL QUALITY GATE   : [SUCCESS] All stages passed in 14.15s! Exit code: 0
+Elapsed Time         : 3.67s
+FINAL QUALITY GATE   : [SUCCESS] All stages passed in 20.59s! Exit code: 0
 ```
 
 ## Next Task
-Phase 15 — Professional Black & White Conversion & Tonal Toning Helper Plugin
-- Plugin: `PhotoGIMP/.config/GIMP/3.0/plug-ins/black-and-white/black-and-white.py`
-- Implements non-destructive monochrome conversion with custom color channel luminance weighting and photographic toning presets.
-- Registers under `<Image>/Colors/Black and White...` and `<Image>/Filters/Retouching/Black and White...`.
+Phase 16 — Photo Filter Optical Warming & Cooling Helper Plugin
+- Plugin: `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-filter/photo-filter.py`
+- Implements non-destructive color temperature & photo filter adjustment layer (Warming 85, Cooling 80, Deep Red, Orange, Amber, Cyan, Deep Blue) with configurable density and attached layer mask.
+- Registers under `<Image>/Colors/Photo Filter...` and `<Image>/Filters/Retouching/Photo Filter...`.

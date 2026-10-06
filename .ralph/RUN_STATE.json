@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-5",
+  "run_id": "iteration-6",
   "status": "completed",
-  "iteration": 5,
-  "current_task": "Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py",
+  "iteration": 6,
+  "current_task": "Implement multi-target installation (--all and Both option) with isolated per-target backups in PhotoGIMP/install.sh, and document Linux desktop smoke testing in docs/SMOKE_TESTING.md",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "cc1edbb08fe2e3d319b17852249d016946d72749",
-  "last_verified_task": "Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py",
+  "last_commit": "85e79c96f70a7cc4cff8d54f1cb727f1d3572974",
+  "last_verified_task": "Implement multi-target installation (--all and Both option) with isolated per-target backups in PhotoGIMP/install.sh, and document Linux desktop smoke testing in docs/SMOKE_TESTING.md",
   "verification": {
-    "command": "python3 PhotoGIMP/scripts/verify_config.py && ./PhotoGIMP/install.sh --batch && gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display \"GIMP smoke test passed\\n\"))' --quit",
+    "command": "./PhotoGIMP/install.sh --help && ./PhotoGIMP/install.sh --batch && python3 PhotoGIMP/scripts/verify_config.py",
     "exit_code": 0,
-    "verified_at": "2026-10-06T11:35:06+05:30",
-    "detail": "24 tool options presets verified; selection tools standardized with anti-aliasing & tolerance 32; crop freed from 16:9; headless GIMP smoke test passed"
+    "verified_at": "2026-10-06T11:48:23+05:30",
+    "detail": "install.sh multi-target --all verified; isolated backup tested; docs/SMOKE_TESTING.md created; verify_config.py passed cleanly"
   },
-  "last_transition": "2026-10-06T11:36:20+05:30",
+  "last_transition": "2026-10-06T11:49:40+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

@@ -22,7 +22,7 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ## Phase 1 — GIMP 3.2+ Installer Compatibility & Automated Deployment
 - [x] Update `PhotoGIMP/install.sh` to detect and support GIMP 3.2+ configuration directory (`~/.config/GIMP/3.2/` alongside `3.0/`).
 - [x] Add non-interactive installation flag (`--batch` / `-y` / `--yes`) to `PhotoGIMP/install.sh` for automated verification and CI environments.
-- [ ] Ensure installer safely backs up and updates both native GIMP 3.x and Flatpak installations.
+- [x] Ensure installer safely backs up and updates both native GIMP 3.x and Flatpak installations — added --all flag and isolated per-target backups.
 - [x] Verify installation against the live system GIMP 3.2.6 configuration directory.
 
 ---
@@ -50,7 +50,7 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ## Phase 5 — Verification & Automated Quality Gate
 - [x] Build automated configuration verification script (`PhotoGIMP/scripts/verify_config.py`).
 - [x] Run headless GIMP validation (`gimp --no-interface --batch ...`) with the installed PhotoGIMP configuration.
-- [ ] Document manual smoke testing steps for Linux desktop DEs (GNOME/KDE/XFCE).
+- [x] Document manual smoke testing steps for Linux desktop DEs (GNOME/KDE/XFCE) in docs/SMOKE_TESTING.md.
 
 ---
 

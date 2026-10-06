@@ -319,5 +319,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 14 — Non-Destructive Shadows & Highlights Recovery Helper Plugin.
 
+## Iteration 16 — Non-Destructive Shadows & Highlights Recovery Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Shadows & Highlights Recovery Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/shadow-highlight/shadow-highlight.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 269 and `photoshop_docs.md` Section 273: "Adjust image shadows and highlights in photoeditor"). Replaces stock destructive adjustment with an isolated, non-destructive recovery layer utilizing local spatial tonal analysis (`gegl:shadows-highlights`) to lift deep shadows (+0.368 delta) and compress blown highlights (-0.224 delta) with an attached reveal-all layer mask and 100% source pixel preservation.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/shadow-highlight/shadow-highlight.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-shadow-highlight` supporting Shadow Amount (0-100%), Highlight Recovery (0-100%), Tonal Radius (1-500px), Midtone Compression (0-100%), Layer Opacity, and attached layer mask.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `shadow-highlight`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 9 (asserting PDB registration, layer modes, mask attachment, shadow tone recovery delta > +0.20, highlight compression delta < -0.15, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Shadows & Highlights Recovery Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 14 complete and scheduled Phase 15 (Black & White Conversion & Toning).
+- **Technical discoveries**:
+  - In GEGL `gegl:shadows-highlights`, positive `shadows` values lift shadow tones, while negative `highlights` values darken/compress blown highlights. The plugin maps the user-facing 0-100% Highlight Recovery slider to negative GEGL highlights internally for intuitive Photoshop-matched operation.
+  - Setting `compress=0.0` or low values allows full dynamic range expansion while preserving natural transitions.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 8 plugins verified).
+    - Stage 2: `install.sh --batch` passed (8 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 51 tests across 9 test suites in 3.46s.
+    - Final quality gate: SUCCESS across all stages in 14.15s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `4d20016`.
+- **Result**: Success.
+- **Next**: Phase 15 — Professional Black & White Conversion & Tonal Toning Helper Plugin.
+
+
 
 

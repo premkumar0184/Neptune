@@ -72,6 +72,7 @@ def test_pdb_registration():
         ("python-fu-quick-export-png", "Quick Export as PNG"),
         ("python-fu-vignette-lighting", "Vignette Lighting Layer"),
         ("python-fu-depth-blur", "Depth Defocus / Background Blur"),
+        ("python-fu-shadow-highlight", "Shadows & Highlights Recovery"),
     ]
 
     for proc_name, label in required_procs:
@@ -740,6 +741,102 @@ def test_depth_blur():
 
 
 # ==============================================================================
+# TEST 9: Shadows & Highlights Recovery Helper (Phase 14)
+# ==============================================================================
+def test_shadow_highlight():
+    print("\n--- Test Suite 9: Shadows & Highlights Recovery Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-shadow-highlight")
+    if proc is None:
+        record_fail("SH-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with deep shadow (left) and harsh highlight (right)
+        base = Gimp.Layer.new(image, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # Left: shadow 0.05
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.05, 0.05, 0.05)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 80, 180)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Right: highlight 0.95
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.95, 0.95, 0.95)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 110, 10, 80, 180)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_shadow = base.get_pixel(50, 100).get_rgba()
+        p_base_hl = base.get_pixel(150, 100).get_rgba()
+
+        # Run shadow/highlight recovery
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", image)
+        cfg.set_property("shadows", 80.0)
+        cfg.set_property("highlights", 80.0)
+        cfg.set_property("radius", 20.0)
+        cfg.set_property("compress", 0.0)
+        cfg.set_property("opacity", 100.0)
+        cfg.set_property("add-mask", True)
+
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SH-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("SH-01", "Execution status", "SUCCESS")
+
+        sh_layer = image.get_layers()[0]
+        if sh_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SH-02", "Layer mode", f"Expected NORMAL, got {sh_layer.get_mode()}")
+            return
+        record_pass("SH-02", "Layer mode & name", f"{sh_layer.get_name()} ({sh_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = sh_layer.get_mask()
+        if mask is None:
+            record_fail("SH-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SH-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Composite sampling
+        flat = image.duplicate().flatten()
+        p_comp_shadow = flat.get_pixel(50, 100).get_rgba()
+        p_comp_hl = flat.get_pixel(150, 100).get_rgba()
+        flat.delete()
+
+        # 9b: Shadow tone lift (must brighten dark shadow by > 0.20)
+        shadow_lift = p_comp_shadow[0] - p_base_shadow[0]
+        if shadow_lift < 0.20:
+            record_fail("SH-04", "Shadow lift", f"Shadow lift {shadow_lift:.4f} < 0.20")
+            return
+        record_pass("SH-04", "Shadow tone recovery", f"Base {p_base_shadow[0]:.3f} -> Lifted {p_comp_shadow[0]:.3f} (delta +{shadow_lift:.3f})")
+
+        # 9c: Highlight tone compression (must darken harsh highlight by < -0.15)
+        hl_comp = p_comp_hl[0] - p_base_hl[0]
+        if hl_comp > -0.15:
+            record_fail("SH-05", "Highlight compression", f"Highlight compression {hl_comp:.4f} > -0.15")
+            return
+        record_pass("SH-05", "Highlight tone compression", f"Base {p_base_hl[0]:.3f} -> Compressed {p_comp_hl[0]:.3f} (delta {hl_comp:.3f})")
+
+        # 9d: Base layer invariance (original pixels must be completely untouched)
+        p_base_shadow_after = base.get_pixel(50, 100).get_rgba()
+        base_diff = abs(p_base_shadow_after[0] - p_base_shadow[0])
+        if base_diff > 0.000001:
+            record_fail("SH-06", "Non-destructive invariance", f"Base layer altered by {base_diff:.6f} > 0")
+            return
+        record_pass("SH-06", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SH-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -757,6 +854,7 @@ def run_all_tests():
     test_quick_export()
     test_vignette_lighting()
     test_depth_blur()
+    test_shadow_highlight()
 
 
     elapsed = time.time() - start_time

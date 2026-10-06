@@ -136,6 +136,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Shadows & Highlights Recovery Helper
+- **Source topic**: Adjust light and tone - Adjust image shadows and highlights (`Topics.txt` line 269, `photoshop_docs.md` Section 273)
+- **Photoshop behavior**: Local neighborhood tonal analysis to correct backlighting, lift dark shadows, and darken/compress blown highlights.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-shadow-highlight` in `<Image>/Colors/Shadows and Highlights...` and `<Image>/Filters/Retouching/Shadows and Highlights...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/shadow-highlight/shadow-highlight.py`.
+- **Current capability**: Creates an isolated, non-destructive recovery layer duplicating the active drawable. Applies GEGL `gegl:shadows-highlights` with configurable shadow lift (0-100%), highlight compression (0-100%), local spatial radius, midtone compression, and attached reveal-all layer mask. Keeps base layer pixels 100% untouched.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:shadows-highlights`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 14).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, shadow lift (delta > +0.20), highlight compression (delta < -0.15), and base layer preservation.
+- **Verification evidence** (Iteration 16):
+  1. `verify_config.py`: Section 6 passed with 8 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Shadow tone recovered from 0.050 to 0.418 (delta +0.368), highlight tone compressed from 0.947 to 0.723 (delta -0.224), base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 16).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

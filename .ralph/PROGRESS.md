@@ -603,6 +603,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin.
 
+## Iteration 27 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Duotone & Tritone Print Effect Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 660: "Add duotone effect to images", line 679: "Adjust duotone ink curves", and `photoshop_docs.md` Section 312 lines 8715-8722: "Duotone mode creates images using one to four custom inks applied to grayscale information... Duotones use two colors, tritones use three colors... Each ink can be mapped to specific tonal ranges, giving you precise control over how colors appear in highlights, midtones, and shadows"). Replaces destructive color index conversions with an isolated non-destructive adjustment layer duplicating the active drawable and mapping image luminance tones via `gegl:gradient-map` to editorial print ink combinations (Ink 1 for Shadows, Ink 2 for Highlights, optional Ink 3 for Midtones), customizable ink curve midpoint balance (10% to 90%), authentic editorial presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Pale Ivory, Cyberpunk Indigo & Neon Pink, Slate/Amber Tritone, Custom Inks), compositing blend modes (Normal poster print, Color HSL tint, Soft Light photographic toning), layer opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-duotone-effect` with 2-ink and 3-ink tonal mapping, ink curve midpoint balance slider, presets, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `duotone-effect` (19 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (19 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 20 (asserting PDB registration, layer modes, mask attachment, classic navy & gold duotone mapping [B>R in shadows, R>B in highlights], forest & pale mint mapping [G>R in shadows, pale mint in highlights], slate/coral/amber tritone 3-ink mapping across all 3 stops, HSL Color blend mode [mode 39], custom ink sliders with midpoint 65.0% and 85.0% opacity, and 0.000000 base layer preservation across all 3 tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Duotone & Tritone Print Effect Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 25 complete and scheduled Phase 26 (Diffuse Glow & Glamour Filter).
+- **Technical discoveries**:
+  - `gegl:gradient-map` maps luminance across up to 5 stops (`stop1` to `stop5` with `color1` to `color5`). Placing the middle stop at `midpoint / 100.0` with the interpolated color enables precise simulation of Photoshop's non-linear duotone ink curve adjustments without posterization.
+  - Using HSL Color blend mode (mode 39) tints image tones with custom inks while keeping original photograph lighting and shadow contrast completely intact.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 19 plugins verified).
+    - Stage 2: `install.sh --batch` passed (19 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 151 tests across 20 test suites in 7.70s.
+    - Final quality gate: SUCCESS across all stages in 19.24s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `fb022be`.
+- **Result**: Success.
+- **Next**: Phase 26 — Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper Plugin.
+
+
 
 
 

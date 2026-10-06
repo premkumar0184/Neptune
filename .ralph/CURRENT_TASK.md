@@ -1,42 +1,43 @@
-# Current Task — Iteration 26
+# Current Task — Iteration 27
 
 ## Task
-**Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin**
+**Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 106: "Adjust image lighting with Light", `photoshop_docs.md` Section 110 lines 3305-3348: "Learn how to fine-tune image lighting with Light adjustment layer in professional photoeditor on desktop... Use the Light adjustment layer to improve image lighting with precise controls for Exposure, Contrast, Highlights, Shadows, Whites, and Blacks"), the Light adjustment layer provides a unified 6-point tonal control panel. In stock GIMP, users must jump between separate disjointed dialogs (Exposure, Brightness-Contrast, Shadows-Highlights, Levels) and destructively apply them. Implementing a unified non-destructive helper plugin provides an isolated adjustment layer duplicating the active drawable, offering 6-point photographic tonal controls (Exposure in EV stops, Contrast S-curve, Highlights compression/boost, Shadows lift/deepen, Whites clipping threshold, and Blacks deep-dark threshold), authentic presets (Brighten & Pop, Recover Backlit Subject, Deep Contrast & Rich Darks, Soft Low-Contrast Wash, High-Key Studio, Custom sliders), layer opacity, an attached reveal-all layer mask, and 100% protection of underlying source pixels.
+In Adobe Photoshop (`Topics.txt` line 660: "Add duotone effect to images", line 679: "Adjust duotone ink curves", and `photoshop_docs.md` Section 312 lines 8715-8722: "Duotone mode creates images using one to four custom inks applied to grayscale information... Duotones use two colors, tritones use three colors... Each ink can be mapped to specific tonal ranges, giving you precise control over how colors appear in highlights, midtones, and shadows"), Duotone and Tritone effects are iconic graphic and darkroom printing workflows. In stock GIMP, creating a duotone requires destructive color index mapping or cumbersome multi-step channel operations. Creating a dedicated non-destructive helper plugin provides an isolated adjustment layer duplicating the active drawable, mapping luminance tones to custom ink colors (Ink 1 for Shadows, Ink 2 for Highlights, optional Ink 3 for Midtones), customizable ink curve midpoint balance (10% to 90%), authentic editorial presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Pale Ivory, Cyberpunk Indigo & Neon Pink, Slate/Amber Tritone, Custom Inks), compositing blend mode options (Normal print poster, Color HSL tint, Soft Light photographic toning), layer opacity, an attached reveal-all layer mask, and 100% protection of underlying source pixels.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `light-tone` in `REQUIRED_PLUGINS`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 19: `test_light_tone`)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `duotone-effect` in `REQUIRED_PLUGINS`)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 20: `test_duotone_effect`)
 
 ## Acceptance Criteria
 1. [x] Plugin file exists, has shebang, is executable (`chmod +x`), and passes bytecode compilation.
-2. [x] PDB procedure `python-fu-light-tone` registered in GIMP PDB under `<Image>/Colors/Light and Tone...`, `<Image>/Filters/Retouching/Light and Tone...`, and `<Image>/Layer`.
-3. [x] Dedicated non-destructive Light & Tone layer created duplicating active drawable with Normal blend mode.
+2. [x] PDB procedure `python-fu-duotone-effect` registered in GIMP PDB under `<Image>/Colors/Duotone Effect...`, `<Image>/Filters/Retouching/Duotone Effect...`, and `<Image>/Layer`.
+3. [x] Dedicated non-destructive Duotone adjustment layer created duplicating active drawable.
 4. [x] In headless GIMP tests:
    - Base layer pixels underneath remain 100% untouched (`diff == 0.000000`).
-   - Exposure adjustment verified (lifts midtones linearly).
-   - Shadows recovery verified (lifts dark tones from 0.1500 to 0.3278).
-   - Highlights compression verified (tames highlights and expands tone range).
-   - Whites & Blacks verified (High-key expands whites to 1.0000; Deep contrast crushes blacks from 0.1500 down to 0.0021).
-   - Custom sliders and opacity verified (Opacity 85.0%, custom EV / Contrast / Highlights / Shadows / Whites / Blacks).
+   - Classic Navy & Gold duotone mapping verified (B > R in shadows, R > B in highlights).
+   - Forest & Pale Mint duotone mapping verified (deep green in shadows, pale mint in highlights).
+   - Slate, Coral & Amber Tritone 3-ink mapping verified across shadows, midtones, and highlights.
+   - HSL Color and Soft Light blend mode selection verified.
+   - Ink curve midpoint balance control verified.
+   - Custom sliders and opacity verified (Opacity 85.0%, custom ink color RGB values).
    - Reveal-all layer mask attached and editable.
-5. [x] `verify_config.py` Section 6 passes with all 18 required plugins verified.
-6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (141/141 tests passing).
+5. [x] `verify_config.py` Section 6 passes with all 19 required plugins verified.
+6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (151/151 tests passing).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (18/18 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (18 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (19/19 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (19 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
-  [PASS] PDB-REG: 18/18 plugins registered including python-fu-light-tone
+  [PASS] PDB-REG: 19/19 plugins registered including python-fu-duotone-effect
   [PASS] FS-01 to FS-05: Frequency Separation (5 tests passed)
   [PASS] LM-01 to LM-04: Luminosity Masks (4 tests passed)
   [PASS] DB-01 to DB-05: Dodge & Burn Layer (5 tests passed)
@@ -54,30 +55,31 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] CT-01 to CT-07: Color Temperature & White Balance (7 tests passed)
   [PASS] CD-01 to CD-08: Clarity & Dehaze (8 tests passed)
   [PASS] FG-01 to FG-09: Film Grain & Analog Texture (9 tests passed)
-  [PASS] LT-01: Execution status (SUCCESS)
-  [PASS] LT-02: Layer mode & name (Light & Tone (Brighten & Pop) (28))
-  [PASS] LT-03: Layer mask attachment (Reveal-all mask attached)
-  [PASS] LT-04: Brighten & Pop exposure lift (Highlights lifted to 1.0000 and shadows lifted from 0.1500 to 0.1559)
-  [PASS] LT-05: Backlit shadow recovery (Shadow lifted from 0.1500 to 0.3278 (lift +0.1778))
-  [PASS] LT-06: Deep contrast & rich blacks (Blacks deepened from 0.1500 down to 0.0021)
-  [PASS] LT-07: High-Key studio white expansion (Luminous highlights expanded from 0.8469 up to 1.0000)
-  [PASS] LT-08: Custom sliders & opacity (Opacity 85.0%, custom 6-point controls verified)
-  [PASS] LT-09: Non-destructive layer preservation (Base pixels 100% untouched (diff 0.000000))
-Total Tests Executed: 141
-Tests Passed        : 141
+  [PASS] LT-01 to LT-09: Light & Tonal Range (9 tests passed)
+  [PASS] DT-01: Execution status (SUCCESS)
+  [PASS] DT-02: Layer mode & name (Duotone (Classic Navy & Gold) (28))
+  [PASS] DT-03: Layer mask attachment (Reveal-all mask attached)
+  [PASS] DT-04: Classic Navy & Gold duotone mapping (Shadow navy (B=0.2195>R=0.1329) and highlight gold (R=0.8632>B=0.3613) verified)
+  [PASS] DT-05: Forest & Pale Mint duotone mapping (Shadow forest (G=0.2874>R=0.1195) and mint highlight (G=0.8308, B=0.7305) verified)
+  [PASS] DT-06: Slate, Coral & Amber tritone mapping (Shadow slate (B=0.2705), midtone coral (R=0.8469>B=0.3515), and highlight amber (R=0.9647>B=0.3916) verified)
+  [PASS] DT-07: HSL Color blend mode (Color blend mode verified (39))
+  [PASS] DT-08: Custom sliders & opacity (Opacity 85.0%, Soft Light (45), midpoint 65.0% verified)
+  [PASS] DT-09: Non-destructive layer preservation (Base pixels 100% untouched across all tonal zones (diff 0.000000))
+Total Tests Executed: 151
+Tests Passed        : 151
 Tests Failed        : 0
-Elapsed Time        : 7.18s
+Elapsed Time        : 7.70s
 Exit Code           : 0
 ```
 
 ## Verification Commands
-- `python3 -m py_compile PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`
+- `python3 -m py_compile PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`
 - `python3 PhotoGIMP/scripts/verify_config.py`
 - `bash PhotoGIMP/install.sh --batch`
 - `gimp --no-interface --console-messages --batch-interpreter=python-fu-eval --batch "exec(open('tests/gimp_e2e_suite.py').read())" --quit`
 - `python3 tests/run_all_tests.py`
 
 ## Expected Checkpoint
-- Git commit in PhotoGIMP submodule (`c69d75a`).
+- Git commit in PhotoGIMP submodule (`fb022be`).
 - Updated `.ralph/PROGRESS.md`, `.ralph/RUN_STATE.json`, `.ralph/IMPLEMENTATION_PLAN.md`, `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`.
 - Git commit in outer repository.

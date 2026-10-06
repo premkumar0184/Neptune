@@ -162,10 +162,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate multi-control exposure adjustment, shadow recovery, highlight protection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `duotone-effect` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`.
-- [ ] Create dedicated non-destructive Duotone adjustment layer duplicating active drawable.
-- [ ] Support two-ink / three-ink tonal luminance mapping with independent shadow ink color, highlight ink color, and optional midtone ink color.
-- [ ] Support curated editorial duotone presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Ivory, Cyberpunk Indigo & Neon Pink, Custom Ink Pickers).
-- [ ] Support compositing blend modes (Color, Soft Light, Normal), layer opacity (10% to 100%), and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Duotone Effect...`, `<Image>/Filters/Retouching/Duotone Effect...`, and `<Image>/Layer`.
-- [ ] Validate tonal ink mapping, blend mode response, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `duotone-effect` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`.
+- [x] Create dedicated non-destructive Duotone adjustment layer duplicating active drawable.
+- [x] Support two-ink / three-ink tonal luminance mapping with independent shadow ink color, highlight ink color, and optional midtone ink color.
+- [x] Support curated editorial duotone presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Ivory, Cyberpunk Indigo & Neon Pink, Slate/Amber Tritone, Custom Ink Pickers).
+- [x] Support compositing blend modes (Color, Soft Light, Normal), layer opacity (10% to 100%), and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Duotone Effect...`, `<Image>/Filters/Retouching/Duotone Effect...`, and `<Image>/Layer`.
+- [x] Validate tonal ink mapping, blend mode response, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 26 — Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `diffuse-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/diffuse-glow/diffuse-glow.py`.
+- [ ] Create dedicated non-destructive Diffuse Glow adjustment layer duplicating active drawable.
+- [ ] Extract bright highlights above threshold, apply optical / Gaussian diffusion bloom, and add subtle organic grain.
+- [ ] Support curated glow presets (Dreamy Glamour Portrait, Ethereal Sunlight Halo, Romantic Vintage Soft Focus, Golden Hour Bloom, Night Neon Radiance, Custom sliders).
+- [ ] Support compositing blend modes (Screen, Soft Light, Addition), glow opacity (10% to 100%), and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Filters/Light and Shadow/Diffuse Glow...`, `<Image>/Filters/Retouching/Diffuse Glow...`, and `<Image>/Layer`.
+- [ ] Validate highlight bloom thresholding, diffuse luminance expansion, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.

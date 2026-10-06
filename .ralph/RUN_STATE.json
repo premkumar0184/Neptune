@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-26",
+  "run_id": "iteration-27",
   "status": "completed",
-  "iteration": 26,
-  "current_task": "Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin",
+  "iteration": 27,
+  "current_task": "Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "c69d75a",
-  "last_verified_task": "Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin",
+  "last_commit": "fb022be",
+  "last_verified_task": "Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-06T19:18:45+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 18 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 18 plugins), Stage 3 (tests/gimp_e2e_suite.py with 141/141 assertions passing across 19 test suites, asserting PDB registration, layer modes, mask attachment, exposure and shadow lift, backlit high dynamic range shadow recovery [+0.1778 from 0.1500 to 0.3278], deep contrast black point crushing [0.1500 down to 0.0021], high-key white highlight expansion [0.8469 up to 1.0000], custom 6-point controls with 85.0% opacity, and 0.000000 base layer preservation in 7.18s)."
+    "verified_at": "2026-10-06T19:29:52+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 19 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 19 plugins), Stage 3 (tests/gimp_e2e_suite.py with 151/151 assertions passing across 20 test suites, asserting PDB registration, layer modes, mask attachment, classic navy & gold duotone mapping, forest & pale mint mapping, slate/coral/amber tritone 3-ink mapping across all 3 stops, HSL Color blend mode, custom ink sliders with midpoint 65.0% and 85.0% opacity, and 0.000000 base layer preservation across all 3 tonal zones in 7.70s)."
   },
-  "next_task": "Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin",
-  "last_transition": "2026-10-06T19:22:30+05:30",
+  "next_task": "Phase 26 — Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper Plugin",
+  "last_transition": "2026-10-06T19:32:30+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

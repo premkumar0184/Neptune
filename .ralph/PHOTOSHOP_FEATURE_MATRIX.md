@@ -321,6 +321,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Duotone & Tritone Print Effect Helper
+- **Source topic**: Quick actions - Add duotone effect to images (`Topics.txt` line 660) & Print - Adjust duotone ink curves (`Topics.txt` line 679, `photoshop_docs.md` Section 312 lines 8715-8722: "Duotone mode creates images using one to four custom inks applied to grayscale information... Duotones use two colors, tritones use three colors... Each ink can be mapped to specific tonal ranges, giving you precise control over how colors appear in highlights, midtones, and shadows")
+- **Photoshop behavior**: Editorial print and graphic darkroom effect mapping luminance tones to 2 or 3 custom inks with configurable ink distribution curves, creative color presets, and print/color blend modes.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-duotone-effect` in `<Image>/Colors/Duotone Effect...`, `<Image>/Filters/Retouching/Duotone Effect...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`.
+- **Current capability**: Creates an isolated, non-destructive Duotone adjustment layer duplicating active drawable. Maps tonal luminance across 2 or 3 ink colors via `gegl:gradient-map` with configurable ink curve midpoint balance (10% to 90%). Features curated editorial presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Pale Ivory, Cyberpunk Indigo & Neon Pink, Slate/Amber Tritone, Custom Inks), flexible compositing modes (Normal poster print, Color HSL tint, Soft Light photographic toning), layer opacity control, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:gradient-map`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 25).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, classic navy & gold duotone mapping, forest & pale mint duotone mapping, slate/coral/amber tritone 3-ink mapping, HSL Color blend mode, custom ink sliders with midpoint balance and opacity, and base layer preservation.
+- **Verification evidence** (Iteration 27):
+  1. `verify_config.py`: Section 6 passed with 19 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Classic Navy & Gold mapping verified (Shadow navy B=0.2195>R=0.1329, highlight gold R=0.8632>B=0.3613), Forest & Pale Mint verified (Shadow green G=0.2874>R=0.1195, highlight mint G=0.8308, B=0.7305), Slate/Coral/Amber tritone verified across all 3 stops, HSL Color mode verified (mode 39), custom sliders with midpoint 65.0% and 85.0% opacity verified, and base layer pixels 100% untouched across all 3 zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 27).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

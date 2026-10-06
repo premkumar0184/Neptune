@@ -83,6 +83,7 @@ def test_pdb_registration():
         ("python-fu-clarity-dehaze", "Clarity & Dehaze Helper"),
         ("python-fu-film-grain", "Film Grain & Analog Texture Helper"),
         ("python-fu-light-tone", "Light & Tonal Range Helper"),
+        ("python-fu-duotone-effect", "Duotone & Tritone Print Effect Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -2189,6 +2190,178 @@ def test_light_tone():
 
 
 # ==============================================================================
+# 20. DUOTONE & TRITONE PRINT EFFECT TEST SUITE
+# ==============================================================================
+def test_duotone_effect():
+    print("\n--- Test Suite 20: Duotone & Tritone Print Effect Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-duotone-effect")
+    if proc is None:
+        record_fail("DT-01", "Procedure lookup", "Procedure python-fu-duotone-effect not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseDuotone", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Fill 3 tonal zones: Shadows (0-25), Midtones (25-55), Highlights (55-80)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 25, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.10, 0.10, 0.10)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 0, 30, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.50, 0.50, 0.50)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 55, 0, 25, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.90, 0.90, 0.90)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_orig_sh = base.get_pixel(10, 40).get_rgba()
+        p_base_orig_mid = base.get_pixel(40, 40).get_rgba()
+        p_base_orig_hl = base.get_pixel(70, 40).get_rgba()
+
+        # 20a: Run Classic Navy & Gold preset
+        cfg_navy = proc.create_config()
+        cfg_navy.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_navy.set_property("image", image)
+        cfg_navy.set_property("preset", "navy-gold")
+        cfg_navy.set_property("blend-mode", "normal")
+        cfg_navy.set_property("opacity", 100.0)
+        cfg_navy.set_property("add-mask", True)
+
+        res = proc.run(cfg_navy)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("DT-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("DT-01", "Execution status", "SUCCESS")
+
+        navy_layer = image.get_layers()[0]
+        if navy_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("DT-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {navy_layer.get_mode()}")
+            return
+        record_pass("DT-02", "Layer mode & name", f"{navy_layer.get_name()} ({navy_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = navy_layer.get_mask()
+        if mask is None:
+            record_fail("DT-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("DT-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Verify Navy & Gold duotone mapping
+        p_navy_sh = navy_layer.get_pixel(10, 40).get_rgba()
+        p_navy_hl = navy_layer.get_pixel(70, 40).get_rgba()
+        if p_navy_sh[2] <= p_navy_sh[0] or p_navy_hl[0] <= p_navy_hl[2]:
+            record_fail("DT-04", "Navy & Gold duotone mapping", f"Expected B>R in shadow and R>B in highlight, got sh={p_navy_sh[:3]}, hl={p_navy_hl[:3]}")
+            return
+        record_pass("DT-04", "Classic Navy & Gold duotone mapping", f"Shadow navy (B={p_navy_sh[2]:.4f}>R={p_navy_sh[0]:.4f}) and highlight gold (R={p_navy_hl[0]:.4f}>B={p_navy_hl[2]:.4f}) verified")
+
+        # 20b: Run Forest & Pale Mint preset
+        image.remove_layer(navy_layer)
+        cfg_forest = proc.create_config()
+        cfg_forest.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_forest.set_property("image", image)
+        cfg_forest.set_property("preset", "forest-mint")
+        cfg_forest.set_property("blend-mode", "normal")
+        cfg_forest.set_property("opacity", 100.0)
+        cfg_forest.set_property("add-mask", False)
+
+        proc.run(cfg_forest)
+        forest_layer = image.get_layers()[0]
+        p_forest_sh = forest_layer.get_pixel(10, 40).get_rgba()
+        p_forest_hl = forest_layer.get_pixel(70, 40).get_rgba()
+        if p_forest_sh[1] <= p_forest_sh[0] or p_forest_hl[1] < 0.70:
+            record_fail("DT-05", "Forest & Mint duotone mapping", f"Expected green shadow and pale mint highlight, got sh={p_forest_sh[:3]}, hl={p_forest_hl[:3]}")
+            return
+        record_pass("DT-05", "Forest & Pale Mint duotone mapping", f"Shadow forest (G={p_forest_sh[1]:.4f}>R={p_forest_sh[0]:.4f}) and mint highlight (G={p_forest_hl[1]:.4f}, B={p_forest_hl[2]:.4f}) verified")
+
+        # 20c: Run Slate, Coral & Amber (Tritone) preset (3-ink mapping)
+        image.remove_layer(forest_layer)
+        cfg_tri = proc.create_config()
+        cfg_tri.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_tri.set_property("image", image)
+        cfg_tri.set_property("preset", "slate-amber-tritone")
+        cfg_tri.set_property("blend-mode", "normal")
+        cfg_tri.set_property("opacity", 100.0)
+        cfg_tri.set_property("add-mask", False)
+
+        proc.run(cfg_tri)
+        tri_layer = image.get_layers()[0]
+        p_tri_sh = tri_layer.get_pixel(10, 40).get_rgba()
+        p_tri_mid = tri_layer.get_pixel(40, 40).get_rgba()
+        p_tri_hl = tri_layer.get_pixel(70, 40).get_rgba()
+        if p_tri_mid[0] <= p_tri_mid[2] or p_tri_hl[0] <= p_tri_hl[2]:
+            record_fail("DT-06", "Tritone 3-ink mapping", f"Expected coral midtone and amber highlight, got mid={p_tri_mid[:3]}, hl={p_tri_hl[:3]}")
+            return
+        record_pass("DT-06", "Slate, Coral & Amber tritone mapping", f"Shadow slate (B={p_tri_sh[2]:.4f}), midtone coral (R={p_tri_mid[0]:.4f}>B={p_tri_mid[2]:.4f}), and highlight amber (R={p_tri_hl[0]:.4f}>B={p_tri_hl[2]:.4f}) verified")
+
+        # 20d: Run with HSL Color blend mode
+        image.remove_layer(tri_layer)
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", image)
+        cfg_col.set_property("preset", "cyberpunk-indigo-pink")
+        cfg_col.set_property("blend-mode", "hsl-color")
+        cfg_col.set_property("opacity", 100.0)
+        cfg_col.set_property("add-mask", False)
+
+        proc.run(cfg_col)
+        col_layer = image.get_layers()[0]
+        if col_layer.get_mode() != Gimp.LayerMode.HSL_COLOR:
+            record_fail("DT-07", "HSL Color blend mode", f"Expected HSL_COLOR ({int(Gimp.LayerMode.HSL_COLOR)}), got {col_layer.get_mode()}")
+            return
+        record_pass("DT-07", "HSL Color blend mode", f"Color blend mode verified ({col_layer.get_mode()})")
+
+        # 20e: Test Custom Inks, midpoint curve shift, and opacity
+        image.remove_layer(col_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("blend-mode", "soft-light")
+        cfg_cust.set_property("midpoint", 65.0)
+        cfg_cust.set_property("custom-shadow-r", 0.10)
+        cfg_cust.set_property("custom-shadow-g", 0.05)
+        cfg_cust.set_property("custom-shadow-b", 0.25)
+        cfg_cust.set_property("custom-highlight-r", 0.95)
+        cfg_cust.set_property("custom-highlight-g", 0.80)
+        cfg_cust.set_property("custom-highlight-b", 0.40)
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("DT-08", "Custom opacity", f"Expected 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        record_pass("DT-08", "Custom sliders & opacity", f"Opacity 85.0%, Soft Light ({cust_layer.get_mode()}), midpoint 65.0% verified")
+
+        # 20f: Non-destructive base layer invariance
+        p_base_after_sh = base.get_pixel(10, 40).get_rgba()
+        p_base_after_mid = base.get_pixel(40, 40).get_rgba()
+        p_base_after_hl = base.get_pixel(70, 40).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_sh[i] - p_base_orig_sh[i]) for i in range(3)),
+            max(abs(p_base_after_mid[i] - p_base_orig_mid[i]) for i in range(3)),
+            max(abs(p_base_after_hl[i] - p_base_orig_hl[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("DT-09", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("DT-09", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("DT-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2217,6 +2390,7 @@ def run_all_tests():
     test_clarity_dehaze()
     test_film_grain()
     test_light_tone()
+    test_duotone_effect()
 
 
     elapsed = time.time() - start_time

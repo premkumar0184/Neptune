@@ -302,7 +302,22 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 - **Verification evidence** (Iteration 25):
   1. `verify_config.py`: Section 6 passed with 17 active Python plugins.
   2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Analog texture variance verified (0.007724 > 0.003), exact monochromatic neutrality verified (R=G=B spread 0.000000), vintage color dye cloud spread verified (0.3906 > 0.01), punchy Overlay mode verified on gritty street, custom sliders with 85.0% opacity verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
-- **Status**: IMPLEMENTED_VERIFIED (Iteration 25).
+---
+
+### Feature: Non-Destructive Light & Tonal Range Helper
+- **Source topic**: Adjust image lighting with Light (`Topics.txt` line 106, `photoshop_docs.md` Section 110 lines 3305-3348: "Learn how to fine-tune image lighting with Light adjustment layer in professional photoeditor on desktop... Use the Light adjustment layer to improve image lighting with precise controls for Exposure, Contrast, Highlights, Shadows, Whites, and Blacks")
+- **Photoshop behavior**: Unified 6-point photographic tonal control adjustment layer offering Exposure (EV stops), Contrast (midtone S-curve), Highlights (compression/recovery), Shadows (lift/open), Whites (specular clipping point), and Blacks (deep dark threshold), with non-destructive live editing and mask attachment.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-light-tone` in `<Image>/Colors/Light and Tone...`, `<Image>/Filters/Retouching/Light and Tone...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`.
+- **Current capability**: Creates an isolated, non-destructive Light adjustment layer duplicating the active drawable. Applies chained GEGL darkroom operations: `gegl:exposure` for linear EV stop scaling, `gegl:brightness-contrast` for midtone S-curve contrast, `gegl:shadows-highlights` for local dynamic range recovery, and `gegl:levels` for specular white point and black point clipping. Features curated lighting presets (Brighten & Pop, Recover Backlit Subject, Deep Contrast & Rich Darks, Soft Low-Contrast Wash, High-Key Studio, Custom sliders), layer opacity control, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:exposure`, `gegl:brightness-contrast`, `gegl:shadows-highlights`, `gegl:levels`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 24).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, exposure and shadow lift, backlit high dynamic range shadow recovery (> +0.10), deep contrast black point crushing (< 0.05), high-key white highlight expansion (>= 0.98), custom 6-point sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 26):
+  1. `verify_config.py`: Section 6 passed with 18 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Exposure and shadow lift verified (Shadow lifted from 0.1500 to 0.1559, highlight to 1.0000), backlit shadow recovery verified (lift +0.1778 from 0.1500 to 0.3278), deep contrast black point crushing verified (crushed from 0.1500 down to 0.0021), high-key white highlight expansion verified (0.8469 up to 1.0000), custom 6-point controls with 85.0% opacity verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 26).
 
 ---
 

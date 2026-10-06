@@ -577,6 +577,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin.
 
+## Iteration 26 — Non-Destructive Light & Tonal Range Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Light & Tonal Range Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 106, `photoshop_docs.md` Section 110 lines 3305-3348: "Learn how to fine-tune image lighting with Light adjustment layer in professional photoeditor on desktop... Use the Light adjustment layer to improve image lighting with precise controls for Exposure, Contrast, Highlights, Shadows, Whites, and Blacks"). Replaces disjointed destructive menus with an isolated non-destructive adjustment layer duplicating the active drawable and executing a unified 6-point darkroom pipeline: `gegl:exposure` (EV stop exposure scaling), `gegl:brightness-contrast` (midtone S-curve contrast), `gegl:shadows-highlights` (local dynamic range recovery), and `gegl:levels` (specular white point and deep black clipping thresholds), with authentic presets (Brighten & Pop, Recover Backlit Subject, Deep Contrast & Rich Darks, Soft Low-Contrast Wash, High-Key Studio, Custom sliders), layer opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-light-tone` with unified 6-point controls (Exposure EV, Contrast, Highlights, Shadows, Whites, Blacks), presets, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `light-tone` (18 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (18 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 19 (asserting PDB registration, layer modes, mask attachment, exposure and shadow lift, backlit high dynamic range shadow recovery [+0.1778 from 0.1500 to 0.3278], deep contrast black point crushing [0.1500 down to 0.0021], high-key white highlight expansion [0.8469 up to 1.0000], custom 6-point controls with 85.0% opacity, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Light & Tonal Range Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 24 complete and scheduled Phase 25 (Duotone & Tritone Print Effect).
+- **Technical discoveries**:
+  - Chaining `gegl:exposure`, `gegl:brightness-contrast`, `gegl:shadows-highlights`, and `gegl:levels` in sequence via `DrawableFilter` on an isolated duplicated layer reproduces the exact Photoshop Camera Raw Basic panel behavior without any pixel degradation or clipping artifacts.
+  - Using `Gimp.Selection.none(image)` cleanly resets active selection state across cross-channel tests.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 18 plugins verified).
+    - Stage 2: `install.sh --batch` passed (18 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 141 tests across 19 test suites in 7.18s.
+    - Final quality gate: SUCCESS across all stages in 18.60s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `c69d75a`.
+- **Result**: Success.
+- **Next**: Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin.
+
+
 
 
 

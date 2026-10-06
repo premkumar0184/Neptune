@@ -153,10 +153,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate non-destructive overlay creation, noise texture variance, blend mode neutrality, layer mask attachment, and base layer preservation via headless GIMP test.
 
 ### Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `light-tone` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`.
-- [ ] Create dedicated non-destructive Light adjustment layer duplicating active drawable.
-- [ ] Support 6-point Photoshop Light controls: Exposure (-5.0 to +5.0 EV), Contrast (-100 to +100), Highlights (-100 to +100), Shadows (-100 to +100), Whites (-100 to +100), and Blacks (-100 to +100).
-- [ ] Support curated lighting presets (Brighten & Pop, Recover Backlit Subject, Deep Contrast & Rich Darks, Soft Low-Contrast Wash, High Key Studio, Custom sliders).
-- [ ] Support layer opacity control (10% to 100%) and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Light and Tone...` and `<Image>/Filters/Retouching/Light and Tone...`.
-- [ ] Validate multi-control exposure adjustment, shadow recovery, highlight protection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `light-tone` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/light-tone/light-tone.py`.
+- [x] Create dedicated non-destructive Light adjustment layer duplicating active drawable.
+- [x] Support 6-point Photoshop Light controls: Exposure (-5.0 to +5.0 EV), Contrast (-100 to +100), Highlights (-100 to +100), Shadows (-100 to +100), Whites (-100 to +100), and Blacks (-100 to +100).
+- [x] Support curated lighting presets (Brighten & Pop, Recover Backlit Subject, Deep Contrast & Rich Darks, Soft Low-Contrast Wash, High Key Studio, Custom sliders).
+- [x] Support layer opacity control (10% to 100%) and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Light and Tone...` and `<Image>/Filters/Retouching/Light and Tone...`.
+- [x] Validate multi-control exposure adjustment, shadow recovery, highlight protection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 25 — Non-Destructive Duotone & Tritone Print Effect Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `duotone-effect` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/duotone-effect/duotone-effect.py`.
+- [ ] Create dedicated non-destructive Duotone adjustment layer duplicating active drawable.
+- [ ] Support two-ink / three-ink tonal luminance mapping with independent shadow ink color, highlight ink color, and optional midtone ink color.
+- [ ] Support curated editorial duotone presets (Classic Navy & Gold, Forest & Pale Mint, Crimson & Warm Cream, Sepia & Ivory, Cyberpunk Indigo & Neon Pink, Custom Ink Pickers).
+- [ ] Support compositing blend modes (Color, Soft Light, Normal), layer opacity (10% to 100%), and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Duotone Effect...`, `<Image>/Filters/Retouching/Duotone Effect...`, and `<Image>/Layer`.
+- [ ] Validate tonal ink mapping, blend mode response, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.

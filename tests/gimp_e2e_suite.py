@@ -82,6 +82,7 @@ def test_pdb_registration():
         ("python-fu-color-temperature", "Color Temperature & White Balance Helper"),
         ("python-fu-clarity-dehaze", "Clarity & Dehaze Helper"),
         ("python-fu-film-grain", "Film Grain & Analog Texture Helper"),
+        ("python-fu-light-tone", "Light & Tonal Range Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -2030,6 +2031,164 @@ def test_film_grain():
 
 
 # ==============================================================================
+# 19. LIGHT & TONAL RANGE TEST SUITE
+# ==============================================================================
+def test_light_tone():
+    print("\n--- Test Suite 19: Light & Tonal Range Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-light-tone")
+    if proc is None:
+        record_fail("LT-01", "Procedure lookup", "Procedure python-fu-light-tone not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseTonal", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Fill left half with dark shadow (0.15) and right half with bright highlight (0.85)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 40, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.15, 0.15, 0.15)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 40, 0, 40, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.85, 0.85, 0.85)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_orig_sh = base.get_pixel(20, 40).get_rgba()
+        p_base_orig_hl = base.get_pixel(60, 40).get_rgba()
+
+        # 19a: Run Brighten & Pop preset
+        cfg_pop = proc.create_config()
+        cfg_pop.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pop.set_property("image", image)
+        cfg_pop.set_property("preset", "brighten-pop")
+        cfg_pop.set_property("opacity", 100.0)
+        cfg_pop.set_property("add-mask", True)
+
+        res = proc.run(cfg_pop)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LT-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("LT-01", "Execution status", "SUCCESS")
+
+        pop_layer = image.get_layers()[0]
+        if pop_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("LT-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {pop_layer.get_mode()}")
+            return
+        record_pass("LT-02", "Layer mode & name", f"{pop_layer.get_name()} ({pop_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = pop_layer.get_mask()
+        if mask is None:
+            record_fail("LT-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("LT-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Verify tonal brightening and shadow lift
+        p_pop_sh = pop_layer.get_pixel(20, 40).get_rgba()[0]
+        p_pop_hl = pop_layer.get_pixel(60, 40).get_rgba()[0]
+        if p_pop_sh < p_base_orig_sh[0] or p_pop_hl < p_base_orig_hl[0]:
+            record_fail("LT-04", "Brighten & Pop tonal response", f"Expected brighter tones, got sh={p_pop_sh:.4f}, hl={p_pop_hl:.4f}")
+            return
+        record_pass("LT-04", "Brighten & Pop exposure lift", f"Highlights lifted to {p_pop_hl:.4f} and shadows lifted from {p_base_orig_sh[0]:.4f} to {p_pop_sh:.4f}")
+
+        # 19b: Run Recover Backlit Subject preset (assert strong shadow recovery)
+        image.remove_layer(pop_layer)
+        cfg_back = proc.create_config()
+        cfg_back.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_back.set_property("image", image)
+        cfg_back.set_property("preset", "backlit-recovery")
+        cfg_back.set_property("opacity", 100.0)
+        cfg_back.set_property("add-mask", False)
+
+        proc.run(cfg_back)
+        back_layer = image.get_layers()[0]
+        p_back_sh = back_layer.get_pixel(20, 40).get_rgba()[0]
+        sh_lift = p_back_sh - p_base_orig_sh[0]
+        if sh_lift < 0.10:
+            record_fail("LT-05", "Backlit shadow recovery", f"Expected shadow lift > 0.10, got {sh_lift:.4f}")
+            return
+        record_pass("LT-05", "Backlit shadow recovery", f"Shadow lifted from {p_base_orig_sh[0]:.4f} to {p_back_sh:.4f} (lift +{sh_lift:.4f})")
+
+        # 19c: Run Deep Contrast & Rich Darks preset (assert black deepening)
+        image.remove_layer(back_layer)
+        cfg_deep = proc.create_config()
+        cfg_deep.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_deep.set_property("image", image)
+        cfg_deep.set_property("preset", "deep-contrast")
+        cfg_deep.set_property("opacity", 100.0)
+        cfg_deep.set_property("add-mask", False)
+
+        proc.run(cfg_deep)
+        deep_layer = image.get_layers()[0]
+        p_deep_sh = deep_layer.get_pixel(20, 40).get_rgba()[0]
+        if p_deep_sh > 0.05:
+            record_fail("LT-06", "Deep contrast black point", f"Expected crushed blacks < 0.05, got {p_deep_sh:.4f}")
+            return
+        record_pass("LT-06", "Deep contrast & rich blacks", f"Blacks deepened from {p_base_orig_sh[0]:.4f} down to {p_deep_sh:.4f}")
+
+        # 19d: Run High-Key Studio preset (assert specular white expansion)
+        image.remove_layer(deep_layer)
+        cfg_hk = proc.create_config()
+        cfg_hk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_hk.set_property("image", image)
+        cfg_hk.set_property("preset", "high-key")
+        cfg_hk.set_property("opacity", 100.0)
+        cfg_hk.set_property("add-mask", False)
+
+        proc.run(cfg_hk)
+        hk_layer = image.get_layers()[0]
+        p_hk_hl = hk_layer.get_pixel(60, 40).get_rgba()[0]
+        if p_hk_hl < 0.98:
+            record_fail("LT-07", "High-Key highlight expansion", f"Expected white highlight >= 0.98, got {p_hk_hl:.4f}")
+            return
+        record_pass("LT-07", "High-Key studio white expansion", f"Luminous highlights expanded from {p_base_orig_hl[0]:.4f} up to {p_hk_hl:.4f}")
+
+        # 19e: Test Custom 6-point sliders and opacity
+        image.remove_layer(hk_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("exposure", 0.5)
+        cfg_cust.set_property("contrast", 20.0)
+        cfg_cust.set_property("highlights", -15.0)
+        cfg_cust.set_property("shadows", 30.0)
+        cfg_cust.set_property("whites", 15.0)
+        cfg_cust.set_property("blacks", -10.0)
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("LT-08", "Custom opacity", f"Expected 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        record_pass("LT-08", "Custom sliders & opacity", f"Opacity 85.0%, custom 6-point controls verified")
+
+        # 19f: Non-destructive base layer invariance
+        p_base_after_sh = base.get_pixel(20, 40).get_rgba()
+        p_base_after_hl = base.get_pixel(60, 40).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_sh[i] - p_base_orig_sh[i]) for i in range(3)),
+            max(abs(p_base_after_hl[i] - p_base_orig_hl[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("LT-09", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("LT-09", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("LT-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2057,6 +2216,7 @@ def run_all_tests():
     test_color_temperature()
     test_clarity_dehaze()
     test_film_grain()
+    test_light_tone()
 
 
     elapsed = time.time() - start_time

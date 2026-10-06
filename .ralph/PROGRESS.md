@@ -45,7 +45,26 @@ This is a concise handoff log, not a transcript of every shell command.
   - `python3 PhotoGIMP/scripts/verify_config.py` — exit code 0; 5 sexp files valid, 23 shortcuts pass, 3 workspace checks pass.
   - `./PhotoGIMP/install.sh --batch` — exit code 0; deployed to `~/.config/GIMP/3.2/`.
   - Live file checks: `(single-window-mode yes)` confirmed in gimprc, `gimp-undo-history` confirmed in sessionrc, 0 Flatpak paths in theme.css.
-- **Commit**: PhotoGIMP sub-repo `e57593f` — `feat(workspace): single-window-mode, undo-history panel, portable theme.css, expanded validator`
+- **Commit**: Outer repo `ce65e03` / PhotoGIMP sub-repo `e57593f`.
 - **Result**: Success.
-- **Learnings**: GIMP 3.x writes `theme.css` on startup — the Flatpak-originated path `/app/share/` is only valid in the Flatpak sandbox. Native installs must use a purely portable CSS file or install to the correct system path. The validator's Section 3 now catches both regressions.
-- **Next**: Verify splash screen installation and desktop application launcher (Phase 3 remaining item).
+- **Learnings**: GIMP 3.x writes `theme.css` on startup — the Flatpak-originated path `/app/share/` is only valid in the Flatpak sandbox. Native installs must use a purely portable CSS file or install to the correct system path.
+
+## Iteration 4 — Native Desktop Launcher & Icon Integration
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations.
+- **Why this task**: `org.gimp.GIMP.desktop` used `Exec=flatpak run ...` and install.sh skipped desktop file and icon deployment on native systems, leaving native users without launcher integration.
+- **Changed**:
+  - `PhotoGIMP/.local/share/applications/org.gimp.GIMP.desktop`: Updated `Exec=gimp %U` and added `TryExec=gimp`.
+  - `PhotoGIMP/install.sh`: Extended desktop file and icon installation to all installation types (both native and Flatpak), including cache updates.
+  - `PhotoGIMP/scripts/verify_config.py`: Added Section 4 Desktop Launcher audit.
+- **Verification**:
+  - `desktop-file-validate ~/.local/share/applications/org.gimp.GIMP.desktop` — exit code 0 (valid syntax).
+  - `./PhotoGIMP/install.sh --batch` — exit code 0 (installed desktop file and icons).
+  - Live file checks: verified `org.gimp.GIMP.desktop` in `~/.local/share/applications/` and `photogimp.png` in `~/.local/share/icons/hicolor/128x128/apps/`.
+  - `python3 PhotoGIMP/scripts/verify_config.py` — exit code 0 (all 4 sections passed).
+- **Commit**: PhotoGIMP sub-repo `c273e6a`.
+- **Result**: Success.
+- **Learnings**: Native installations now receive complete desktop environment integration (application menu entries and multi-resolution hicolor icon assets).
+- **Next**: Phase 4 — Tool options audit and default presets alignment (`toolrc` and `tool-options/`).

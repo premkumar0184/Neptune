@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-3",
+  "run_id": "iteration-4",
   "status": "completed",
-  "iteration": 3,
-  "current_task": "Refine Single-Window workspace (sessionrc, gimprc) and theme.css for GIMP 3.x native compatibility and panel alignment",
+  "iteration": 4,
+  "current_task": "Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations",
   "account_label": "account-A",
-  "model": "Claude Sonnet 4.6 (Thinking)",
-  "last_commit": "pending-outer-repo",
-  "last_verified_task": "Refine Single-Window workspace (sessionrc, gimprc) and theme.css for GIMP 3.x native compatibility and panel alignment",
+  "model": "Gemini 3.8 Flash (High)",
+  "last_commit": "b8d6742efc1c9275318a15da8e6ae3cf41aeef2d",
+  "last_verified_task": "Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations",
   "verification": {
-    "command": "python3 PhotoGIMP/scripts/verify_config.py && ./PhotoGIMP/install.sh --batch",
+    "command": "python3 PhotoGIMP/scripts/verify_config.py && ./PhotoGIMP/install.sh --batch && desktop-file-validate ~/.local/share/applications/org.gimp.GIMP.desktop",
     "exit_code": 0,
-    "verified_at": "2026-10-06T10:55:45+05:30",
-    "detail": "All syntax valid; all 23 shortcuts pass; workspace checks pass (single-window-mode, gimp-undo-history, no Flatpak paths); installer deployed to ~/.config/GIMP/3.2/"
+    "verified_at": "2026-10-06T11:27:09+05:30",
+    "detail": "Desktop file Exec=gimp %U validated with desktop-file-validate; batch installer deployed desktop file and icons; verify_config.py 4 sections passed"
   },
-  "last_transition": "2026-10-06T10:56:00+05:30",
+  "last_transition": "2026-10-06T11:28:10+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-4",
+  "run_id": "iteration-5",
   "status": "completed",
-  "iteration": 4,
-  "current_task": "Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations",
+  "iteration": 5,
+  "current_task": "Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "b8d6742efc1c9275318a15da8e6ae3cf41aeef2d",
-  "last_verified_task": "Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations",
+  "last_commit": "cc1edbb08fe2e3d319b17852249d016946d72749",
+  "last_verified_task": "Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py",
   "verification": {
-    "command": "python3 PhotoGIMP/scripts/verify_config.py && ./PhotoGIMP/install.sh --batch && desktop-file-validate ~/.local/share/applications/org.gimp.GIMP.desktop",
+    "command": "python3 PhotoGIMP/scripts/verify_config.py && ./PhotoGIMP/install.sh --batch && gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display \"GIMP smoke test passed\\n\"))' --quit",
     "exit_code": 0,
-    "verified_at": "2026-10-06T11:27:09+05:30",
-    "detail": "Desktop file Exec=gimp %U validated with desktop-file-validate; batch installer deployed desktop file and icons; verify_config.py 4 sections passed"
+    "verified_at": "2026-10-06T11:35:06+05:30",
+    "detail": "24 tool options presets verified; selection tools standardized with anti-aliasing & tolerance 32; crop freed from 16:9; headless GIMP smoke test passed"
   },
-  "last_transition": "2026-10-06T11:28:10+05:30",
+  "last_transition": "2026-10-06T11:36:20+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

@@ -64,7 +64,29 @@ This is a concise handoff log, not a transcript of every shell command.
   - `./PhotoGIMP/install.sh --batch` — exit code 0 (installed desktop file and icons).
   - Live file checks: verified `org.gimp.GIMP.desktop` in `~/.local/share/applications/` and `photogimp.png` in `~/.local/share/icons/hicolor/128x128/apps/`.
   - `python3 PhotoGIMP/scripts/verify_config.py` — exit code 0 (all 4 sections passed).
-- **Commit**: PhotoGIMP sub-repo `c273e6a`.
+- **Commit**: Outer repo `3357757` / PhotoGIMP sub-repo `c273e6a`.
 - **Result**: Success.
-- **Learnings**: Native installations now receive complete desktop environment integration (application menu entries and multi-resolution hicolor icon assets).
-- **Next**: Phase 4 — Tool options audit and default presets alignment (`toolrc` and `tool-options/`).
+
+## Iteration 5 — Tool Options & Retouching Workflows Standardized
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py.
+- **Why this task**: PhotoGIMP lacked tool-options presets for standard selection tools (Rectangular Marquee, Elliptical Marquee, Lasso, Magic Wand, Color Select) and gimp-crop-tool had a hardcoded 16:9 aspect constraint instead of Photoshop's free-form crop default.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-crop-tool`: Replaced forced 16:9 ratio with free-form crop and Rule of Thirds guide.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-rect-select-tool`: Created preset with anti-aliasing on, feather off.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-ellipse-select-tool`: Created preset with anti-aliasing on, feather off.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-free-select-tool`: Created preset with anti-aliasing on, feather off.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-fuzzy-select-tool`: Created preset with standard 32 tolerance and transparent selection.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-by-color-select-tool`: Created preset with standard 32 tolerance.
+  - `PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-unified-transform-tool`: Created free-transform preset.
+  - `PhotoGIMP/scripts/verify_config.py`: Added Section 5 Tool Options audit.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py` — exit code 0 (all 5 sections passed: syntax, shortcuts, workspace, desktop launcher, tool options).
+  - `./PhotoGIMP/install.sh --batch` — exit code 0 (deployed options to `~/.config/GIMP/3.2/tool-options/`).
+  - Headless smoke test: `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP smoke test passed\n"))' --quit` — exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5a560e0`.
+- **Result**: Success.
+- **Learnings**: Selection and crop defaults now accurately reflect Photoshop behavior out of the box without manual user reconfiguration.
+- **Next**: Phase 5 — Document manual smoke testing steps and finalize project verification gate.

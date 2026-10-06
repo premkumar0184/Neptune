@@ -2,27 +2,30 @@
 
 Status: COMPLETED
 
-Task: Create native-GIMP desktop launcher and extend install.sh to install desktop file and icons for native installations.
-Why: The existing `org.gimp.GIMP.desktop` uses `Exec=flatpak run ...` which only works for Flatpak. On native GIMP 3.2.6, install.sh skips desktop file and icon installation entirely. Users get no application launcher entry or icons when installing PhotoGIMP natively.
+Task: Standardize default tool options for Photoshop behavior (selections, transform, crop) and add tool options audit to verify_config.py.
+Why: PhotoGIMP lacks tool-options presets for standard selection tools (Rectangular Marquee, Elliptical Marquee, Lasso, Magic Wand, Color Select), causing them to fall back to arbitrary defaults. Also, gimp-crop-tool has a hardcoded 16:9 aspect constraint instead of Photoshop's free-form default.
 Affected areas:
-- PhotoGIMP/.local/share/applications/org.gimp.GIMP.desktop  (update Exec for native)
-- PhotoGIMP/install.sh  (install desktop + icons for native too, not just Flatpak)
-- PhotoGIMP/scripts/verify_config.py  (add check: desktop file Exec line is not Flatpak-only)
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-crop-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-rect-select-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-ellipse-select-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-free-select-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-fuzzy-select-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-by-color-select-tool
+- PhotoGIMP/.config/GIMP/3.0/tool-options/gimp-unified-transform-tool
+- PhotoGIMP/scripts/verify_config.py
 
 Acceptance criteria:
-1. `org.gimp.GIMP.desktop` Exec line uses `gimp %U` (native) as the default; file remains valid per `desktop-file-validate`. [PASSED]
-2. `install.sh` installs the desktop file and icons for native installs as well as Flatpak. [PASSED]
-3. After `./install.sh --batch`, `~/.local/share/applications/org.gimp.GIMP.desktop` exists with a native Exec line. [PASSED]
-4. After `./install.sh --batch`, icon sizes exist in `~/.local/share/icons/hicolor/`. [PASSED]
-5. `python3 PhotoGIMP/scripts/verify_config.py` passes exit code 0 (new check: desktop file not Flatpak-only). [PASSED]
-6. Splash screen `~/.config/GIMP/3.2/splashes/` already has the file (already handled by config copy — verify). [PASSED]
+1. `gimp-rect-select-tool`, `gimp-ellipse-select-tool`, `gimp-free-select-tool` presets configure anti-aliasing enabled and feathering disabled by default. [PASSED]
+2. `gimp-fuzzy-select-tool` (Magic Wand) and `gimp-by-color-select-tool` presets configure anti-aliasing enabled, transparent selection enabled, and Photoshop standard tolerance (threshold 32.0). [PASSED]
+3. `gimp-crop-tool` preset removed forced 16:9 aspect ratio in favor of Photoshop-standard free-form crop. [PASSED]
+4. `gimp-unified-transform-tool` preset configured with valid S-expression transform options. [PASSED]
+5. `PhotoGIMP/scripts/verify_config.py` extended with Section 5 Tool Options audit. [PASSED]
+6. `python3 PhotoGIMP/scripts/verify_config.py` passes with exit code 0. [PASSED]
+7. `./PhotoGIMP/install.sh --batch` deploys updated tool-options to `~/.config/GIMP/3.2/tool-options/`. [PASSED]
 
 Verification evidence:
-- `desktop-file-validate ~/.local/share/applications/org.gimp.GIMP.desktop` exited with 0 (valid desktop file syntax).
-- `./PhotoGIMP/install.sh --batch` installed desktop file and icons into `~/.local/share/applications/` and `~/.local/share/icons/hicolor/`.
-- Confirmed `Exec=gimp %U` and `TryExec=gimp` in `~/.local/share/applications/org.gimp.GIMP.desktop`.
-- Confirmed icon assets in `~/.local/share/icons/hicolor/128x128/apps/photogimp.png`.
-- Confirmed splash image `splash-screen-2025-v2.png` in `~/.config/GIMP/3.2/splashes/`.
-- `python3 PhotoGIMP/scripts/verify_config.py` passed exit code 0 with all 4 sections validated.
+- `python3 PhotoGIMP/scripts/verify_config.py` exited with code 0 (24 tool-options files validated, syntax clean, crop/wand properties verified).
+- `./PhotoGIMP/install.sh --batch` exited with code 0, deploying options to `~/.config/GIMP/3.2/tool-options/`.
+- Headless smoke test: `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP smoke test passed\n"))' --quit` passed with code 0.
 
-Rollback/checkpoint: PhotoGIMP sub-repo commit c273e6a.
+Rollback/checkpoint: PhotoGIMP sub-repo commit 5a560e0.

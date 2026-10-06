@@ -42,14 +42,14 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ---
 
 ## Phase 4 — Tool Options & Retouching Workflows
-- [ ] Audit tool configuration (`toolrc` and `tool-options/`) for Brush, Eraser, Healing Brush, Clone Stamp, Marquee, Lasso, Wand, and Transform tools.
-- [ ] Standardize default tool options to match Photoshop default tool behaviors (feathering, anti-aliasing, sample merged).
+- [x] Audit tool configuration (`toolrc` and `tool-options/`) for Brush, Eraser, Healing Brush, Clone Stamp, Marquee, Lasso, Wand, and Transform tools.
+- [x] Standardize default tool options to match Photoshop default tool behaviors (free-form crop, anti-aliasing, 32 tolerance for wand, feathering defaults).
 
 ---
 
 ## Phase 5 — Verification & Automated Quality Gate
 - [x] Build automated configuration verification script (`PhotoGIMP/scripts/verify_config.py`).
-- [ ] Run headless GIMP validation (`gimp --no-interface --batch ...`) with the installed PhotoGIMP configuration.
+- [x] Run headless GIMP validation (`gimp --no-interface --batch ...`) with the installed PhotoGIMP configuration.
 - [ ] Document manual smoke testing steps for Linux desktop DEs (GNOME/KDE/XFCE).
 
 ---

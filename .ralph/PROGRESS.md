@@ -525,6 +525,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 22 — Non-Destructive Clarity & Dehaze Helper Plugin.
 
+## Iteration 24 — Non-Destructive Clarity & Dehaze Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Clarity & Dehaze Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 104, `photoshop_docs.md` Section 108 lines 3260-3277: "Adjust midtone contrast and reduce haze non-destructively using the Clarity and dehaze adjustment layer in professional photoeditor"). Replaces destructive filtering with an isolated non-destructive layer applying wide-radius unsharp masking (`gegl:unsharp-mask`) or Gaussian softening (`gegl:gaussian-blur`) for Clarity, combined with contrast expansion (`gegl:brightness-contrast`) and saturation recovery (`gegl:vibrance`) for Dehaze, with authentic presets (Landscape, Mountain Haze, Soft Portrait, Mist/Fog, Architecture), custom sliders, opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-clarity-dehaze` with wide-radius unsharp mask local contrast, Gaussian softening for negative clarity, contrast and brightness adjustment for dehaze, vibrance recovery, presets, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `clarity-dehaze`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 17 (asserting PDB registration, layer modes, mask attachment, midtone local contrast boost from 0.202 to 0.356 [1.76x boost], atmospheric haze black level penetration from 0.301 to 0.153 [delta 0.148], negative clarity boundary softening from 0.202 to 0.106, custom sliders with 85.0% opacity, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Clarity & Dehaze Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 22 complete and scheduled Phase 23 (Film Grain & Analog Texture).
+- **Technical discoveries**:
+  - In GEGL `gegl:brightness-contrast`, the `contrast` property defaults to 1.0 (identity), NOT 0.0. Contrast modulation must be calculated as `1.0 + (d_amount / 100.0) * factor` to avoid collapsing image dynamic range to flat gray.
+  - Applying wide-radius unsharp mask (`std-dev = 25.0`, `scale = 0.6 to 1.5`) increases edge local contrast by >1.7x without blowing out extreme highlights or crushing shadows, reproducing authentic Photoshop / Camera Raw Clarity behavior.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 16 plugins verified).
+    - Stage 2: `install.sh --batch` passed (16 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 121 tests across 17 test suites in 6.19s.
+    - Final quality gate: SUCCESS across all stages in 17.42s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5e22f15`.
+- **Result**: Success.
+- **Next**: Phase 23 — Non-Destructive Film Grain & Analog Texture Helper Plugin.
+
+
 
 
 

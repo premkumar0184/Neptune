@@ -272,6 +272,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Clarity & Dehaze Helper
+- **Source topic**: Adjust contrast with Clarity and Dehaze (`Topics.txt` line 104, `photoshop_docs.md` Section 108 lines 3260-3277: "Adjust midtone contrast and reduce haze non-destructively using the Clarity and dehaze adjustment layer in professional photoeditor")
+- **Photoshop behavior**: Adjusts midtone local contrast to add definition to textures and image structure (Clarity), and penetrates or simulates atmospheric fog/humidity while restoring rich shadow contrast and vibrant saturation (Dehaze).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-clarity-dehaze` in `<Image>/Colors/Clarity and Dehaze...`, `<Image>/Filters/Enhance/Clarity and Dehaze...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable. Applies wide-radius unsharp masking (`gegl:unsharp-mask`) or Gaussian softening (`gegl:gaussian-blur`) for Clarity, combined with contrast expansion (`gegl:brightness-contrast`) and saturation recovery (`gegl:vibrance`) for Dehaze. Features curated photographic presets (Landscape: Crisp Punch & Dehaze, Atmospheric: Cut Mountain Haze, Portrait: Soft Glamour Glow, Creative: Atmospheric Mist & Fog, Architecture: High-Structure Contrast, Custom sliders), layer opacity control (10% to 100%), attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:unsharp-mask`, `gegl:gaussian-blur`, `gegl:brightness-contrast`, `gegl:vibrance`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 22).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, midtone local contrast boost (delta > 0.10, ratio > 1.5x), atmospheric haze black level penetration (deepened > 0.10), negative clarity boundary softening, custom sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 24):
+  1. `verify_config.py`: Section 6 passed with 16 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Midtone local contrast boosted from 0.202 to 0.356 (1.76x boost), atmospheric haze penetration deepened black point from 0.301 to 0.153 (delta 0.148), negative clarity softened boundary from 0.202 to 0.106, custom sliders with 85.0% opacity verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 24).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

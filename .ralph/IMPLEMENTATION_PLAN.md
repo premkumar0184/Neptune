@@ -134,11 +134,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate Kelvin temperature shifts (cooling shifts B>R, warming shifts R>B), layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 22 — Non-Destructive Clarity & Dehaze Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `clarity-dehaze` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`.
-- [ ] Create dedicated non-destructive Clarity & Dehaze adjustment layer duplicating active drawable.
-- [ ] Support midtone local contrast enhancement (Clarity slider -100 to +100) using wide-radius edge-preserving unsharp masking / local contrast filtering.
-- [ ] Support atmospheric haze reduction and contrast restoration (Dehaze slider -100 to +100) using contrast stretching and black point recovery.
-- [ ] Support curated presets (Landscape Punch, Soft Portrait Glow, Cut Mountain Haze, Heavy Fog / Dreamy, Dramatic Architecture, Custom sliders).
+- [x] Implement native GIMP 3.x Python 3 plugin `clarity-dehaze` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`.
+- [x] Create dedicated non-destructive Clarity & Dehaze adjustment layer duplicating active drawable.
+- [x] Support midtone local contrast enhancement (Clarity slider -100 to +100) using wide-radius edge-preserving unsharp masking / local contrast filtering.
+- [x] Support atmospheric haze reduction and contrast restoration (Dehaze slider -100 to +100) using contrast stretching and black point recovery.
+- [x] Support curated presets (Landscape: Crisp Punch & Dehaze, Atmospheric: Cut Mountain Haze, Portrait: Soft Glamour Glow, Creative: Atmospheric Mist & Fog, Architecture: High-Structure Contrast, Custom sliders).
+- [x] Support layer opacity control (10% to 100%) and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Clarity and Dehaze...` and `<Image>/Filters/Enhance/Clarity and Dehaze...`.
+- [x] Validate midtone contrast enhancement, haze penetration, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 23 — Non-Destructive Film Grain & Analog Texture Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `film-grain` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/film-grain/film-grain.py`.
+- [ ] Create dedicated non-destructive Film Grain adjustment overlay layer (`#808080` neutral gray with Soft Light / Overlay blending).
+- [ ] Support grain amount (0-100%), particle size, roughness/clumping, and monochromatic vs organic color grain options.
+- [ ] Support authentic analog presets (35mm Classic Film Grain, 120 Medium Format Subtle, Gritty High-ISO Street, Vintage 1970s Silver Halide, Subtle Studio Texture, Custom sliders).
 - [ ] Support layer opacity control (10% to 100%) and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Clarity and Dehaze...` and `<Image>/Filters/Enhance/Clarity and Dehaze...`.
-- [ ] Validate midtone contrast enhancement, haze penetration, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+- [ ] Register under menu path `<Image>/Filters/Noise/Film Grain...` and `<Image>/Layer/New Film Grain Layer...`.
+- [ ] Validate non-destructive overlay creation, noise texture variance, blend mode neutrality, layer mask attachment, and base layer preservation via headless GIMP test.

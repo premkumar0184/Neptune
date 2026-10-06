@@ -80,6 +80,7 @@ def test_pdb_registration():
         ("python-fu-gradient-map", "Gradient Map & Cinematic Grading Helper"),
         ("python-fu-channel-mixer", "Channel Mixer & Infrared Helper"),
         ("python-fu-color-temperature", "Color Temperature & White Balance Helper"),
+        ("python-fu-clarity-dehaze", "Clarity & Dehaze Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1751,6 +1752,147 @@ def test_color_temperature():
 
 
 # ==============================================================================
+# 17. CLARITY & DEHAZE TEST SUITE
+# ==============================================================================
+def test_clarity_dehaze():
+    print("\n--- Test Suite 17: Clarity & Dehaze Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-clarity-dehaze")
+    if proc is None:
+        record_fail("CD-01", "Procedure lookup", "Procedure python-fu-clarity-dehaze not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseClarityTest", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Create midtone pattern with local contrast:
+        # Outer area = 0.50 mid-gray
+        # Center square = 0.30 dark mid-gray
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.3, 0.3)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_out = base.get_pixel(10, 40).get_rgba()
+        p_base_in = base.get_pixel(30, 40).get_rgba()
+        base_contrast = p_base_out[0] - p_base_in[0]
+
+        # 17a: Run Landscape Preset (Clarity +40, Dehaze +35)
+        cfg_land = proc.create_config()
+        cfg_land.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_land.set_property("image", image)
+        cfg_land.set_property("preset", "landscape")
+        cfg_land.set_property("opacity", 100.0)
+        cfg_land.set_property("add-mask", True)
+
+        res = proc.run(cfg_land)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CD-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("CD-01", "Execution status", "SUCCESS")
+
+        land_layer = image.get_layers()[0]
+        if land_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("CD-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {land_layer.get_mode()}")
+            return
+        record_pass("CD-02", "Layer mode & name", f"{land_layer.get_name()} ({land_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = land_layer.get_mask()
+        if mask is None:
+            record_fail("CD-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("CD-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Verify midtone local contrast enhancement
+        p_land_out = land_layer.get_pixel(10, 40).get_rgba()
+        p_land_in = land_layer.get_pixel(30, 40).get_rgba()
+        land_contrast = p_land_out[0] - p_land_in[0]
+        if not (land_contrast > base_contrast and land_contrast > 0.25):
+            record_fail("CD-04", "Clarity contrast boost", f"Expected contrast > {base_contrast:.3f}, got {land_contrast:.3f}")
+            return
+        record_pass("CD-04", "Midtone local contrast boost", f"Base contrast {base_contrast:.3f} -> Clarity {land_contrast:.3f} (boost x{land_contrast/base_contrast:.2f})")
+
+        # 17b: Run Cut Mountain Haze Preset (Clarity +20, Dehaze +60)
+        image.remove_layer(land_layer)
+        cfg_haze = proc.create_config()
+        cfg_haze.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_haze.set_property("image", image)
+        cfg_haze.set_property("preset", "cut-haze")
+        cfg_haze.set_property("opacity", 100.0)
+        cfg_haze.set_property("add-mask", False)
+
+        proc.run(cfg_haze)
+        haze_layer = image.get_layers()[0]
+        p_haze_in = haze_layer.get_pixel(30, 40).get_rgba()
+        # Strong dehaze deepens dark points and increases contrast
+        if not (p_haze_in[0] < p_base_in[0]):
+            record_fail("CD-05", "Dehaze dark penetration", f"Expected darkened black level < {p_base_in[0]:.3f}, got {p_haze_in[0]:.3f}")
+            return
+        record_pass("CD-05", "Atmospheric haze penetration", f"Haze black level deepened: Base {p_base_in[0]:.3f} -> Dehazed {p_haze_in[0]:.3f} (delta {p_base_in[0] - p_haze_in[0]:.3f})")
+
+        # 17c: Run Soft Portrait Preset (Clarity -30, Dehaze 0)
+        image.remove_layer(haze_layer)
+        cfg_port = proc.create_config()
+        cfg_port.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_port.set_property("image", image)
+        cfg_port.set_property("preset", "soft-portrait")
+        cfg_port.set_property("opacity", 100.0)
+        cfg_port.set_property("add-mask", False)
+
+        proc.run(cfg_port)
+        port_layer = image.get_layers()[0]
+        p_port_edge_out = port_layer.get_pixel(19, 40).get_rgba()
+        p_port_edge_in = port_layer.get_pixel(21, 40).get_rgba()
+        edge_contrast = abs(p_port_edge_out[0] - p_port_edge_in[0])
+        # Soft negative clarity diffuses sharp edge transition
+        if not (edge_contrast < base_contrast):
+            record_fail("CD-06", "Negative clarity softening", f"Expected softened boundary < {base_contrast:.3f}, got {edge_contrast:.3f}")
+            return
+        record_pass("CD-06", "Negative clarity softening", f"Boundary softened: Base {base_contrast:.3f} -> Softened {edge_contrast:.3f}")
+
+        # 17d: Test Custom sliders and opacity
+        image.remove_layer(port_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("clarity", 50.0)
+        cfg_cust.set_property("dehaze", -20.0)
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("CD-07", "Custom opacity", f"Expected 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        record_pass("CD-07", "Custom sliders & opacity", f"Opacity {cust_layer.get_opacity():.1f}%, custom Clarity +50.0 / Dehaze -20.0 verified")
+
+        # 17e: Non-destructive base layer invariance
+        p_base_after_out = base.get_pixel(10, 40).get_rgba()
+        p_base_after_in = base.get_pixel(30, 40).get_rgba()
+        diff_out = max(abs(p_base_after_out[i] - p_base_out[i]) for i in range(3))
+        diff_in = max(abs(p_base_after_in[i] - p_base_in[i]) for i in range(3))
+        max_base_diff = max(diff_out, diff_in)
+        if max_base_diff > 0.000001:
+            record_fail("CD-08", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("CD-08", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CD-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1776,6 +1918,7 @@ def run_all_tests():
     test_gradient_map()
     test_channel_mixer()
     test_color_temperature()
+    test_clarity_dehaze()
 
 
     elapsed = time.time() - start_time

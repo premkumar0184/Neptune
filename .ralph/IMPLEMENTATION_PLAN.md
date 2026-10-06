@@ -50,7 +50,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Register under menu path `<Image>/File` and `<Image>/File/Export` (`Quick Export as PNG` and `Quick Export...`).
 - [x] Validate exported image files, scaling presets, and document integrity via headless GIMP test.
 
-### Phase 11 — End-to-End Plugin Suite Quality Gate
-- [ ] Extend `PhotoGIMP/scripts/verify_config.py` with Section 6 Plugin Suite audit.
-- [ ] Ensure `PhotoGIMP/install.sh` deploys all plugin directories to user config `plug-ins/` with executable permissions.
-- [ ] Execute full headless GIMP test suite exercising all custom plugins.
+### Phase 11 — End-to-End Plugin Suite Quality Gate & Full Automated Regression Suite
+- [x] Extend `PhotoGIMP/scripts/verify_config.py` with Section 6 Plugin Suite audit (REQUIRED_PLUGINS inventory, permissions, byte-compilation, shebang, GIMP 3 API, live user config checks).
+- [x] Ensure `PhotoGIMP/install.sh` deploys all plugin directories to user config `plug-ins/` with executable permissions.
+- [x] Build and execute full headless GIMP test suite (`tests/gimp_e2e_suite.py` and `tests/run_all_tests.py`) exercising all 5 custom plugins with 30/30 automated tests passing.
+
+---
+
+## Next Product Development Phases (Photoshop Creative Tools)
+
+### Phase 12 — Non-Destructive Vignette & Lens Lighting Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `vignette-lighting` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`.
+- [ ] Support non-destructive radial exposure falloff (dark vignette or highlight vignette) with configurable radius, softness, and blend mode.
+- [ ] Register under menu path `<Image>/Filters/Light and Shadow/Vignette Lighting...` and `<Image>/Layer/New Vignette Layer...`.
+- [ ] Validate non-destructive layer creation and radial luminance falloff via headless GIMP test.
+

@@ -241,3 +241,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `76eb970`.
 - **Result**: Success.
 - **Next**: Phase 11 — End-to-End Plugin Suite Quality Gate & Full Regression Suite.
+
+## Iteration 13 — End-to-End Plugin Suite Quality Gate & Automated Regression Suite
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Establish comprehensive quality gate and unified automated regression suite across all 5 custom Photoshop workflow plugins.
+- **Why this task**: Completes Phase 11 of the implementation plan, ensuring that all 5 plugins are rigorously tested against their mathematical and functional Photoshop behaviors, audited against an explicit inventory list in `verify_config.py`, guaranteed executable during installer deployment, and callable in a single unified test runner.
+- **Changed**:
+  - `PhotoGIMP/scripts/verify_config.py`: Added explicit `REQUIRED_PLUGINS` inventory audit verifying all 5 plugins, matching directories, executable bits, byte-compilation syntax, shebangs, GIMP 3 API imports, procedure declarations, and live user config deployment.
+  - `PhotoGIMP/install.sh`: Added explicit permissions enforcement loop (`chmod +x`) on all plug-in scripts and installation confirmation report.
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/frequency-separation/frequency-separation.py`: Added fallback for `drawables` to support headless batch invocation.
+  - `tests/gimp_e2e_suite.py`: Created comprehensive 30-assertion headless test suite exercising all 6 PDB procedures, testing Frequency Separation group/layers, Luminosity Masks 9 channels with luminance mathematics, Dodge & Burn Layer #808080 neutrality and painting response, High Pass Sharpening edge micro-contrast, and Quick Export scaling/formats.
+  - `tests/run_all_tests.py`: Created unified runner executing Stage 1 (Config Audit), Stage 2 (Installer Batch Run), and Stage 3 (Headless GIMP Regression Suite).
+- **Technical discoveries**:
+  - `image.pick_color` in GIMP 3.x PyGObject returns a `(success, GeglColor)` tuple where `drawables` must be passed as a sequence (e.g. `[layer]`).
+  - To sample multi-layer compositing results accurately in headless mode, `image.duplicate().flatten()` followed by `flat.get_pixel(x, y).get_rgba()` provides reliable, deterministic color inspection.
+  - `Gimp.Selection.none(image)` cleanly clears active selections across all GIMP 3 Python procedures.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, 5/5 plugins audited).
+    - Stage 2: `install.sh --batch` passed (5 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 30 tests in 2.69s.
+    - Final quality gate: SUCCESS across all stages in 13.44s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `4b59689`.
+- **Result**: Success.
+- **Next**: Phase 12 — Non-Destructive Vignette & Lens Lighting Helper Plugin.
+

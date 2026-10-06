@@ -88,6 +88,20 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Unified End-to-End Regression Suite & Plugin Quality Gate
+- **Source topic**: Technical requirements / Automated testing / Quality control
+- **Photoshop behavior**: Rigorous continuous regression test suite asserting plugin integrity and mathematical accuracy.
+- **GIMP equivalent**: Standalone test runners `tests/run_all_tests.py` and `tests/gimp_e2e_suite.py` plus strict inventory auditing in `verify_config.py`.
+- **GIMP source locations**: `tests/gimp_e2e_suite.py`, `tests/run_all_tests.py`, `PhotoGIMP/scripts/verify_config.py`.
+- **Current capability**: 3-stage automated quality pipeline: Stage 1 audits configuration, shortcuts, workspace, desktop launcher, tool options, and REQUIRED_PLUGINS inventory; Stage 2 validates installer batch mode and executable permissions; Stage 3 executes 30 headless assertions verifying PDB registration, layer math, channels, neutrality, edge sharpening, and export presets.
+- **Gap**: None.
+- **Verification evidence** (Iteration 13):
+  1. `python3 tests/run_all_tests.py`: All 3 stages passed cleanly in 13.44s.
+  2. 30/30 assertions in `tests/gimp_e2e_suite.py` passed with exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 13).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

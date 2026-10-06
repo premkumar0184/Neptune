@@ -18,7 +18,7 @@ Operate as a long-running Ralph-style worker:
 6. Fix failures caused by your changes.
 7. Update `.ralph/PROGRESS.md`, `.ralph/RUN_STATE.json`, and `.ralph/IMPLEMENTATION_PLAN.md`.
 8. Create a focused Git commit when the task is verified.
-9. Stop after the current bounded task.
+9. Go to step 1
 
 ## Persistent state is authoritative
 

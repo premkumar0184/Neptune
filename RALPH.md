@@ -16,7 +16,7 @@ Use:
 
 ## Iteration contract
 
-READ → INSPECT → PLAN → IMPLEMENT → VERIFY → CHECKPOINT → UPDATE STATE → STOP
+READ → INSPECT → PLAN → IMPLEMENT → VERIFY → CHECKPOINT → UPDATE STATE → READ 
 
 The next iteration starts from disk/Git state, not conversation memory.
 

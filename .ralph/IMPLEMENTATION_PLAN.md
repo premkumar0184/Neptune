@@ -39,10 +39,10 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate layer creation, neutrality (0.000000 diff), and dodging/burning properties via headless GIMP test.
 
 ### Phase 9 — High Pass Sharpening Helper
-- [ ] Implement native GIMP 3.x Python 3 plugin `high-pass-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high_pass_sharpen.py`.
-- [ ] Duplicate active layer, apply `gegl:high-pass` filter with configurable radius, and set blend mode to Soft Light / Overlay.
-- [ ] Register under menu path `<Image>/Filters/Enhance/High Pass Sharpen...`.
-- [ ] Validate sharpening layer generation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `high-pass-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high-pass-sharpen.py`.
+- [x] Duplicate active layer, apply `gegl:high-pass` filter with configurable radius, and set blend mode to Soft Light / Overlay.
+- [x] Register under menu path `<Image>/Filters/Enhance/High Pass Sharpen...` and `<Image>/Filters/Retouching/High Pass Sharpen...`.
+- [x] Validate sharpening layer generation, edge micro-contrast enhancement, and noise invariance via headless GIMP test.
 
 ### Phase 10 — Quick Export (Web & Social Presets)
 - [ ] Implement native GIMP 3.x Python 3 plugin `quick-export` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick_export.py`.

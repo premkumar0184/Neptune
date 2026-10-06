@@ -190,3 +190,28 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `3c74d07`.
 - **Result**: Success.
 - **Next**: Phase 9 — High Pass Sharpening Helper Plugin.
+
+## Iteration 11 — High Pass Sharpening Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Task**: Implement native GIMP 3.x Python 3 High Pass Sharpening helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high-pass-sharpen.py`.
+- **Why this task**: Edge-preserving frequency sharpening is a standard Photoshop workflow (`topics.txt` line 458: "Sharpen image using edge mask" and `photoshop_docs.md` Section 423). Duplicating the layer, applying high-pass, setting blend mode to Soft Light/Overlay, and attaching a layer mask previously required tedious manual operations in GIMP. This plugin automates the entire process in one click.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high-pass-sharpen.py`: Created native Python 3 GObject-Introspection plugin duplicating target drawable, applying GEGL `gegl:high-pass` filter with configurable radius, setting blend mode to Soft Light or Overlay, controlling opacity, and optionally attaching a reveal-all layer mask.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Updated High Pass Sharpening entry to IMPLEMENTED_VERIFIED.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Checked off all Phase 9 items.
+- **Technical discoveries**:
+  - Built-in fallback in the plugin resolves `target_drawable` from `image.get_selected_drawables()` when invoked headlessly without setting `drawables` on `GimpProcedureConfig`, bypassing PyGObject's `GimpCoreObjectArray` marshalling limitation.
+  - Mathematical verification showed edge step contrast increased from 0.4000 to 0.4295 (Soft Light) and 0.4420 (Overlay) while flat smooth regions experienced less than 0.0006 deviation, proving halo-free edge sharpening.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exit 0, all 6 sections passing, 4 active Python plugins verified.
+  - Automated 5-test suite via `gimp --no-interface --batch-interpreter=python-fu-eval`:
+    1. PDB procedure registered (`python-fu-high-pass-sharpen`).
+    2. Soft Light layer created with requested name, mode, opacity, layer mask, and active selection.
+    3. Edge micro-contrast mathematically verified (0.4000 -> 0.4295).
+    4. Flat region noise invariance verified (< 0.0006 deviation).
+    5. Overlay mode (strong contrast: 0.4420) and maskless option verified.
+  - All tests passed, exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5fb53db`.
+- **Result**: Success.
+- **Next**: Phase 10 — Quick Export (Web & Social Presets) plugin.

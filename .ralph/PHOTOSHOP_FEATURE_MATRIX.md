@@ -55,16 +55,19 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 ---
 
 ### Feature: High Pass Sharpening Helper
-- **Source topic**: Adjust image color and tone - Sharpening and noise reduction
-- **Photoshop behavior**: High Pass filter applied to duplicate layer in Overlay/Soft Light mode to sharpen micro-contrast and edges without halo artifacts.
-- **GIMP equivalent**: `gegl:high-pass` filter exists in GIMP 3.x, but requires manual layer duplicate, filter application, and blend mode switch.
-- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high_pass_sharpen.py`.
-- **Current capability**: Manual GEGL filter application.
-- **Gap**: Dedicated one-click sharpening layer setup with live radius slider.
-- **Dependencies**: GEGL `gegl:high-pass`, Python 3.
+- **Source topic**: Adjust image color and tone - Sharpening and noise reduction / Smart filters - Sharpen image using edge mask
+- **Photoshop behavior**: High Pass filter applied to duplicate layer in Overlay/Soft Light mode with layer mask to sharpen micro-contrast and edges without halo artifacts.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-high-pass-sharpen` in `<Image>/Filters/Enhance/High Pass Sharpen...` and `<Image>/Filters/Retouching/High Pass Sharpen...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high-pass-sharpen.py`.
+- **Current capability**: One-click duplication of active layer, GEGL `gegl:high-pass` filter application with radius slider, Soft Light / Overlay blend mode assignment, opacity control, and optional reveal-all layer mask attachment.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:high-pass`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
 - **Implementation priority**: Medium (Phase 9).
-- **Verification strategy**: Headless GIMP test asserting sharpened layer creation.
-- **Status**: Planned.
+- **Verification strategy**: Headless automated test verifying PDB registration, layer creation, layer mask attachment, edge micro-contrast enhancement, and smooth region noise invariance.
+- **Verification evidence** (Iteration 11):
+  1. `verify_config.py`: Section 6 passed with 4 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Edge contrast increased from 0.4000 to 0.4295 in Soft Light and to 0.4420 in Overlay; flat region noise deviation was < 0.0006. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 11).
 
 ---
 

@@ -75,6 +75,7 @@ def test_pdb_registration():
         ("python-fu-shadow-highlight", "Shadows & Highlights Recovery"),
         ("python-fu-black-and-white", "Black & White Conversion & Toning"),
         ("python-fu-photo-filter", "Photo Filter Optical Lens Effect"),
+        ("python-fu-vibrance", "Vibrance & Smart Saturation Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1097,6 +1098,120 @@ def test_photo_filter():
 
 
 # ==============================================================================
+# TEST 12: Non-Destructive Vibrance & Smart Saturation (Phase 17)
+# ==============================================================================
+def test_vibrance():
+    print("\n--- Test Suite 12: Non-Destructive Vibrance & Smart Saturation ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-vibrance")
+    if proc is None:
+        record_fail("VIB-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with muted cyan on left, saturated red on right
+        base = Gimp.Layer.new(image, "Base", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.4, 0.5, 0.52)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 40, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.1, 0.1)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 50, 10, 40, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_muted = base.get_pixel(30, 50).get_rgba()
+        p_base_sat = base.get_pixel(70, 50).get_rgba()
+        spread_base_muted = max(p_base_muted[:3]) - min(p_base_muted[:3])
+        spread_base_sat = max(p_base_sat[:3]) - min(p_base_sat[:3])
+
+        # 12a: Run default Vibrance (+25 Vibrance, 0 Saturation)
+        cfg_def = proc.create_config()
+        cfg_def.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_def.set_property("image", image)
+        cfg_def.set_property("preset", "default")
+        cfg_def.set_property("opacity", 100.0)
+        cfg_def.set_property("add-mask", True)
+
+        res = proc.run(cfg_def)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("VIB-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("VIB-01", "Execution status", "SUCCESS")
+
+        vib_layer = image.get_layers()[0]
+        if vib_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("VIB-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {vib_layer.get_mode()}")
+            return
+        record_pass("VIB-02", "Layer mode & name", f"{vib_layer.get_name()} ({vib_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = vib_layer.get_mask()
+        if mask is None:
+            record_fail("VIB-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("VIB-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 12b: Intelligent saturation boost for muted tones
+        p_vib_muted = vib_layer.get_pixel(30, 50).get_rgba()
+        p_vib_sat = vib_layer.get_pixel(70, 50).get_rgba()
+        spread_vib_muted = max(p_vib_muted[:3]) - min(p_vib_muted[:3])
+        spread_vib_sat = max(p_vib_sat[:3]) - min(p_vib_sat[:3])
+
+        muted_boost = spread_vib_muted - spread_base_muted
+        sat_boost = spread_vib_sat - spread_base_sat
+
+        if muted_boost < 0.25:
+            record_fail("VIB-04", "Muted color boost", f"Expected muted boost > 0.25, got {muted_boost:.4f}")
+            return
+        record_pass("VIB-04", "Muted color saturation boost", f"Base spread {spread_base_muted:.3f} -> Vibrance spread {spread_vib_muted:.3f} (delta +{muted_boost:.3f})")
+
+        # 12c: Saturated tone protection (muted boost should be > 2x saturated boost)
+        if muted_boost <= (sat_boost * 2.0):
+            record_fail("VIB-05", "Saturated tone protection", f"Muted boost {muted_boost:.4f} not > 2x saturated boost {sat_boost:.4f}")
+            return
+        record_pass("VIB-05", "Saturated tone protection ratio", f"Muted boost +{muted_boost:.3f} vs Saturated boost +{sat_boost:.3f} (protection ratio {muted_boost/max(0.001, sat_boost):.1f}x)")
+
+        # 12d: Uniform full desaturation test (custom saturation=-100)
+        image.remove_layer(vib_layer)
+        cfg_desat = proc.create_config()
+        cfg_desat.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_desat.set_property("image", image)
+        cfg_desat.set_property("preset", "custom")
+        cfg_desat.set_property("vibrance", 0.0)
+        cfg_desat.set_property("saturation", -100.0)
+        cfg_desat.set_property("opacity", 100.0)
+        cfg_desat.set_property("add-mask", False)
+
+        proc.run(cfg_desat)
+        desat_layer = image.get_layers()[0]
+        p_desat = desat_layer.get_pixel(70, 50).get_rgba()
+        desat_spread = max(p_desat[:3]) - min(p_desat[:3])
+
+        if desat_spread > 0.000001:
+            record_fail("VIB-06", "Full desaturation response", f"Chromatic spread {desat_spread:.6f} > 0 on -100 saturation")
+            return
+        record_pass("VIB-06", "Full desaturation response", f"Saturation -100 produces exact monochrome (spread {desat_spread:.6f})")
+
+        # 12e: Non-destructive base layer invariance
+        p_base_after = base.get_pixel(30, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_muted[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("VIB-07", "Non-destructive invariance", f"Base layer altered by {base_diff:.6f} > 0")
+            return
+        record_pass("VIB-07", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("VIB-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1117,6 +1232,7 @@ def run_all_tests():
     test_shadow_highlight()
     test_black_and_white()
     test_photo_filter()
+    test_vibrance()
 
 
     elapsed = time.time() - start_time

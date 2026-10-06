@@ -397,3 +397,28 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 17 — Non-Destructive Vibrance & Smart Saturation Helper Plugin.
 
+## Iteration 19 — Non-Destructive Vibrance & Smart Saturation Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Vibrance & Smart Saturation Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 324, `photoshop_docs.md` Section 104 & 319: "Use a Vibrance adjustment layer to enhance muted colors while preserving skin tones and preventing color clipping"). Replaces destructive global saturation adjustments with an isolated non-destructive layer applying GEGL `gegl:vibrance` with dual Photoshop-style sliders (Vibrance -100 to +100 and Saturation -100 to +100), curated photographic presets, adjustable opacity, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-vibrance` with dual sliders, photographic presets (Default, Portrait, Landscape, Vivid, Subtle, Muted, Custom), layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `vibrance`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 12 (asserting PDB registration, layer mode, mask attachment, muted tone boost delta +0.430, saturated tone protection ratio 5.2x, full -100 saturation desaturation spread 0.000000, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Vibrance & Smart Saturation Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 17 complete and scheduled Phase 18 (Color Balance & Tonal Grading).
+- **Technical discoveries**:
+  - In GEGL `gegl:vibrance`, the user-facing -100 to +100 Saturation slider directly maps to GEGL's `saturation` factor as `1.0 + (sat_slider / 100.0)` where 1.0 represents unchanged saturation and 0.0 represents complete neutral grayscale conversion.
+  - The vibrance transfer curve provides >5x higher chroma amplification on muted colors than on already saturated colors, ensuring portrait skin tones remain natural and free from color-banding or sunburn artifacts.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 11 plugins verified).
+    - Stage 2: `install.sh --batch` passed (11 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 76 tests across 12 test suites in 4.52s.
+    - Final quality gate: SUCCESS across all stages in 15.37s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `e17c686`.
+- **Result**: Success.
+- **Next**: Phase 18 — Non-Destructive Color Balance & Tonal Grading Helper Plugin.

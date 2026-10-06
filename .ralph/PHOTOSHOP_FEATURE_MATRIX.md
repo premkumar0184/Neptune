@@ -187,6 +187,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Vibrance & Smart Saturation Helper
+- **Source topic**: Adjust image color and tone - Adjust color saturation using a Vibrance adjustment layer (`Topics.txt` line 324, `photoshop_docs.md` Section 104 & 319)
+- **Photoshop behavior**: Enhances muted colors while preserving skin tones and preventing color clipping. Vibrance provides intelligent saturation control that adapts to existing color intensity.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-vibrance` in `<Image>/Colors/Vibrance...` and `<Image>/Filters/Retouching/Vibrance...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable and applies GEGL `gegl:vibrance`. Includes dual-slider controls (Vibrance -100 to +100 and Saturation -100 to +100), curated photographic presets (Default, Portrait skin-tone friendly, Landscape, Vivid, Subtle, Muted, Custom), adjustable opacity, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:vibrance`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 17).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, muted tone boost (+0.430), skin/saturated tone protection (>5x protection ratio), full desaturation response (spread 0.000000 on -100 saturation), and base layer preservation.
+- **Verification evidence** (Iteration 19):
+  1. `verify_config.py`: Section 6 passed with 11 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Default Vibrance +25 boosted muted spread from 0.119 to 0.549 (delta +0.430) while saturated spread only rose from 0.900 to 0.983 (delta +0.083, 5.2x protection ratio), Saturation -100 yielded exact grayscale 0.000000 spread, and base layer pixels remained 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 19).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

@@ -94,10 +94,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate optical color shifts (warming shifts R>B, cooling shifts B>R), density scaling, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 17 — Non-Destructive Vibrance & Smart Saturation Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `vibrance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`.
-- [ ] Create dedicated non-destructive Vibrance adjustment layer powered by GEGL `gegl:vibrance`.
-- [ ] Provide intelligent saturation boosting that lifts muted colors while protecting already saturated skin tones and preventing color clipping.
-- [ ] Dual-slider controls: Vibrance (-100 to +100, default +25) and Saturation (-100 to +100, default 0), with layer opacity and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Vibrance...` and `<Image>/Filters/Retouching/Vibrance...`.
-- [ ] Validate muted color boost, saturated tone protection, layer mask attachment, and non-destructive base layer isolation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `vibrance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`.
+- [x] Create dedicated non-destructive Vibrance adjustment layer powered by GEGL `gegl:vibrance`.
+- [x] Provide intelligent saturation boosting that lifts muted colors while protecting already saturated skin tones and preventing color clipping.
+- [x] Dual-slider controls: Vibrance (-100 to +100, default +25) and Saturation (-100 to +100, default 0), with layer opacity and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Vibrance...` and `<Image>/Filters/Retouching/Vibrance...`.
+- [x] Validate muted color boost, saturated tone protection, layer mask attachment, and non-destructive base layer isolation via headless GIMP test.
+
+### Phase 18 — Non-Destructive Color Balance & Tonal Grading Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `color-balance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`.
+- [ ] Create dedicated non-destructive Color Balance adjustment layer duplicating the active drawable.
+- [ ] Support independent 3-way color grading across Shadows, Midtones, and Highlights with Cyan-Red, Magenta-Green, and Yellow-Blue controls.
+- [ ] Support preserve luminosity toggle and attached reveal-all white layer mask for local brush masking.
+- [ ] Register under menu path `<Image>/Colors/Color Balance...` and `<Image>/Filters/Retouching/Color Balance...`.
+- [ ] Validate tonal range color shifts, preserve luminosity stability, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
 

@@ -2,26 +2,27 @@
 
 Status: COMPLETED
 
-Task: Implement multi-target installation (--all and Both option) with isolated per-target backups in PhotoGIMP/install.sh, and document Linux desktop smoke testing in docs/SMOKE_TESTING.md.
-Why: When both native and Flatpak GIMP are installed, users previously had to choose one or manually re-run with different flags; adding --all and option 3 ("Both") ensures complete coverage with independent backups. Documenting smoke testing completes the manual quality gate documentation required by Phase 5.
+Task: Execute final verification quality gate across all configuration validators and headless smoke tests, and finalize project implementation state.
+Why: All phases in IMPLEMENTATION_PLAN.md (0 through 5) have been implemented and individually verified. A final comprehensive end-to-end verification gate validates the complete solution before marking the plan COMPLETED.
 Affected areas:
-- PhotoGIMP/install.sh
-- docs/SMOKE_TESTING.md
+- PhotoGIMP/.config/GIMP/3.0/gimprc
 - PhotoGIMP/scripts/verify_config.py
+- .ralph/IMPLEMENTATION_PLAN.md
+- .ralph/DECISIONS.md
+- .ralph/PROGRESS.md
+- .ralph/RUN_STATE.json
 
 Acceptance criteria:
-1. `PhotoGIMP/install.sh` supports `--all` argument in addition to `--native`, `--flatpak`, and `--batch`. [PASSED]
-2. When both runtimes are detected in interactive mode, installer offers option `3) Both`. [PASSED]
-3. Separate backups are created for each target configuration directory prior to overwriting files. [PASSED]
-4. `docs/SMOKE_TESTING.md` documents structured manual smoke test steps across GNOME, KDE Plasma, and XFCE desktops. [PASSED]
-5. `./PhotoGIMP/install.sh --help` outputs the new usage information with exit code 0. [PASSED]
-6. `./PhotoGIMP/install.sh --batch` continues to function cleanly with exit code 0. [PASSED]
-7. `python3 PhotoGIMP/scripts/verify_config.py` passes with exit code 0. [PASSED]
+1. `python3 PhotoGIMP/scripts/verify_config.py` passes with all 5 sections cleanly (Syntax, Shortcuts, Workspace, Desktop Launcher, Tool Options). [PASSED]
+2. `./PhotoGIMP/install.sh --batch` runs cleanly and deploys all configuration, desktop launcher, and icon files. [PASSED]
+3. Headless GIMP execution (`gimp --no-interface ...`) successfully boots and executes batch commands against the live configuration without parser errors. [PASSED]
+4. `IMPLEMENTATION_PLAN.md` status is updated to `COMPLETED`. [PASSED]
+5. `.ralph/RUN_STATE.json` status is updated to `completed`. [PASSED]
+6. Final changes are committed to Git. [PASSED]
 
 Verification evidence:
-- `./PhotoGIMP/install.sh --help` displays usage `Usage: ./PhotoGIMP/install.sh [--batch|-y|--yes] [--native|--flatpak|--all]` with code 0.
-- `./PhotoGIMP/install.sh --batch` executed cleanly, creating isolated backup `~/.config/GIMP/GIMP-backup-*-native` and deploying configuration with code 0.
-- `docs/SMOKE_TESTING.md` created with desktop integration, workspace layout, shortcuts, and rollback instructions.
-- `python3 PhotoGIMP/scripts/verify_config.py` verified with code 0.
+- `python3 PhotoGIMP/scripts/verify_config.py` exited with code 0 (all 5 audit sections passing).
+- `./PhotoGIMP/install.sh --batch` deployed cleanly with code 0.
+- `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP clean launch verified!\n"))' --quit` verified 100% clean boot with 0 parse errors and exit code 0.
 
-Rollback/checkpoint: PhotoGIMP sub-repo commit 35a9612.
+Rollback/checkpoint: PhotoGIMP sub-repo commit e15ea82.

@@ -102,6 +102,23 @@ This is a concise handoff log, not a transcript of every shell command.
   - `./PhotoGIMP/install.sh --help`: Exited with code 0 displaying updated usage options (`--native`, `--flatpak`, `--all`).
   - `./PhotoGIMP/install.sh --batch`: Exited with code 0 deploying configuration with isolated backup name `GIMP-backup-*-native`.
   - `python3 PhotoGIMP/scripts/verify_config.py`: Exited with code 0.
-- **Commit**: PhotoGIMP sub-repo `35a9612`.
+- **Commit**: Outer repo `ffe10f4` / PhotoGIMP sub-repo `35a9612`.
 - **Result**: Success.
-- **Learnings**: All planned implementation phases in IMPLEMENTATION_PLAN.md are now complete and fully verified.
+
+## Iteration 7 — Final Verification Quality Gate & Architecture Decisions Checkpoint
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.7 Flash (High)
+- **Task**: Execute final verification quality gate across all validators, eliminate GIMP 3.x startup parser warnings, and finalize project state.
+- **Why this task**: End-to-end verification gate identified that `(single-window-mode yes)` in `gimprc` is deprecated in GIMP 3.x and caused a fatal parser warning on startup; resolved by relying on GIMP 3.x `sessionrc` `gimp-single-image-window` structure and recorded architectural decisions D-001 and D-002.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/gimprc`: Removed obsolete `single-window-mode` token.
+  - `PhotoGIMP/scripts/verify_config.py`: Updated Section 3 workspace check to assert GIMP 3.x `sessionrc` single-window configuration and clean `gimprc`.
+  - `.ralph/DECISIONS.md`: Recorded D-001 (Portable theme styling) and D-002 (GIMP 3.x single-window configuration).
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked overall status as COMPLETED.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exited with code 0 (all 5 audit sections passed).
+  - `./PhotoGIMP/install.sh --batch`: Exited with code 0.
+  - Headless smoke test: `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP clean launch verified!\n"))' --quit`: Exited with code 0, 100% clean boot without configuration parse errors.
+- **Commit**: PhotoGIMP sub-repo `e15ea82`.
+- **Result**: Success — Implementation plan completed.

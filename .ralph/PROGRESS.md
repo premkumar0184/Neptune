@@ -21,4 +21,16 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: `feat(installer): add batch mode and GIMP 3.2+ config target support`
 - **Result**: Success.
 - **Learnings**: Native GIMP 3.2 configuration directory is correctly resolved via GIMP script-fu `gimp-directory` check.
-- **Next**: Audit `shortcutsrc` and keybindings for GIMP 3.2 menu action compatibility.
+
+## Iteration 2 — Configuration Validator & Keybinding Alignment
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.6 Flash (High)
+- **Task**: Create automated configuration validator `PhotoGIMP/scripts/verify_config.py` and audit/activate core Photoshop keybindings in `PhotoGIMP/.config/GIMP/3.0/shortcutsrc`.
+- **Why this task**: Provide automated syntax/shortcut verification for GIMP config files and fix inactive Photoshop shortcuts (`select-all` `Ctrl+A`, `select-invert` `Ctrl+Shift+I`, `edit-undo` `Ctrl+Z`, `edit-redo` `Ctrl+Shift+Z`, `tools-levels` `Ctrl+L`, `tools-curves` `Ctrl+M`, `tools-hue-saturation` `Ctrl+U`).
+- **Changed**: `PhotoGIMP/scripts/verify_config.py`, `PhotoGIMP/.config/GIMP/3.0/shortcutsrc`
+- **Verification**: Executed `python3 PhotoGIMP/scripts/verify_config.py` (Exit Code 0) and `./PhotoGIMP/install.sh --batch` (Exit Code 0).
+- **Commit**: `feat(shortcuts): add config validator script and activate core photoshop keybindings`
+- **Result**: Success.
+- **Learnings**: `verify_config.py` successfully catches parenthesis syntax errors and inactive keybindings in `shortcutsrc`.
+- **Next**: Inspect and refine `sessionrc` dockable layout for GIMP 3.2 single-window workspace.

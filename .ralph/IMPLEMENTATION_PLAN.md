@@ -2,7 +2,7 @@
 
 Status: IN_PROGRESS
 
-This file is the authoritative list of project work for transforming GIMP/PhotoGIMP into a polished Linux photo editor.
+This file is the authoritative list of project work for transforming GIMP/PhotoGIMP into a seamless Photoshop-like editing experience.
 
 ## Product objective
 
@@ -28,9 +28,9 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ---
 
 ## Phase 2 — Photoshop Keybinding Audit & Alignment
-- [ ] Audit `PhotoGIMP/.config/GIMP/3.0/shortcutsrc` for action path compatibility with GIMP 3.2 action names.
-- [ ] Map missing Photoshop shortcuts (e.g. Deselect `Ctrl+D`, Select All `Ctrl+A`, Invert Selection `Ctrl+Shift+I`, Layer via Copy `Ctrl+J`, Free Transform `Ctrl+T`, Levels `Ctrl+L`, Curves `Ctrl+M`, Hue/Saturation `Ctrl+U`).
-- [ ] Create automated syntax validator for `shortcutsrc` to prevent broken keybindings.
+- [x] Audit `PhotoGIMP/.config/GIMP/3.0/shortcutsrc` for action path compatibility with GIMP 3.2 action names.
+- [x] Map and activate missing Photoshop shortcuts (Select All `Ctrl+A`, Select Invert `Ctrl+Shift+I`, Deselect `Ctrl+D`, Layer Duplicate `Ctrl+J`, Free Transform `Ctrl+T`, Undo `Ctrl+Z`, Redo `Ctrl+Shift+Z`, Levels `Ctrl+L`, Curves `Ctrl+M`, Hue/Saturation `Ctrl+U`).
+- [x] Create automated syntax and shortcut validator `PhotoGIMP/scripts/verify_config.py` to prevent broken keybindings.
 
 ---
 
@@ -48,7 +48,7 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ---
 
 ## Phase 5 — Verification & Automated Quality Gate
-- [ ] Build automated verification script (`scripts/verify_photogimp.py` or `.ralph/verify.sh`) to check configuration syntax and file structure.
+- [x] Build automated configuration verification script (`PhotoGIMP/scripts/verify_config.py`).
 - [ ] Run headless GIMP validation (`gimp --no-interface --batch ...`) with the installed PhotoGIMP configuration.
 - [ ] Document manual smoke testing steps for Linux desktop DEs (GNOME/KDE/XFCE).
 

@@ -2,18 +2,21 @@
 
 Status: COMPLETED
 
-Task: Upgrade PhotoGIMP/install.sh for GIMP 3.2+ support and non-interactive batch installation mode.
-Why: The host system runs GIMP 3.2.6 (config dir ~/.config/GIMP/3.2). The current installer fails in non-interactive environments when multiple GIMP runtimes are detected and lacks explicit flag handling for automated deployment and verification.
-Affected areas: PhotoGIMP/install.sh
+Task: Create automated configuration validator PhotoGIMP/scripts/verify_config.py and audit/uncomment essential Photoshop keybindings in PhotoGIMP/.config/GIMP/3.0/shortcutsrc.
+Why: Currently no automated validator exists for PhotoGIMP configuration syntax, and several core Photoshop shortcuts (such as select-all <Primary>a, select-invert <Primary><Shift>i) in shortcutsrc were commented out or missing active mappings.
+Affected areas:
+- PhotoGIMP/scripts/verify_config.py
+- PhotoGIMP/.config/GIMP/3.0/shortcutsrc
+
 Acceptance criteria:
-1. `PhotoGIMP/install.sh` parses `--batch` or `-y` / `--yes` command-line flags for non-interactive execution. [PASSED]
-2. Installer detects GIMP 3.2+ (and any GIMP 3.x) native installations correctly. [PASSED]
-3. Config files from `PhotoGIMP/.config/GIMP/3.0` are installed to the active GIMP config directory (`~/.config/GIMP/3.2/` or detected dir). [PASSED]
-4. Automated backup of existing config is created prior to installation. [PASSED]
-5. Running `PhotoGIMP/install.sh --batch` succeeds with exit code 0. [PASSED]
+1. `PhotoGIMP/scripts/verify_config.py` parses and validates S-expression syntax of GIMP config files (`shortcutsrc`, `gimprc`, `sessionrc`, `toolrc`, `contextrc`). [PASSED]
+2. `verify_config.py` checks active presence of core Photoshop shortcuts (`select-all`, `select-none`, `select-invert`, `layers-duplicate`, `tools-unified-transform`, `edit-undo`, `edit-redo`, `edit-fill-fg`, `edit-fill-bg`, `tools-levels`, `tools-curves`, `tools-hue-saturation`). [PASSED]
+3. Essential Photoshop shortcuts in `PhotoGIMP/.config/GIMP/3.0/shortcutsrc` are active and syntax-valid. [PASSED]
+4. `python3 PhotoGIMP/scripts/verify_config.py` passes with exit code 0. [PASSED]
+5. Re-running `./PhotoGIMP/install.sh --batch` deploys verified config cleanly. [PASSED]
 
 Verification commands:
-- `./PhotoGIMP/install.sh --batch` [EXECTUTED - Exit code 0]
-- Test checking installed files in `~/.config/GIMP/3.2/` (`gimprc`, `sessionrc`, `shortcutsrc`, `toolrc`, `theme.css`). [VERIFIED]
+- `python3 PhotoGIMP/scripts/verify_config.py` [EXECUTED - Exit code 0]
+- `./PhotoGIMP/install.sh --batch` [EXECUTED - Exit code 0]
 
 Rollback/checkpoint: Git commit on master.

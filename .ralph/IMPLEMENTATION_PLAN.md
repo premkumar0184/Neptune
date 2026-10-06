@@ -60,8 +60,16 @@ This file is the authoritative roadmap of product-development work to transform 
 ## Next Product Development Phases (Photoshop Creative Tools)
 
 ### Phase 12 — Non-Destructive Vignette & Lens Lighting Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `vignette-lighting` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`.
-- [ ] Support non-destructive radial exposure falloff (dark vignette or highlight vignette) with configurable radius, softness, and blend mode.
-- [ ] Register under menu path `<Image>/Filters/Light and Shadow/Vignette Lighting...` and `<Image>/Layer/New Vignette Layer...`.
-- [ ] Validate non-destructive layer creation and radial luminance falloff via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `vignette-lighting` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`.
+- [x] Support non-destructive radial exposure falloff (dark vignette or highlight vignette) with configurable radius, softness, and blend mode.
+- [x] Register under menu path `<Image>/Filters/Light and Shadow/Vignette Lighting...` and `<Image>/Layer/New Vignette Layer...`.
+- [x] Validate non-destructive layer creation and radial luminance falloff via headless GIMP test (center diff 0.000000, edge darkening -0.190, edge brightening +0.292).
+
+### Phase 13 — Depth of Field & Background Defocus Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `depth-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`.
+- [ ] Duplicate active drawable into a non-destructive blur layer with configurable Gaussian / lens blur radius.
+- [ ] Attach an interactive radial / elliptical depth gradient mask preserving subject sharpness in the center while defocusing backgrounds.
+- [ ] Register under menu path `<Image>/Filters/Blur/Depth Defocus...` and `<Image>/Filters/Blur/Background Blur...`.
+- [ ] Validate non-destructive layer creation, center subject edge sharpness preservation, and background blur via headless GIMP test.
+
 

@@ -268,3 +268,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 12 — Non-Destructive Vignette & Lens Lighting Helper Plugin.
 
+## Iteration 14 — Non-Destructive Vignette & Lens Lighting Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Vignette & Lens Lighting Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`.
+- **Why this task**: Solves Photoshop workflow requirement (`Topics.txt` lines 106 & 661 and `photoshop_docs.md` Section 271: "Darken the edges of your image to bring focus to its center"). Replaces destructive stock GIMP vignette filtering with a professional non-destructive adjustment overlay layer where the center of the image remains 100% untouched (0.000000 mathematical difference) while edges experience smooth radial exposure falloff.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-vignette-lighting` with interactive tone selection (Dark Vignette shadow falloff vs Light Vignette highlight), blend modes (Soft Light, Overlay, Multiply), radius, softness, opacity, and reveal-all layer mask attachment.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `vignette-lighting`.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 7 (asserting PDB registration, layer modes, reveal-all mask, 0.000000 center identity neutrality, -0.190 edge shadow falloff, and +0.292 highlight vignette brightening).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Non-Destructive Vignette & Lens Lighting Helper as IMPLEMENTED_VERIFIED.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Checked off Phase 12 and defined Phase 13 (Depth of Field & Background Defocus).
+- **Technical discoveries**:
+  - In GEGL `gegl:vignette`, the `shape` property expects a string (`gchararray`, e.g. `"circle"`), not an integer.
+  - Using `#808080` (sRGB 128/255 perceptual midpoint) as the base fill under Soft Light and Overlay modes ensures exact mathematical 0.000000 identity compositing at the image center, eliminating unwanted center dimming or brightening.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 6 plugins verified).
+    - Stage 2: `install.sh --batch` passed (6 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 37 tests across 7 test suites in 2.78s.
+    - Final quality gate: SUCCESS across all stages in 18.84s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `094cc3a`.
+- **Result**: Success.
+- **Next**: Phase 13 — Depth of Field & Background Defocus Helper Plugin.
+
+

@@ -70,6 +70,7 @@ def test_pdb_registration():
         ("python-fu-high-pass-sharpen", "High Pass Sharpen"),
         ("python-fu-quick-export", "Quick Export Dialog"),
         ("python-fu-quick-export-png", "Quick Export as PNG"),
+        ("python-fu-vignette-lighting", "Vignette Lighting Layer"),
     ]
 
     for proc_name, label in required_procs:
@@ -516,6 +517,108 @@ def test_quick_export():
 
 
 # ==============================================================================
+# TEST 7: Non-Destructive Vignette & Lens Lighting Helper (Phase 12)
+# ==============================================================================
+def test_vignette_lighting():
+    print("\n--- Test Suite 7: Non-Destructive Vignette & Lens Lighting Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-vignette-lighting")
+    if proc is None:
+        record_fail("VL-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with photo tone
+        base = Gimp.Layer.new(image, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.6, 0.45, 0.35)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_center = base.get_pixel(100, 100).get_rgba()
+        p_base_edge = base.get_pixel(10, 10).get_rgba()
+
+        # 7a: Dark Vignette in Soft Light Mode (Default)
+        cfg_dark = proc.create_config()
+        cfg_dark.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dark.set_property("image", image)
+        cfg_dark.set_property("tone", "dark")
+        cfg_dark.set_property("mode", "softlight")
+        cfg_dark.set_property("radius", 1.2)
+        cfg_dark.set_property("softness", 0.7)
+        cfg_dark.set_property("opacity", 80.0)
+        cfg_dark.set_property("add-mask", True)
+
+        res = proc.run(cfg_dark)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("VL-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("VL-01", "Execution status", "SUCCESS")
+
+        vig_layer = image.get_layers()[0]
+        if vig_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("VL-02", "Layer mode", f"Expected SOFTLIGHT, got {vig_layer.get_mode()}")
+            return
+        record_pass("VL-02", "Layer mode & name", f"{vig_layer.get_name()} (SOFTLIGHT, {vig_layer.get_opacity():.1f}%)")
+
+        # Verify reveal-all layer mask attachment
+        mask = vig_layer.get_mask()
+        if mask is None:
+            record_fail("VL-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("VL-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 7b: Mathematical center neutrality (center must be untouched)
+        p_comp_center = get_composite_pixel(image, 100, 100)
+        center_diff = max(abs(p_comp_center[i] - p_base_center[i]) for i in range(3))
+        if center_diff > 0.000001:
+            record_fail("VL-04", "Center neutrality", f"Center altered by {center_diff:.6f} > 0")
+            return
+        record_pass("VL-04", "Center mathematical neutrality", f"Identity diff = {center_diff:.6f}")
+
+        # 7c: Edge darkening falloff
+        p_comp_edge = get_composite_pixel(image, 10, 10)
+        edge_darkening = p_base_edge[0] - p_comp_edge[0]
+        if edge_darkening < 0.10:
+            record_fail("VL-05", "Edge darkening", f"Edge falloff {edge_darkening:.4f} < 0.10")
+            return
+        record_pass("VL-05", "Edge radial shadow falloff", f"Base {p_base_edge[0]:.3f} -> Darkened {p_comp_edge[0]:.3f} (delta -{edge_darkening:.3f})")
+
+        # 7d: Highlight Vignette Mode Test
+        image_hl = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+        base_hl = Gimp.Layer.new(image_hl, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image_hl.insert_layer(base_hl, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.4, 0.4, 0.4)"))
+        base_hl.edit_fill(Gimp.FillType.FOREGROUND)
+        p_hl_edge = base_hl.get_pixel(10, 10).get_rgba()
+
+        cfg_hl = proc.create_config()
+        cfg_hl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_hl.set_property("image", image_hl)
+        cfg_hl.set_property("tone", "light")
+        cfg_hl.set_property("mode", "softlight")
+        cfg_hl.set_property("radius", 1.2)
+        cfg_hl.set_property("softness", 0.7)
+        cfg_hl.set_property("opacity", 80.0)
+        cfg_hl.set_property("add-mask", False)
+
+        proc.run(cfg_hl)
+        p_comp_hl_edge = get_composite_pixel(image_hl, 10, 10)
+        edge_brightening = p_comp_hl_edge[0] - p_hl_edge[0]
+        if edge_brightening < 0.10:
+            record_fail("VL-06", "Highlight vignette", f"Edge brightening {edge_brightening:.4f} < 0.10")
+            image_hl.delete()
+            return
+        record_pass("VL-06", "Highlight vignette edge brightening", f"Base {p_hl_edge[0]:.3f} -> Brightened {p_comp_hl_edge[0]:.3f} (delta +{edge_brightening:.3f})")
+        image_hl.delete()
+
+    except Exception as e:
+        record_fail("VL-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -531,6 +634,8 @@ def run_all_tests():
     test_dodge_burn_layer()
     test_high_pass_sharpen()
     test_quick_export()
+    test_vignette_lighting()
+
 
     elapsed = time.time() - start_time
 

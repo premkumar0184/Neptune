@@ -102,6 +102,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Vignette & Lens Lighting Helper
+- **Source topic**: Retouch and correct - Vignette / Darken edges to focus center (`Topics.txt` lines 106 & 661, `photoshop_docs.md` Section 271)
+- **Photoshop behavior**: Dedicated non-destructive vignette / lens lighting effect darkening (or lightening) outer periphery while maintaining 100% untouched subject exposure at the center.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-vignette-lighting` in `<Image>/Filters/Light and Shadow/Vignette Lighting...` and `<Image>/Layer/New Vignette Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/vignette-lighting/vignette-lighting.py`.
+- **Current capability**: Dedicated non-destructive overlay layer with Dark Vignette (shadow falloff) and Light Vignette (highlight / high-key) tone options, Soft Light / Overlay / Multiply blend modes, configurable radius, softness, opacity, and reveal-all layer mask attachment. Uses `#808080` (sRGB 128/255 perceptual midpoint) base fill ensuring mathematical 0.000000 center identity neutrality.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:vignette`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 12).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, reveal-all mask, 0.000000 center identity neutrality, -0.190 edge shadow falloff, and +0.292 highlight vignette brightening.
+- **Verification evidence** (Iteration 14):
+  1. `verify_config.py`: Section 6 passed with 6 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Center identity difference is 0.000000, edge radial shadow falloff delta is -0.190, highlight vignette edge brightening delta is +0.292. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 14).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

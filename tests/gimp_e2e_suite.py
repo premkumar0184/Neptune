@@ -71,6 +71,7 @@ def test_pdb_registration():
         ("python-fu-quick-export", "Quick Export Dialog"),
         ("python-fu-quick-export-png", "Quick Export as PNG"),
         ("python-fu-vignette-lighting", "Vignette Lighting Layer"),
+        ("python-fu-depth-blur", "Depth Defocus / Background Blur"),
     ]
 
     for proc_name, label in required_procs:
@@ -619,6 +620,126 @@ def test_vignette_lighting():
 
 
 # ==============================================================================
+# TEST 8: Depth of Field & Background Defocus Helper (Phase 13)
+# ==============================================================================
+def test_depth_blur():
+    print("\n--- Test Suite 8: Depth of Field & Background Defocus Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-depth-blur")
+    if proc is None:
+        record_fail("DF-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with gray background and white test spots at center and corner
+        base = Gimp.Layer.new(image, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Draw distinct white features at center (100, 100) and corner (10, 10)
+        Gimp.context_set_foreground(Gegl.Color.new("white"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 95, 95, 10, 10)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 5, 5, 10, 10)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_center = base.get_pixel(100, 100).get_rgba()
+        p_base_corner = base.get_pixel(10, 10).get_rgba()
+
+        # 8a: Lens Blur Mode with Radial Depth Mask
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", image)
+        cfg.set_property("blur-type", "lens")
+        cfg.set_property("blur-radius", 15.0)
+        cfg.set_property("highlight-factor", 0.2)
+        cfg.set_property("depth-source", "radial")
+        cfg.set_property("focal-radius", 0.8)
+        cfg.set_property("focal-softness", 0.6)
+        cfg.set_property("opacity", 100.0)
+
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("DF-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("DF-01", "Execution status", "SUCCESS")
+
+        blur_layer = image.get_layers()[0]
+        if blur_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("DF-02", "Layer mode", f"Expected NORMAL, got {blur_layer.get_mode()}")
+            return
+        record_pass("DF-02", "Layer mode & name", f"{blur_layer.get_name()} ({blur_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = blur_layer.get_mask()
+        if mask is None:
+            record_fail("DF-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("DF-03", "Depth mask attachment", "Attached radial depth gradient mask")
+
+        # 8b: Subject sharpness preservation at center (diff == 0.000000)
+        p_comp_center = get_composite_pixel(image, 100, 100)
+        center_diff = max(abs(p_comp_center[i] - p_base_center[i]) for i in range(3))
+        if center_diff > 0.000001:
+            record_fail("DF-04", "Subject sharpness", f"Center altered by {center_diff:.6f} > 0")
+            return
+        record_pass("DF-04", "Subject sharpness invariance", f"Center diff = {center_diff:.6f} (100% sharp)")
+
+        # 8c: Corner background defocus attenuation
+        p_comp_corner = get_composite_pixel(image, 10, 10)
+        corner_defocus = abs(p_comp_corner[0] - p_base_corner[0])
+        if corner_defocus < 0.15:
+            record_fail("DF-05", "Background defocus", f"Corner defocus {corner_defocus:.4f} < 0.15")
+            return
+        record_pass("DF-05", "Background defocus attenuation", f"Corner base {p_base_corner[0]:.3f} -> Defocused {p_comp_corner[0]:.3f} (delta {corner_defocus:.3f})")
+
+        # 8d: Gaussian Blur & Selection Mode Test
+        image_sel = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+        base_sel = Gimp.Layer.new(image_sel, "Base", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image_sel.insert_layer(base_sel, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base_sel.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Create active selection around center subject
+        image_sel.select_rectangle(Gimp.ChannelOps.REPLACE, 80, 80, 40, 40)
+
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image_sel)
+        cfg_sel.set_property("blur-type", "gaussian")
+        cfg_sel.set_property("blur-radius", 10.0)
+        cfg_sel.set_property("depth-source", "selection")
+        cfg_sel.set_property("opacity", 90.0)
+
+        proc.run(cfg_sel)
+        blur_sel_layer = image_sel.get_layers()[0]
+        sel_mask = blur_sel_layer.get_mask()
+        if sel_mask is None:
+            record_fail("DF-06", "Selection mask mode", "Expected mask attached for selection mode")
+            image_sel.delete()
+            return
+
+        # Center inside selection must have mask = black (0.0), edge outside selection must have mask = white (1.0)
+        mask_center = sel_mask.get_pixel(100, 100).get_rgba()[0]
+        mask_edge = sel_mask.get_pixel(10, 10).get_rgba()[0]
+        if mask_center > 0.01 or mask_edge < 0.99:
+            record_fail("DF-06", "Selection mask inversion", f"Expected center 0.0 and edge 1.0, got center {mask_center:.3f}, edge {mask_edge:.3f}")
+            image_sel.delete()
+            return
+        record_pass("DF-06", "Selection depth mask isolation", f"Subject mask={mask_center:.1f} (in-focus), Background mask={mask_edge:.1f} (blurred)")
+        image_sel.delete()
+
+    except Exception as e:
+        record_fail("DF-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -635,6 +756,7 @@ def run_all_tests():
     test_high_pass_sharpen()
     test_quick_export()
     test_vignette_lighting()
+    test_depth_blur()
 
 
     elapsed = time.time() - start_time

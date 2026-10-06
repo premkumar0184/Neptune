@@ -293,4 +293,31 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 13 — Depth of Field & Background Defocus Helper Plugin.
 
+## Iteration 15 — Depth of Field & Background Defocus Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Depth of Field & Background Defocus Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 461 & 659 and `photoshop_docs.md` Section 425: "Create depth of field with lens blur" and "Blur image backgrounds"). Replaces stock destructive blur with a non-destructive depth defocus layer that simulates camera lens bokeh and specular highlights while preserving 100% subject sharpness (0.000000 mathematical difference) via automatic focal depth masking.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-depth-blur` supporting Optical Lens Blur (`gegl:lens-blur` with specular highlights) and Gaussian Blur (`gegl:gaussian-blur`), configurable blur radius, depth mask modes (`radial`, `selection`, `full`), in-focus subject radius, transition feather, and attached layer mask.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `depth-blur`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 8 (asserting PDB registration, non-destructive layer duplication, depth mask attachment, center subject sharpness invariance with 0.000000 diff, corner background defocus attenuation delta 0.356, and active selection depth isolation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Depth of Field & Background Defocus Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 13 complete and scheduled Phase 14 (Shadows & Highlights Recovery).
+- **Technical discoveries**:
+  - In GIMP 3 PyGObject, applying `gegl:vignette` to a black layer mask with `color=white` creates an exact radial focal protection mask where the center is 0.0 (blur hidden, subject 100% sharp) and outer edges transition to 1.0 (blur fully visible).
+  - `gegl:lens-blur` natively exposes `highlight-factor`, allowing 1:1 simulation of Photoshop's Lens Blur Specular Highlights feature.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 7 plugins verified).
+    - Stage 2: `install.sh --batch` passed (7 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 44 tests across 8 test suites in 3.04s.
+    - Final quality gate: SUCCESS across all stages in 12.87s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `05c169d`.
+- **Result**: Success.
+- **Next**: Phase 14 — Non-Destructive Shadows & Highlights Recovery Helper Plugin.
+
+
 

@@ -119,6 +119,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Depth of Field & Background Defocus Helper
+- **Source topic**: Blur and sharpen filters - Create depth of field with lens blur (`Topics.txt` lines 461 & 659, `photoshop_docs.md` Section 425)
+- **Photoshop behavior**: Optical lens blur with depth map / gradient protection isolating the sharp subject from blurred background, simulating camera lens aperture bokeh and specular highlights.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-depth-blur` in `<Image>/Filters/Blur/Depth Defocus (Lens Blur)...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`.
+- **Current capability**: Creates an isolated, non-destructive blur layer duplicating the active drawable. Supports Optical Lens Blur (`gegl:lens-blur` with specular bokeh highlights) and Gaussian Blur (`gegl:gaussian-blur`). Automatically generates a depth protection mask (radial falloff, active selection, or full reveal) ensuring the in-focus subject remains mathematically 100% sharp (0.000000 difference) while smoothly defocusing background elements, with editable mask for manual brush refinement.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:lens-blur`, `gegl:gaussian-blur`, `gegl:vignette`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 13).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, center subject sharpness invariance (0.000000 diff), background defocus attenuation (delta > 0.15), and active selection depth isolation.
+- **Verification evidence** (Iteration 15):
+  1. `verify_config.py`: Section 6 passed with 7 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Center identity difference is 0.000000 (100% sharp), corner background defocus delta is 0.356, selection mode mask successfully isolated subject (0.0) from background (1.0). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 15).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

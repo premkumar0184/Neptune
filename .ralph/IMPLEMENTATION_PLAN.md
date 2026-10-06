@@ -66,10 +66,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate non-destructive layer creation and radial luminance falloff via headless GIMP test (center diff 0.000000, edge darkening -0.190, edge brightening +0.292).
 
 ### Phase 13 — Depth of Field & Background Defocus Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `depth-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`.
-- [ ] Duplicate active drawable into a non-destructive blur layer with configurable Gaussian / lens blur radius.
-- [ ] Attach an interactive radial / elliptical depth gradient mask preserving subject sharpness in the center while defocusing backgrounds.
-- [ ] Register under menu path `<Image>/Filters/Blur/Depth Defocus...` and `<Image>/Filters/Blur/Background Blur...`.
-- [ ] Validate non-destructive layer creation, center subject edge sharpness preservation, and background blur via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `depth-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/depth-blur/depth-blur.py`.
+- [x] Duplicate active drawable into a non-destructive blur layer with configurable Gaussian / lens blur radius.
+- [x] Attach an interactive radial / elliptical depth gradient mask preserving subject sharpness in the center while defocusing backgrounds.
+- [x] Register under menu path `<Image>/Filters/Blur/Depth Defocus (Lens Blur)...`.
+- [x] Validate non-destructive layer creation, center subject edge sharpness preservation, and background blur via headless GIMP test (center diff 0.000000, corner defocus delta 0.356).
+
+### Phase 14 — Non-Destructive Shadows & Highlights Recovery Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `shadow-highlight` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/shadow-highlight/shadow-highlight.py`.
+- [ ] Duplicate active drawable into a non-destructive tone recovery layer with configurable shadow recovery and highlight compression.
+- [ ] Utilize GEGL `gegl:shadows-highlights` with tone radius and adjustment sliders for local dynamic range recovery.
+- [ ] Register under menu path `<Image>/Colors/Shadows and Highlights...` and `<Image>/Filters/Retouching/Shadows and Highlights...`.
+- [ ] Validate tonal recovery, preservation of midtone contrast, and shadow detail expansion via headless GIMP test.
+
 
 

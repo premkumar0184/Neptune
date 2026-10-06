@@ -2,27 +2,29 @@
 
 Status: COMPLETED
 
-Task: Execute final verification quality gate across all configuration validators and headless smoke tests, and finalize project implementation state.
-Why: All phases in IMPLEMENTATION_PLAN.md (0 through 5) have been implemented and individually verified. A final comprehensive end-to-end verification gate validates the complete solution before marking the plan COMPLETED.
+Task: Implement native GIMP 3.x Python 3 Frequency Separation retouching plugin in PhotoGIMP/.config/GIMP/3.0/plug-ins/frequency-separation/frequency-separation.py.
+Why: Frequency Separation is a cornerstone professional Photoshop retouching technique from photoshop_docs.md. GIMP has no built-in automated Frequency Separation tool. Implementing a native GIMP 3.x GObject-Introspection plugin provides one-click non-destructive frequency separation into Low Frequency (tones/colors) and High Frequency (texture/pores) layers.
 Affected areas:
-- PhotoGIMP/.config/GIMP/3.0/gimprc
+- PhotoGIMP/.config/GIMP/3.0/plug-ins/frequency-separation/frequency-separation.py
 - PhotoGIMP/scripts/verify_config.py
 - .ralph/IMPLEMENTATION_PLAN.md
-- .ralph/DECISIONS.md
+- .ralph/PHOTOSHOP_FEATURE_MATRIX.md
 - .ralph/PROGRESS.md
 - .ralph/RUN_STATE.json
 
 Acceptance criteria:
-1. `python3 PhotoGIMP/scripts/verify_config.py` passes with all 5 sections cleanly (Syntax, Shortcuts, Workspace, Desktop Launcher, Tool Options). [PASSED]
-2. `./PhotoGIMP/install.sh --batch` runs cleanly and deploys all configuration, desktop launcher, and icon files. [PASSED]
-3. Headless GIMP execution (`gimp --no-interface ...`) successfully boots and executes batch commands against the live configuration without parser errors. [PASSED]
-4. `IMPLEMENTATION_PLAN.md` status is updated to `COMPLETED`. [PASSED]
-5. `.ralph/RUN_STATE.json` status is updated to `completed`. [PASSED]
-6. Final changes are committed to Git. [PASSED]
+1. `frequency-separation.py` is a valid Python 3 GIMP plugin using `gi.repository.Gimp` (API version 3.0) and `gi.repository.Gegl`. [PASSED]
+2. The plugin registers under menu path `<Image>/Filters/Retouching` as `Frequency Separation...`. [PASSED]
+3. Running the procedure on an image creates a `Frequency Separation` layer group containing:
+   - `Low Frequency (Color & Tone)` layer with Gaussian blur applied.
+   - `High Frequency (Texture)` layer with high-frequency texture and Grain Merge / Linear Light blending. [PASSED]
+4. Plugin is executable (`chmod +x`) and passes syntax check with `python3 -m py_compile`. [PASSED]
+5. Automated headless GIMP test runs the procedure on a generated test image and verifies successful layer creation without errors. [PASSED]
+6. `install.sh` deploys the plugin to `~/.config/GIMP/3.2/plug-ins/` with execute permissions. [PASSED]
 
 Verification evidence:
-- `python3 PhotoGIMP/scripts/verify_config.py` exited with code 0 (all 5 audit sections passing).
-- `./PhotoGIMP/install.sh --batch` deployed cleanly with code 0.
-- `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP clean launch verified!\n"))' --quit` verified 100% clean boot with 0 parse errors and exit code 0.
+- `python3 PhotoGIMP/scripts/verify_config.py` passed with all 6 sections clean (code 0).
+- `./PhotoGIMP/install.sh --batch` deployed plugin to `~/.config/GIMP/3.2/plug-ins/frequency-separation/frequency-separation.py`.
+- Headless execution via Script-Fu and GIMP PDB created layer group `Frequency Separation (Portrait)` containing `[High Frequency (Texture)]` and `[Low Frequency (Color & Tone)]` with exit code 0.
 
-Rollback/checkpoint: PhotoGIMP sub-repo commit e15ea82.
+Rollback/checkpoint: PhotoGIMP sub-repo commit 307b1c8.

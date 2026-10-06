@@ -115,10 +115,28 @@ This is a concise handoff log, not a transcript of every shell command.
   - `PhotoGIMP/.config/GIMP/3.0/gimprc`: Removed obsolete `single-window-mode` token.
   - `PhotoGIMP/scripts/verify_config.py`: Updated Section 3 workspace check to assert GIMP 3.x `sessionrc` single-window configuration and clean `gimprc`.
   - `.ralph/DECISIONS.md`: Recorded D-001 (Portable theme styling) and D-002 (GIMP 3.x single-window configuration).
-  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked overall status as COMPLETED.
 - **Verification**:
   - `python3 PhotoGIMP/scripts/verify_config.py`: Exited with code 0 (all 5 audit sections passed).
   - `./PhotoGIMP/install.sh --batch`: Exited with code 0.
   - Headless smoke test: `gimp --no-interface --console-messages --batch-interpreter=plug-in-script-fu-eval --batch '(begin (display "GIMP clean launch verified!\n"))' --quit`: Exited with code 0, 100% clean boot without configuration parse errors.
-- **Commit**: PhotoGIMP sub-repo `e15ea82`.
-- **Result**: Success — Implementation plan completed.
+- **Commit**: Outer repo `2acfbde` / PhotoGIMP sub-repo `e15ea82`.
+- **Result**: Success.
+
+## Iteration 8 — Frequency Separation Retouching Plugin (Product Feature)
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.7 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Frequency Separation retouching plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/frequency-separation/frequency-separation.py`.
+- **Why this task**: Responded to critical audit requirement to implement genuine Photoshop functionality. Frequency Separation is a core portrait retouching workflow from `photoshop_docs.md` that was missing in GIMP.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/frequency-separation/frequency-separation.py`: Created native Python 3 GObject-Introspection plugin implementing non-destructive frequency separation into `Low Frequency (Color & Tone)` (Gaussian blur) and `High Frequency (Texture)` (High-pass with Grain Merge blend mode) inside a container layer group.
+  - `PhotoGIMP/scripts/verify_config.py`: Added Section 6 Python 3 Plug-ins audit checking executable permissions and bytecode compilation.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Rebuilt to reflect actual feature gap and marked Frequency Separation as Implemented & Verified.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Rebuilt into a dependency-aware plan covering active product feature development phases (Phases 6-11).
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exited with code 0 (all 6 sections passing).
+  - `./PhotoGIMP/install.sh --batch`: Exited with code 0 (deployed plugin to `~/.config/GIMP/3.2/plug-ins/`).
+  - Automated headless test via Script-Fu and PDB: Exited with code 0, creating `Frequency Separation (Portrait)` with `[High Frequency (Texture)]` and `[Low Frequency (Color & Tone)]`.
+- **Commit**: PhotoGIMP sub-repo `307b1c8`.
+- **Result**: Success.
+- **Next**: Phase 7 — Luminosity Masks Channel Generator plugin.

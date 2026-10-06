@@ -72,16 +72,19 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 ---
 
 ### Feature: Quick Export (Web & Social Formats)
-- **Source topic**: Save and export images - Export images in multiple formats
-- **Photoshop behavior**: Quick Export as PNG / JPEG / WebP with scaling presets (1x, 2x, 0.5x) and automatic metadata stripping.
-- **GIMP equivalent**: Standard File -> Export As dialog requiring manual format and parameter selection every time.
-- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick_export.py`.
-- **Current capability**: Standard GIMP file export dialogs.
-- **Gap**: Fast one-click export to PNG/JPEG with automatic naming in document directory.
-- **Dependencies**: Python 3 GIMP file export procedures (`gimp-file-save` / `file-png-save`).
+- **Source topic**: Save and export images - Export files to different formats / Export your work using the Quick Export as option
+- **Photoshop behavior**: Quick Export as PNG / JPEG with scaling presets (1x, 2x, 0.5x), automatic document directory output, and bypass of modal configuration dialogs.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `quick-export.py` registering `python-fu-quick-export` and `python-fu-quick-export-png` in `<Image>/File` and `<Image>/File/Export`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick-export.py`.
+- **Current capability**: One-click instant PNG export (`Quick Export as PNG`) and configurable export dialog (`Quick Export...`) supporting PNG/JPEG formats, 1x/0.5x/2x scaling presets, quality control, and document folder resolution.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gio`), PDB `file-png-export`, `file-jpeg-export`.
 - **Implementation priority**: Medium (Phase 10).
-- **Verification strategy**: Headless GIMP test exporting test canvas to PNG/JPEG and verifying output file validity.
-- **Status**: Planned.
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, valid file creation on disk, correct PNG/JPEG signatures, accurate image scaling dimensions (1x, 0.5x, 2x), and document layer integrity.
+- **Verification evidence** (Iteration 12):
+  1. `verify_config.py`: Section 6 passed with 5 active Python plugins.
+  2. Objective file and dimension behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: 1x PNG export (200x100), JPEG export (valid SOI header), 0.5x scaling (100x50), 2x scaling (400x200), and original canvas integrity confirmed untouched. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 12).
 
 ---
 

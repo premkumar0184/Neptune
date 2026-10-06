@@ -45,10 +45,10 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate sharpening layer generation, edge micro-contrast enhancement, and noise invariance via headless GIMP test.
 
 ### Phase 10 — Quick Export (Web & Social Presets)
-- [ ] Implement native GIMP 3.x Python 3 plugin `quick-export` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick_export.py`.
-- [ ] Fast one-click export to PNG / JPEG in document directory with automatic scaling (1x, 2x, 0.5x).
-- [ ] Register under menu path `<Image>/File/Quick Export as PNG...`.
-- [ ] Validate exported image files via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `quick-export` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick-export.py`.
+- [x] Fast one-click export to PNG / JPEG in document directory with automatic scaling (1x, 2x, 0.5x).
+- [x] Register under menu path `<Image>/File` and `<Image>/File/Export` (`Quick Export as PNG` and `Quick Export...`).
+- [x] Validate exported image files, scaling presets, and document integrity via headless GIMP test.
 
 ### Phase 11 — End-to-End Plugin Suite Quality Gate
 - [ ] Extend `PhotoGIMP/scripts/verify_config.py` with Section 6 Plugin Suite audit.

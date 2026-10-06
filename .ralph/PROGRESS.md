@@ -215,3 +215,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `5fb53db`.
 - **Result**: Success.
 - **Next**: Phase 10 — Quick Export (Web & Social Presets) plugin.
+
+## Iteration 12 — Quick Export (Web & Social Presets) Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Task**: Implement native GIMP 3.x Python 3 Quick Export plugin suite in `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick-export.py`.
+- **Why this task**: Fast asset output for web and social media is a core Photoshop workflow (`Topics.txt` lines 578 & 596: "Export your work using the Quick Export as option", and `photoshop_docs.md` Section 515). Standard GIMP export requires opening multi-step modal dialogs every time. This plugin provides one-click instant PNG export and a configurable Quick Export dialog with scaling presets (1x, 0.5x, 2x).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/quick-export/quick-export.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-quick-export-png` (one-click instant PNG) and `python-fu-quick-export` (configurable dialog with PNG/JPEG formats, 1x/0.5x/2x scaling presets, JPEG quality, and target directory resolution).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Updated Quick Export entry to IMPLEMENTED_VERIFIED.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Checked off all Phase 10 items.
+- **Technical discoveries**:
+  - In GIMP 3.x, PDB procedures for file export are `file-png-export` and `file-jpeg-export` (taking `Gimp.Image`, `Gio.File`, and `Gimp.RunMode`).
+  - By performing scaling on an image duplicate (`image.duplicate() -> dup.scale(w, h) -> export -> dup.delete()`), the user's active document and undo history in the editor remain completely untouched.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exit 0, all 6 sections passing, 5 active Python plugins verified.
+  - Automated 6-test suite via `gimp --no-interface --batch-interpreter=python-fu-eval`:
+    1. Both PDB procedures registered (`python-fu-quick-export`, `python-fu-quick-export-png`).
+    2. 1x PNG export verified (200x100 canvas -> 200x100 PNG on disk).
+    3. Document integrity verified (original canvas untouched).
+    4. JPEG export verified (valid SOI header and file size).
+    5. 0.5x scaling preset verified (scaled 200x100 -> 100x50 on disk).
+    6. 2x scaling preset verified (scaled 200x100 -> 400x200 on disk).
+  - All tests passed, exit code 0.
+- **Commit**: PhotoGIMP sub-repo `76eb970`.
+- **Result**: Success.
+- **Next**: Phase 11 — End-to-End Plugin Suite Quality Gate & Full Regression Suite.

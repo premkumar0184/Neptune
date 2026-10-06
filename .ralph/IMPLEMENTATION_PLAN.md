@@ -118,12 +118,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate tonal luminance mapping, smooth multi-stop color transitions, blend mode interaction, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `channel-mixer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/channel-mixer/channel-mixer.py`.
-- [ ] Create dedicated non-destructive Channel Mixer adjustment layer powered by GEGL `gegl:channel-mixer`.
-- [ ] Support rebalancing RGB channels, cross-channel gains, and fine-art monochrome/infrared photography simulation presets (Infrared Look, Color Swap, B&W High-Contrast Film, Custom gains).
-- [ ] Support preserve luminosity toggle, layer opacity control, and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Channel Mixer...` and `<Image>/Filters/Retouching/Channel Mixer...`.
-- [ ] Validate cross-channel gain shifts, infrared color inversion, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `channel-mixer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/channel-mixer/channel-mixer.py`.
+- [x] Create dedicated non-destructive Channel Mixer adjustment layer powered by GEGL `gegl:channel-mixer`.
+- [x] Support rebalancing RGB channels, cross-channel gains, and fine-art monochrome/infrared photography simulation presets (Infrared Look, Color Swap, B&W High-Contrast Film, Custom gains).
+- [x] Support preserve luminosity toggle, layer opacity control, and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Channel Mixer...` and `<Image>/Filters/Retouching/Channel Mixer...`.
+- [x] Validate cross-channel gain shifts, infrared color inversion, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 21 — Non-Destructive Color Temperature & White Balance Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `color-temperature` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`.
+- [ ] Create dedicated non-destructive Color Temperature adjustment layer powered by GEGL `gegl:color-temperature`.
+- [ ] Support physical Kelvin white balance correction and creative temperature styling (Candlelight 1850K, Tungsten 3200K, Fluorescent 4000K, Daylight 5500K, Cloudy 6500K, Shade 7500K, Blue Sky 10000K, Custom Kelvin sliders).
+- [ ] Support layer opacity control, blend modes, and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Color Temperature...` and `<Image>/Filters/Retouching/Color Temperature...`.
+- [ ] Validate Kelvin temperature shifts (cooling shifts B>R, warming shifts R>B), layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
 
 
 

@@ -78,6 +78,7 @@ def test_pdb_registration():
         ("python-fu-vibrance", "Vibrance & Smart Saturation Helper"),
         ("python-fu-color-balance", "Color Balance & Tonal Grading Helper"),
         ("python-fu-gradient-map", "Gradient Map & Cinematic Grading Helper"),
+        ("python-fu-channel-mixer", "Channel Mixer & Infrared Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1494,6 +1495,150 @@ def test_gradient_map():
 
 
 # ==============================================================================
+# TEST 15: Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin (Phase 20)
+# ==============================================================================
+def test_channel_mixer():
+    print("\n--- Test Suite 15: Channel Mixer & Infrared Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-channel-mixer")
+    if proc is None:
+        record_fail("CM-01", "Procedure lookup", "Procedure python-fu-channel-mixer not found")
+        return
+
+    image = Gimp.Image.new(120, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseColors", 120, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Create distinct color zones:
+        # Red zone (x: 10..35, y: 10..90) = rgb(0.9, 0.1, 0.1)
+        # Green zone (x: 45..70, y: 10..90) = rgb(0.1, 0.9, 0.1)
+        # Blue zone (x: 80..105, y: 10..90) = rgb(0.1, 0.1, 0.9)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.1, 0.1)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 25, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.1, 0.9, 0.1)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 45, 10, 25, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.1, 0.1, 0.9)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 80, 10, 25, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_r = base.get_pixel(20, 50).get_rgba()
+        p_base_g = base.get_pixel(55, 50).get_rgba()
+        p_base_b = base.get_pixel(90, 50).get_rgba()
+
+        # 15a: Run Color Infrared (Red/Blue channel swap)
+        cfg_ir = proc.create_config()
+        cfg_ir.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ir.set_property("image", image)
+        cfg_ir.set_property("preset", "infrared-color")
+        cfg_ir.set_property("opacity", 100.0)
+        cfg_ir.set_property("add-mask", True)
+
+        res = proc.run(cfg_ir)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CM-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("CM-01", "Execution status", "SUCCESS")
+
+        cm_layer = image.get_layers()[0]
+        if cm_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("CM-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {cm_layer.get_mode()}")
+            return
+        record_pass("CM-02", "Layer mode & name", f"{cm_layer.get_name()} ({cm_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = cm_layer.get_mask()
+        if mask is None:
+            record_fail("CM-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("CM-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Red-to-Blue swap check:
+        # In Infrared, Red input maps to Blue output (Blue > Red)
+        p_swap_r = cm_layer.get_pixel(20, 50).get_rgba()
+        if not (p_swap_r[2] > p_swap_r[0] and p_swap_r[2] > 0.8):
+            record_fail("CM-04", "Red-to-Blue swap", f"Expected Blue > Red (B > 0.8), got R={p_swap_r[0]:.3f}, B={p_swap_r[2]:.3f}")
+            return
+        record_pass("CM-04", "Red-to-Blue channel swap", f"Red zone -> Blue: B={p_swap_r[2]:.3f} > R={p_swap_r[0]:.3f}")
+
+        # Blue-to-Red swap check:
+        # Blue input maps to Red output (Red > Blue)
+        p_swap_b = cm_layer.get_pixel(90, 50).get_rgba()
+        if not (p_swap_b[0] > p_swap_b[2] and p_swap_b[0] > 0.8):
+            record_fail("CM-05", "Blue-to-Red swap", f"Expected Red > Blue (R > 0.8), got R={p_swap_b[0]:.3f}, B={p_swap_b[2]:.3f}")
+            return
+        record_pass("CM-05", "Blue-to-Red channel swap", f"Blue zone -> Red: R={p_swap_b[0]:.3f} > B={p_swap_b[2]:.3f}")
+
+        # 15b: Test B&W Standard monochrome preset
+        image.remove_layer(cm_layer)
+        cfg_mono = proc.create_config()
+        cfg_mono.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mono.set_property("image", image)
+        cfg_mono.set_property("preset", "bw-standard")
+        cfg_mono.set_property("opacity", 100.0)
+        cfg_mono.set_property("add-mask", False)
+
+        proc.run(cfg_mono)
+        mono_layer = image.get_layers()[0]
+        p_mono_g = mono_layer.get_pixel(55, 50).get_rgba()
+        mono_diff = max(abs(p_mono_g[0] - p_mono_g[1]), abs(p_mono_g[1] - p_mono_g[2]), abs(p_mono_g[0] - p_mono_g[2]))
+        if mono_diff > 0.001:
+            record_fail("CM-06", "Monochrome neutrality", f"Channels not equal: R={p_mono_g[0]:.3f}, G={p_mono_g[1]:.3f}, B={p_mono_g[2]:.3f} (diff {mono_diff:.4f})")
+            return
+        record_pass("CM-06", "Monochrome neutrality", f"Exact monochrome: R=G=B={p_mono_g[0]:.3f} (diff {mono_diff:.6f})")
+
+        # 15c: Test Custom sliders with monochrome mode and opacity
+        image.remove_layer(mono_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("monochrome", True)
+        cfg_cust.set_property("red-red", 50.0)
+        cfg_cust.set_property("red-green", 30.0)
+        cfg_cust.set_property("red-blue", 20.0)
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("CM-07", "Custom opacity", f"Expected 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        p_cust_r = cust_layer.get_pixel(20, 50).get_rgba()
+        cust_diff = max(abs(p_cust_r[0] - p_cust_r[1]), abs(p_cust_r[1] - p_cust_r[2]))
+        if cust_diff > 0.001:
+            record_fail("CM-07", "Custom monochrome mode", f"Channels not equal: R={p_cust_r[0]:.3f}, G={p_cust_r[1]:.3f}")
+            return
+        record_pass("CM-07", "Custom monochrome mode & opacity", f"Opacity 85.0%, R=G=B={p_cust_r[0]:.3f} (diff {cust_diff:.6f})")
+
+        # 15d: Non-destructive base layer invariance
+        p_base_after_r = base.get_pixel(20, 50).get_rgba()
+        p_base_after_g = base.get_pixel(55, 50).get_rgba()
+        p_base_after_b = base.get_pixel(90, 50).get_rgba()
+        diff_r = max(abs(p_base_after_r[i] - p_base_r[i]) for i in range(3))
+        diff_g = max(abs(p_base_after_g[i] - p_base_g[i]) for i in range(3))
+        diff_b = max(abs(p_base_after_b[i] - p_base_b[i]) for i in range(3))
+        max_base_diff = max(diff_r, diff_g, diff_b)
+        if max_base_diff > 0.000001:
+            record_fail("CM-08", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("CM-08", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CM-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1517,6 +1662,7 @@ def run_all_tests():
     test_vibrance()
     test_color_balance()
     test_gradient_map()
+    test_channel_mixer()
 
 
     elapsed = time.time() - start_time

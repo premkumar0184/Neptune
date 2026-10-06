@@ -238,6 +238,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Channel Mixer & Monochrome Infrared Helper
+- **Source topic**: Adjust image color and tone - Rebalances color channels (`Topics.txt` lines 93-103, `photoshop_docs.md` Section 3075 & 3219: "Channel Mixer: Rebalances color channels")
+- **Photoshop behavior**: Modifies color channels using a mix of existing color channels, allowing color cast corrections, specialized monochrome film simulation, and false-color infrared photography.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-channel-mixer` in `<Image>/Colors/Channel Mixer...` and `<Image>/Filters/Retouching/Channel Mixer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/channel-mixer/channel-mixer.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable and applies GEGL `gegl:channel-mixer`. Features authentic photographic presets (Color Infrared Red/Blue swap, B&W Standard Neutral 40/40/20, B&W Landscape 20/70/10, B&W Portrait 60/30/10, B&W High Contrast / Red Glass 100/0/0, Warm Golden Cast, Cool Cyan Cast, Custom Mixer Weights with Photoshop-style Monochrome toggle and per-channel percentage sliders), preserve luminosity toggle, layer opacity slider, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:channel-mixer`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 20).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Color Infrared swap (Red zone -> Blue B > R, Blue zone -> Red R > B), exact monochrome neutrality (R == G == B, spread 0.000000), custom monochrome mode with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 22):
+  1. `verify_config.py`: Section 6 passed with 14 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Color Infrared verified with Red zone swapped to Blue (B=0.896 > R=0.100), Blue zone swapped to Red (R=0.896 > B=0.100), exact monochrome neutrality (R=G=B=0.418, spread 0.000000), Custom monochrome mode at 85.0% opacity (spread 0.000000), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 22).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

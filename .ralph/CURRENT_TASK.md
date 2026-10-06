@@ -1,69 +1,63 @@
-# Current Task — Iteration 21
+# Current Task — Iteration 22
 
 ## Task
-**Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin**
+**Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Completed Work
-1. Created native GIMP 3.x Python 3 plugin [gradient-map.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py).
-2. Registered PDB procedure `python-fu-gradient-map` under:
-   - `<Image>/Colors/Gradient Map...`
-   - `<Image>/Filters/Retouching/Gradient Map...`
+1. Created native GIMP 3.x Python 3 plugin [channel-mixer.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/.config/GIMP/3.0/plug-ins/channel-mixer/channel-mixer.py).
+2. Registered PDB procedure `python-fu-channel-mixer` under:
+   - `<Image>/Colors/Channel Mixer...`
+   - `<Image>/Filters/Retouching/Channel Mixer...`
 3. Features:
-   - Dedicated non-destructive Gradient Map adjustment layer created above active drawable.
-   - Powered by GEGL `gegl:gradient-map` with linear tone mapping (`srgb=False`) preserving stop positions.
-   - Photographic & cinematic color palettes:
-     - Teal & Orange (Cinematic Look: Deep navy teal shadows, warm coral midtones, warm ivory highlights)
-     - Sepia Vintage (Antique Tone: Roasted espresso shadows, warm chestnut midtones, antique linen highlights)
-     - Cyberpunk Neon (Synthwave: Midnight indigo shadows, neon magenta midtones, electric cyan highlights)
-     - Copper & Patina (Metallic Mood: Oxidized bronze shadows, weathered turquoise midtones, pale mint highlights)
-     - Fine Art B&W (Silver Gelatin: Rich black shadows, neutral gray midtones, crisp clean white highlights)
-     - Golden Sunset (Warm Glow: Deep burgundy shadows, golden amber midtones, radiant sunlight highlights)
-     - Custom Two-Tone Gradient (Start & End RGB channel sliders)
-   - Configurable blend modes:
-     - Soft Light (`Gimp.LayerMode.SOFTLIGHT`, mode 45) — Subtle cinematic grading (Photoshop default)
-     - Overlay (`Gimp.LayerMode.OVERLAY`, mode 23) — Punchy contrast grading
-     - Color (`Gimp.LayerMode.HSL_COLOR`, mode 39) — Color tinting preserving luminance
-     - Normal (`Gimp.LayerMode.NORMAL`, mode 28) — Full direct gradient replacement
-   - Layer opacity slider (10% to 100%, default 70%).
-   - Gradient reversal option (`reverse=True`) inverting stop orders.
+   - Dedicated non-destructive Channel Mixer adjustment layer created above active drawable.
+   - Powered by GEGL `gegl:channel-mixer`.
+   - Authentic photographic and artistic presets:
+     - Color Infrared (Red/Blue Swap for Kodak Aerochrome digital infrared simulation)
+     - B&W Standard Neutral (40/40/20 balanced monochrome)
+     - B&W Landscape (20/70/10 green boost for bright foliage and deep skies)
+     - B&W Portrait (60/30/10 red boost for smooth flattering skin tones)
+     - B&W High Contrast / Red Filter (100/0/0 dramatic sky contrast)
+     - Warm Golden Cast (Red gain boost, Blue attenuation)
+     - Cool Cyan Cast (Blue gain boost, Red attenuation)
+     - Custom Mixer Weights with Photoshop-style Monochrome toggle and per-channel percentage sliders
+   - Preserve luminosity toggle.
+   - Configurable layer opacity (10% to 100%, default 100%).
    - Attached reveal-all white layer mask for brush masking / selective application.
    - Safe target layer resolution via `image.get_selected_layers()` preventing layer mask confusion.
    - 100% preservation of source layer pixels underneath.
-4. Extended [verify_config.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/scripts/verify_config.py) to audit `gradient-map` as part of `REQUIRED_PLUGINS`.
+4. Extended [verify_config.py](file:///home/prem/Downloads/GIMP/PhotoGIMP/scripts/verify_config.py) to audit `channel-mixer` as part of `REQUIRED_PLUGINS`.
 5. Deployed to `~/.config/GIMP/3.2/plug-ins/` via `install.sh --batch`.
-6. Extended [tests/gimp_e2e_suite.py](file:///home/prem/Downloads/GIMP/tests/gimp_e2e_suite.py) with Test Suite 14 asserting:
-   - PDB registration (`python-fu-gradient-map`)
+6. Extended [tests/gimp_e2e_suite.py](file:///home/prem/Downloads/GIMP/tests/gimp_e2e_suite.py) with Test Suite 15 asserting:
+   - PDB registration (`python-fu-channel-mixer`)
    - Normal layer mode and layer creation
    - Reveal-all layer mask attachment
-   - Tonal mapping validation (Shadows mapped to Teal B=0.202 > R=0.020, Midtones mapped to Coral R=0.847 > B=0.223, Highlights mapped to Ivory R=1.000 > B=0.847)
-   - Soft Light blend mode (45) and 75.0% opacity assignment
-   - Reverse gradient mapping verification (Inverted: Shadows magenta R=0.896>G=0.000, Highlights green G=0.799>R=0.000)
+   - Color Infrared Red/Blue swap verification (Red zone -> Blue B=0.896 > R=0.100, Blue zone -> Red R=0.896 > B=0.100)
+   - Exact monochrome neutrality verification (R=G=B, spread 0.000000)
+   - Custom monochrome mode with opacity 85.0% and exact neutrality (spread 0.000000)
    - Non-destructive source layer invariance (diff 0.000000)
 
 ## Acceptance Criteria — All Passed
 1. [x] Plugin file exists, has shebang, is executable (`chmod +x`), and passes bytecode compilation.
-2. [x] PDB procedure `python-fu-gradient-map` registered in GIMP PDB under `<Image>/Colors` and `<Image>/Filters/Retouching`.
-3. [x] Dedicated non-destructive Gradient Map adjustment layer created above active drawable with multi-stop mapping.
+2. [x] PDB procedure `python-fu-channel-mixer` registered in GIMP PDB under `<Image>/Colors` and `<Image>/Filters/Retouching`.
+3. [x] Dedicated non-destructive Channel Mixer adjustment layer created above active drawable with channel mixing.
 4. [x] In headless GIMP tests:
-   - Shadows teal mapping verified (B=0.202 > R=0.020).
-   - Midtones warm coral mapping verified (R=0.847 > B=0.223).
-   - Highlights ivory mapping verified (R=1.000 > B=0.847).
-   - Soft Light mode and opacity verified.
-   - Reverse gradient mapping verified.
+   - Color Infrared Red/Blue swap verified (B=0.896 > R=0.100, R=0.896 > B=0.100).
+   - Exact monochrome neutrality verified (R=G=B spread 0.000000).
+   - Custom monochrome mode and opacity verified.
    - Layer mask is attached and editable.
    - Source layer pixels remain 100% untouched.
-5. [x] `verify_config.py` Section 6 passes with all 13 required plugins verified.
-6. [x] Unified runner `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (95/95 tests passing).
+5. [x] `verify_config.py` Section 6 passes with all 14 required plugins verified.
+6. [x] Unified runner `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (104/104 tests passing).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (13/13 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (13 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (14/14 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (14 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
   [PASS] PDB-REG: Frequency Separation (python-fu-frequency-separation) (registered)
   [PASS] PDB-REG: Luminosity Masks (python-fu-luminosity-masks) (registered)
@@ -79,6 +73,7 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] PDB-REG: Vibrance & Smart Saturation Helper (python-fu-vibrance) (registered)
   [PASS] PDB-REG: Color Balance & Tonal Grading Helper (python-fu-color-balance) (registered)
   [PASS] PDB-REG: Gradient Map & Cinematic Grading Helper (python-fu-gradient-map) (registered)
+  [PASS] PDB-REG: Channel Mixer & Infrared Helper (python-fu-channel-mixer) (registered)
   [PASS] FS-01 to FS-05: Frequency Separation (5 tests passed)
   [PASS] LM-01 to LM-04: Luminosity Masks (4 tests passed)
   [PASS] DB-01 to DB-05: Dodge & Burn Layer (5 tests passed)
@@ -91,18 +86,18 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] PF-01 to PF-08: Photo Filter Optical Lens Effects (8 tests passed)
   [PASS] VIB-01 to VIB-07: Vibrance & Smart Saturation (7 tests passed)
   [PASS] CB-01 to CB-08: Color Balance & Tonal Grading (8 tests passed)
-  [PASS] GM-01: Execution status (SUCCESS)
-  [PASS] GM-02: Layer mode & name (Gradient Map (Teal & Orange) (28))
-  [PASS] GM-03: Layer mask attachment (Reveal-all mask attached)
-  [PASS] GM-04: Shadows teal mapping (Teal shadows: B=0.202 > R=0.020)
-  [PASS] GM-05: Midtones coral mapping (Coral midtones: R=0.847 > B=0.223)
-  [PASS] GM-06: Highlights ivory mapping (Ivory highlights: R=1.000 > B=0.847)
-  [PASS] GM-07: Soft Light mode & opacity (Soft Light (45), opacity 75.0%)
-  [PASS] GM-08: Reverse gradient mapping (Inverted: Shadows magenta, Highlights green)
-  [PASS] GM-09: Non-destructive layer preservation (Base pixels 100% untouched (diff 0.000000))
-Total Tests Executed: 95
-Tests Passed        : 95
+  [PASS] GM-01 to GM-09: Gradient Map & Cinematic Grading (9 tests passed)
+  [PASS] CM-01: Execution status (SUCCESS)
+  [PASS] CM-02: Layer mode & name (Channel Mixer (Color Infrared (Red/Blue Swap)) (28))
+  [PASS] CM-03: Layer mask attachment (Reveal-all mask attached)
+  [PASS] CM-04: Red-to-Blue channel swap (Red zone -> Blue: B=0.896 > R=0.100)
+  [PASS] CM-05: Blue-to-Red channel swap (Blue zone -> Red: R=0.896 > B=0.100)
+  [PASS] CM-06: Monochrome neutrality (Exact monochrome: R=G=B=0.418 (diff 0.000000))
+  [PASS] CM-07: Custom monochrome mode & opacity (Opacity 85.0%, R=G=B=0.497 (diff 0.000000))
+  [PASS] CM-08: Non-destructive layer preservation (Base pixels 100% untouched (diff 0.000000))
+Total Tests Executed: 104
+Tests Passed        : 104
 Tests Failed        : 0
-Elapsed Time        : 4.91s
+Elapsed Time        : 5.44s
 Exit Code           : 0
 ```

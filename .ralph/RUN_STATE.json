@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-21",
+  "run_id": "iteration-22",
   "status": "completed",
-  "iteration": 21,
-  "current_task": "Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin",
+  "iteration": 22,
+  "current_task": "Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "0c796ad",
-  "last_verified_task": "Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin",
+  "last_commit": "15dec16",
+  "last_verified_task": "Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-06T17:49:35+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 13 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 13 plugins), Stage 3 (tests/gimp_e2e_suite.py with 95/95 assertions passing across 14 test suites, asserting PDB registration, layer modes, mask attachment, Teal & Orange mapping with Shadows B=0.202>R=0.020, Midtones R=0.847>B=0.223, Highlights R=1.000>B=0.847, Soft Light mode 45 at 75.0% opacity, reverse mapping inversion, and 0.000000 base layer preservation in 4.91s)."
+    "verified_at": "2026-10-06T17:57:45+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 14 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 14 plugins), Stage 3 (tests/gimp_e2e_suite.py with 104/104 assertions passing across 15 test suites, asserting PDB registration, layer modes, mask attachment, Color Infrared swap with Red->Blue B=0.896>R=0.100 and Blue->Red R=0.896>B=0.100, exact monochrome neutrality with R=G=B spread 0.000000, custom monochrome mode at 85.0% opacity, and 0.000000 base layer preservation in 5.44s)."
   },
-  "next_task": "Phase 20 — Non-Destructive Channel Mixer & Monochrome Infrared Helper Plugin",
-  "last_transition": "2026-10-06T17:51:30+05:30",
+  "next_task": "Phase 21 — Non-Destructive Color Temperature & White Balance Helper Plugin",
+  "last_transition": "2026-10-06T17:59:00+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

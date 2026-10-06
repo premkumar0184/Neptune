@@ -289,6 +289,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Film Grain & Analog Texture Helper
+- **Source topic**: Adjust texture with Grain (`Topics.txt` line 105, `photoshop_docs.md` Section 109 lines 3280-3300: "Add grain to your image non-destructively using the Grain adjustment layer in professional photoeditor")
+- **Photoshop behavior**: Simulates authentic silver halide film grain non-destructively on an adjustment layer, controlling grain Amount, particle Size (clustering), Roughness (randomness/sharpness), and monochromatic vs color grain.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-film-grain` in `<Image>/Filters/Noise/Film Grain...`, `<Image>/Filters/Retouching/Film Grain...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/film-grain/film-grain.py`.
+- **Current capability**: Creates an isolated, non-destructive Film Grain adjustment overlay layer on neutral 50% gray (`#808080`) with Soft Light or Overlay blend mode. Applies GEGL Gaussian noise (`gegl:noise-rgb`), particle clustering (`gegl:noise-spread`), and roughness smoothing (`gegl:gaussian-blur`). Features curated analog film presets (35mm Classic Film Grain, 120 Medium Format Subtle, Gritty High-ISO Street, Vintage 1970s Color Grain, Fine Art Archival Print, Custom sliders), layer opacity control, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:noise-rgb`, `gegl:noise-spread`, `gegl:gaussian-blur`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 23).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, analog silver halide texture variance (> 0.003), exact monochromatic channel neutrality (`r == g == b`, spread 0.000000), vintage color dye cloud chromatic spread (> 0.01), Overlay blend mode on gritty street, custom sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 25):
+  1. `verify_config.py`: Section 6 passed with 17 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Analog texture variance verified (0.007724 > 0.003), exact monochromatic neutrality verified (R=G=B spread 0.000000), vintage color dye cloud spread verified (0.3906 > 0.01), punchy Overlay mode verified on gritty street, custom sliders with 85.0% opacity verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 25).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

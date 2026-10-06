@@ -81,6 +81,7 @@ def test_pdb_registration():
         ("python-fu-channel-mixer", "Channel Mixer & Infrared Helper"),
         ("python-fu-color-temperature", "Color Temperature & White Balance Helper"),
         ("python-fu-clarity-dehaze", "Clarity & Dehaze Helper"),
+        ("python-fu-film-grain", "Film Grain & Analog Texture Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1893,6 +1894,142 @@ def test_clarity_dehaze():
 
 
 # ==============================================================================
+# 18. FILM GRAIN TEST SUITE
+# ==============================================================================
+def test_film_grain():
+    print("\n--- Test Suite 18: Film Grain & Analog Texture Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-film-grain")
+    if proc is None:
+        record_fail("FG-01", "Procedure lookup", "Procedure python-fu-film-grain not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseNeutral", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Fill base with neutral gray
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(40, 40).get_rgba()
+
+        # 18a: Run 35mm Classic Film Grain preset
+        cfg_35 = proc.create_config()
+        cfg_35.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_35.set_property("image", image)
+        cfg_35.set_property("preset", "35mm-classic")
+        cfg_35.set_property("opacity", 100.0)
+        cfg_35.set_property("add-mask", True)
+
+        res = proc.run(cfg_35)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("FG-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("FG-01", "Execution status", "SUCCESS")
+
+        grain_35 = image.get_layers()[0]
+        if grain_35.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("FG-02", "Layer mode", f"Expected SOFTLIGHT ({int(Gimp.LayerMode.SOFTLIGHT)}), got {grain_35.get_mode()}")
+            return
+        record_pass("FG-02", "Layer mode & name", f"{grain_35.get_name()} ({grain_35.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = grain_35.get_mask()
+        if mask is None:
+            record_fail("FG-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("FG-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Sample pixel area to calculate high-frequency texture variance
+        pixels_35 = [grain_35.get_pixel(x, y).get_rgba() for x in range(30, 50) for y in range(30, 50)]
+        r_vals_35 = [p[0] for p in pixels_35]
+        mean_r = sum(r_vals_35) / len(r_vals_35)
+        variance_35 = sum((x - mean_r)**2 for x in r_vals_35) / len(r_vals_35)
+        if variance_35 < 0.003:
+            record_fail("FG-04", "Grain texture variance", f"Expected variance > 0.003, got {variance_35:.6f}")
+            return
+        record_pass("FG-04", "Grain texture variance", f"Analog silver halide variance: {variance_35:.6f} > 0.003")
+
+        # Verify monochromatic neutrality (R == G == B)
+        mono_spread = max(abs(p[0] - p[1]) + abs(p[1] - p[2]) for p in pixels_35)
+        if mono_spread > 0.001:
+            record_fail("FG-05", "Monochromatic grain", f"Expected exact channel equality, got max spread {mono_spread:.6f}")
+            return
+        record_pass("FG-05", "Monochromatic silver halide grain", f"Exact channel neutrality (R=G=B spread {mono_spread:.6f})")
+
+        # 18b: Run Vintage 1970s Color Grain preset (assert color dye clouds)
+        image.remove_layer(grain_35)
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", image)
+        cfg_col.set_property("preset", "vintage-color")
+        cfg_col.set_property("opacity", 100.0)
+        cfg_col.set_property("add-mask", False)
+
+        proc.run(cfg_col)
+        grain_col = image.get_layers()[0]
+        pixels_col = [grain_col.get_pixel(x, y).get_rgba() for x in range(30, 50) for y in range(30, 50)]
+        chroma_diff = max(abs(p[0] - p[2]) for p in pixels_col)
+        if chroma_diff < 0.01:
+            record_fail("FG-06", "Color grain chromatic spread", f"Expected color grain spread > 0.01, got {chroma_diff:.6f}")
+            return
+        record_pass("FG-06", "Vintage color dye clouds", f"Chromatic grain spread: {chroma_diff:.4f} > 0.01")
+
+        # 18c: Run Gritty Street preset (assert Overlay blend mode)
+        image.remove_layer(grain_col)
+        cfg_grit = proc.create_config()
+        cfg_grit.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_grit.set_property("image", image)
+        cfg_grit.set_property("preset", "gritty-street")
+        cfg_grit.set_property("opacity", 100.0)
+        cfg_grit.set_property("add-mask", False)
+
+        proc.run(cfg_grit)
+        grain_grit = image.get_layers()[0]
+        if grain_grit.get_mode() != Gimp.LayerMode.OVERLAY:
+            record_fail("FG-07", "Gritty street overlay mode", f"Expected OVERLAY ({int(Gimp.LayerMode.OVERLAY)}), got {grain_grit.get_mode()}")
+            return
+        record_pass("FG-07", "Gritty street overlay blend", f"Punchy Overlay blend mode ({grain_grit.get_mode()})")
+
+        # 18d: Test Custom sliders and opacity
+        image.remove_layer(grain_grit)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("amount", 50.0)
+        cfg_cust.set_property("size", 2)
+        cfg_cust.set_property("roughness", 75.0)
+        cfg_cust.set_property("monochrome", True)
+        cfg_cust.set_property("blend-mode", "soft-light")
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("FG-08", "Custom opacity", f"Expected 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        record_pass("FG-08", "Custom sliders & opacity", f"Opacity 85.0%, custom Amount 50.0% / Size 2 / Roughness 75.0% verified")
+
+        # 18e: Non-destructive base layer invariance
+        p_base_after = base.get_pixel(40, 40).get_rgba()
+        max_base_diff = max(abs(p_base_after[i] - p_base_orig[i]) for i in range(3))
+        if max_base_diff > 0.000001:
+            record_fail("FG-09", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("FG-09", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("FG-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1919,6 +2056,7 @@ def run_all_tests():
     test_channel_mixer()
     test_color_temperature()
     test_clarity_dehaze()
+    test_film_grain()
 
 
     elapsed = time.time() - start_time

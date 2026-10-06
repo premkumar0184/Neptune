@@ -551,6 +551,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 23 — Non-Destructive Film Grain & Analog Texture Helper Plugin.
 
+## Iteration 25 — Non-Destructive Film Grain & Analog Texture Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Film Grain & Analog Texture Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/film-grain/film-grain.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 105, `photoshop_docs.md` Section 109 lines 3280-3300: "Add grain to your image non-destructively using the Grain adjustment layer in professional photoeditor"). Replaces destructive noise filtering with an isolated non-destructive neutral gray (`#808080`) overlay layer applying GEGL Gaussian noise (`gegl:noise-rgb`), particle clustering (`gegl:noise-spread`), and roughness smoothing (`gegl:gaussian-blur`), with authentic presets (35mm Classic Film Grain, 120 Medium Format Subtle, Gritty High-ISO Street, Vintage 1970s Color Grain, Fine Art Archival Print, Custom sliders), opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/film-grain/film-grain.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-film-grain` with Gaussian noise, particle clustering, roughness smoothing, monochromatic vs organic color grain options, presets, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `film-grain`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 18 (asserting PDB registration, layer modes, mask attachment, analog silver halide texture variance 0.007724 > 0.003, exact monochromatic channel neutrality [R=G=B spread 0.000000], vintage color dye cloud chromatic spread 0.3906 > 0.01, punchy Overlay blend mode on gritty street, custom sliders with 85.0% opacity, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Film Grain & Analog Texture Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 23 complete and scheduled Phase 24 (Light & Tonal Range Helper).
+- **Technical discoveries**:
+  - In Soft Light and Overlay blending, a base fill of `#808080` (sRGB 128/255 perceptual midpoint) produces exact 0.000000 identity neutrality against underlying image pixels.
+  - Applying `gegl:noise-spread` on Gaussian noise clusters the high-frequency points into realistic physical silver halide crystal clumps, faithfully recreating 35mm film grain appearance.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 17 plugins verified).
+    - Stage 2: `install.sh --batch` passed (17 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 131 tests across 18 test suites in 6.69s.
+    - Final quality gate: SUCCESS across all stages in 18.04s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `86f1d76`.
+- **Result**: Success.
+- **Next**: Phase 24 — Non-Destructive Light & Tonal Range Helper Plugin.
+
+
 
 
 

@@ -170,6 +170,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Photo Filter Optical Warming & Cooling Helper
+- **Source topic**: Color adjustment and fill layers - Adjustment and fill layers overview / Photo Filter (`Topics.txt` lines 93/94, `photoshop_docs.md` Section 3074 & 3218)
+- **Photoshop behavior**: Simulates optical camera glass filters (Kodak Wratten 85 warming, 80 cooling, color contrasts) with density control (1% to 100%), luminosity preservation, and layer mask.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-photo-filter` in `<Image>/Colors/Photo Filter...` and `<Image>/Filters/Retouching/Photo Filter...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-filter/photo-filter.py`.
+- **Current capability**: Creates an isolated, non-destructive photo filter adjustment layer above the target layer with 16 authentic optical presets (Kodak Wratten 85 warming, 81 golden warm, 80 cooling blue, 82 soft cooling, red, orange, yellow, green, cyan, blue, magenta, sepia, deep red, deep blue, deep emerald, amber) plus custom RGB color, density slider (1% to 100%), preserve luminosity mode (`Gimp.LayerMode.LCH_COLOR` vs `SOFTLIGHT`), and attached reveal-all layer mask.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 16).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, optical warming response (R > B), cooling response (B > R), density modulation (25% vs 75%), Soft Light non-preserve luminosity mode, and base layer invariance.
+- **Verification evidence** (Iteration 18):
+  1. `verify_config.py`: Section 6 passed with 10 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Warming 85 produces R=0.578 > B=0.376 (delta +0.201), Cooling 80 produces B=0.680 > R=0.413 (delta +0.267), 75% density delta increases to +0.762, Soft Light mode 45 verified, base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 18).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

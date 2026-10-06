@@ -87,13 +87,17 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate monochrome conversion accuracy, tonal channel weighting response, and non-destructive base layer isolation via headless GIMP test (neutrality diff 0.000000, red filter contrast +0.497, sepia warm split verified).
 
 ### Phase 16 — Photo Filter Optical Warming & Cooling Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `photo-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-filter/photo-filter.py`.
-- [ ] Create non-destructive color temperature / photo filter layer simulating optical lens filters (Warming 85, Cooling 80, Deep Red, Orange, Amber, Cyan, Deep Blue).
-- [ ] Configurable filter density slider (1% to 100%), preserve luminosity toggle, and attached layer mask.
-- [ ] Register under menu path `<Image>/Colors/Photo Filter...` and `<Image>/Filters/Retouching/Photo Filter...`.
-- [ ] Validate optical color shifts (warming shifts R>B, cooling shifts B>R), density scaling, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `photo-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-filter/photo-filter.py`.
+- [x] Create non-destructive color temperature / photo filter layer simulating optical lens filters (Warming 85, Cooling 80, Deep Red, Orange, Amber, Cyan, Deep Blue).
+- [x] Configurable filter density slider (1% to 100%), preserve luminosity toggle, and attached layer mask.
+- [x] Register under menu path `<Image>/Colors/Photo Filter...` and `<Image>/Filters/Retouching/Photo Filter...`.
+- [x] Validate optical color shifts (warming shifts R>B, cooling shifts B>R), density scaling, and non-destructive source layer preservation via headless GIMP test.
 
-
-
-
+### Phase 17 — Non-Destructive Vibrance & Smart Saturation Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `vibrance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/vibrance/vibrance.py`.
+- [ ] Create dedicated non-destructive Vibrance adjustment layer powered by GEGL `gegl:vibrance`.
+- [ ] Provide intelligent saturation boosting that lifts muted colors while protecting already saturated skin tones and preventing color clipping.
+- [ ] Dual-slider controls: Vibrance (-100 to +100, default +25) and Saturation (-100 to +100, default 0), with layer opacity and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Vibrance...` and `<Image>/Filters/Retouching/Vibrance...`.
+- [ ] Validate muted color boost, saturated tone protection, layer mask attachment, and non-destructive base layer isolation via headless GIMP test.
 

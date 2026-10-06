@@ -74,6 +74,7 @@ def test_pdb_registration():
         ("python-fu-depth-blur", "Depth Defocus / Background Blur"),
         ("python-fu-shadow-highlight", "Shadows & Highlights Recovery"),
         ("python-fu-black-and-white", "Black & White Conversion & Toning"),
+        ("python-fu-photo-filter", "Photo Filter Optical Lens Effect"),
     ]
 
     for proc_name, label in required_procs:
@@ -956,6 +957,146 @@ def test_black_and_white():
 
 
 # ==============================================================================
+# TEST 11: Photo Filter Optical Warming & Cooling Helper (Phase 16)
+# ==============================================================================
+def test_photo_filter():
+    print("\n--- Test Suite 11: Photo Filter Optical Warming & Cooling Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-photo-filter")
+    if proc is None:
+        record_fail("PF-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with 50% neutral gray
+        base = Gimp.Layer.new(image, "Base", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base = base.get_pixel(50, 50).get_rgba()
+
+        # 11a: Warming Filter (85) at 25% density with preserve-luminosity
+        cfg_warm = proc.create_config()
+        cfg_warm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_warm.set_property("image", image)
+        cfg_warm.set_property("preset", "warming-85")
+        cfg_warm.set_property("density", 25.0)
+        cfg_warm.set_property("preserve-luminosity", True)
+        cfg_warm.set_property("add-mask", True)
+
+        res = proc.run(cfg_warm)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("PF-01", "Execution status", "SUCCESS")
+
+        filter_layer = image.get_layers()[0]
+        if filter_layer.get_mode() != Gimp.LayerMode.LCH_COLOR:
+            record_fail("PF-02", "Layer mode", f"Expected LCH_COLOR ({int(Gimp.LayerMode.LCH_COLOR)}), got {filter_layer.get_mode()}")
+            return
+        if abs(filter_layer.get_opacity() - 25.0) > 0.01:
+            record_fail("PF-02", "Layer opacity", f"Expected 25.0%, got {filter_layer.get_opacity()}%")
+            return
+        record_pass("PF-02", "Layer mode & opacity", f"{filter_layer.get_name()} ({filter_layer.get_mode()}, {filter_layer.get_opacity()}%)")
+
+        # Verify layer mask attachment
+        mask = filter_layer.get_mask()
+        if mask is None:
+            record_fail("PF-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("PF-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 11b: Optical warming shift (Red > Blue on neutral canvas)
+        flat = image.duplicate().flatten()
+        p_warm = flat.get_pixel(50, 50).get_rgba()
+        flat.delete()
+
+        warm_delta = p_warm[0] - p_warm[2]
+        if warm_delta < 0.10:
+            record_fail("PF-04", "Optical warming shift", f"Expected Red-Blue delta > 0.10, got {warm_delta:.4f}")
+            return
+        record_pass("PF-04", "Optical warming shift (Warming 85)", f"R={p_warm[0]:.3f} > B={p_warm[2]:.3f} (delta +{warm_delta:.3f})")
+
+        # Remove filter layer
+        image.remove_layer(filter_layer)
+
+        # 11c: Optical cooling shift (Cooling Filter 80: Blue > Red on neutral canvas)
+        cfg_cool = proc.create_config()
+        cfg_cool.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cool.set_property("image", image)
+        cfg_cool.set_property("preset", "cooling-80")
+        cfg_cool.set_property("density", 25.0)
+        cfg_cool.set_property("preserve-luminosity", True)
+        cfg_cool.set_property("add-mask", False)
+
+        proc.run(cfg_cool)
+        filter_cool = image.get_layers()[0]
+        flat_c = image.duplicate().flatten()
+        p_cool = flat_c.get_pixel(50, 50).get_rgba()
+        flat_c.delete()
+
+        cool_delta = p_cool[2] - p_cool[0]
+        if cool_delta < 0.15:
+            record_fail("PF-05", "Optical cooling shift", f"Expected Blue-Red delta > 0.15, got {cool_delta:.4f}")
+            return
+        record_pass("PF-05", "Optical cooling shift (Cooling 80)", f"B={p_cool[2]:.3f} > R={p_cool[0]:.3f} (delta +{cool_delta:.3f})")
+
+        # 11d: Density scaling response (75% density vs 25% density)
+        image.remove_layer(filter_cool)
+        cfg_dense = proc.create_config()
+        cfg_dense.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dense.set_property("image", image)
+        cfg_dense.set_property("preset", "cooling-80")
+        cfg_dense.set_property("density", 75.0)
+        cfg_dense.set_property("preserve-luminosity", True)
+        cfg_dense.set_property("add-mask", False)
+
+        proc.run(cfg_dense)
+        filter_dense = image.get_layers()[0]
+        flat_d = image.duplicate().flatten()
+        p_dense = flat_d.get_pixel(50, 50).get_rgba()
+        flat_d.delete()
+
+        dense_delta = p_dense[2] - p_dense[0]
+        if dense_delta <= cool_delta:
+            record_fail("PF-06", "Density scaling response", f"Expected 75% delta ({dense_delta:.4f}) > 25% delta ({cool_delta:.4f})")
+            return
+        record_pass("PF-06", "Density scaling response", f"25% delta +{cool_delta:.3f} -> 75% delta +{dense_delta:.3f}")
+
+        # 11e: Non-preserve luminosity mode (Soft Light mode for physical glass absorption)
+        image.remove_layer(filter_dense)
+        cfg_sl = proc.create_config()
+        cfg_sl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sl.set_property("image", image)
+        cfg_sl.set_property("preset", "amber")
+        cfg_sl.set_property("density", 40.0)
+        cfg_sl.set_property("preserve-luminosity", False)
+        cfg_sl.set_property("add-mask", False)
+
+        proc.run(cfg_sl)
+        filter_sl = image.get_layers()[0]
+        if filter_sl.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("PF-07", "Non-preserve luminosity mode", f"Expected SOFTLIGHT ({int(Gimp.LayerMode.SOFTLIGHT)}), got {filter_sl.get_mode()}")
+            return
+        record_pass("PF-07", "Non-preserve luminosity mode", f"Soft Light absorption mode ({filter_sl.get_mode()})")
+
+        # 11f: Non-destructive base layer invariance
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("PF-08", "Non-destructive invariance", f"Base layer altered by {base_diff:.6f} > 0")
+            return
+        record_pass("PF-08", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("PF-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -975,6 +1116,7 @@ def run_all_tests():
     test_depth_blur()
     test_shadow_highlight()
     test_black_and_white()
+    test_photo_filter()
 
 
     elapsed = time.time() - start_time

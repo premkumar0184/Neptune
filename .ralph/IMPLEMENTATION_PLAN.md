@@ -27,10 +27,10 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate plugin syntax, registration, and execute automated headless GIMP test splitting a test image and verifying layer structure.
 
 ### Phase 7 — Luminosity Masks Channel Generator
-- [ ] Implement native GIMP 3.x Python 3 plugin `luminosity-masks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity_masks.py`.
-- [ ] Automatically calculate 9 precision tonal channels: Lights (1, 2, 3), Darks (1, 2, 3), and Midtones (1, 2, 3).
-- [ ] Register under menu path `<Image>/Select/Luminosity Masks...`.
-- [ ] Validate channel generation on test image via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `luminosity-masks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity-masks.py`.
+- [x] Automatically calculate 9 precision tonal channels: Lights (1, 2, 3), Darks (1, 2, 3), and Midtones (1, 2, 3).
+- [x] Register under menu path `<Image>/Select/Luminosity Masks...`.
+- [x] Validate channel generation on test image via headless GIMP test (exit 0, 9 channels named correctly).
 
 ### Phase 8 — Non-Destructive Dodge & Burn Layer Helper
 - [ ] Implement native GIMP 3.x Python 3 plugin `dodge-burn-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge_burn_layer.py`.

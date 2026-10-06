@@ -140,3 +140,28 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `307b1c8`.
 - **Result**: Success.
 - **Next**: Phase 7 — Luminosity Masks Channel Generator plugin.
+
+## Iteration 9 — Luminosity Masks Channel Generator Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Task**: Implement native GIMP 3.x Python 3 Luminosity Masks channel generator in `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity-masks.py`.
+- **Why this task**: Luminosity masks are a core professional photography technique (Photoshop Channels panel / tonal selection workflow) unavailable in stock GIMP. Directly addresses `topics.txt` entry "Select areas based on color or tone / Channels panel".
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity-masks.py`: Created native Python 3 GObject-Introspection plugin implementing one-click generation of 9 tonal selection channels: Lights 1/2/3, Darks 1/2/3, Midtones 1/2/3.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Updated Luminosity Masks entry to IMPLEMENTED_VERIFIED.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Checked off all Phase 7 items.
+- **Technical discoveries**:
+  - `Gimp.Layer.new_from_drawable(src, dest_image)` required for cross-image layer import — using `.copy()` on a layer from a duplicate image causes "wrong image" insertion error.
+  - `Gegl.Buffer.copy()` signature is `src_buf.copy(src_rect, abyss_policy, dst_buf, dst_rect)` not `dst_buf.copy(abyss, dst, src_rect, dst_rect)`.
+  - `Gimp.DrawableFilter` (gegl:gray, gegl:invert-linear) fails on temporary/headless layers with "The filter is hidden" — must use deprecated-but-functional `Drawable.desaturate()` and `Drawable.invert()`.
+  - `gimp-image-get-channels` returns `(#(id1 id2 ...))` in GIMP 3 Script-Fu — use `(car ...)` to extract the vector, then `vector->list`.
+  - `gimp-drawable-fill` replaces deprecated `gimp-edit-fill` in GIMP 3.x Script-Fu.
+  - `gimp-layer-new` in GIMP 3 Script-Fu: name is 2nd arg: `(gimp-layer-new image "Name" w h type opacity mode)`.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exit 0, all 6 sections passing, 2 plugins verified.
+  - Headless GIMP Script-Fu test: `Channel count: 9 / Midtones 3 / Midtones 2 / Midtones 1 / Darks 3 / Darks 2 / Darks 1 / Lights 3 / Lights 2 / Lights 1 / batch command executed successfully`. Exit code 0.
+  - Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval` testing split white/black image against `Lights 1` and `Darks 1` pixel RGB values: Lights 1 white side = 1.000, black side = 0.000; Darks 1 white side = 0.000, black side = 1.000. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `f4ca966`.
+- **Result**: Success.
+- **Next**: Phase 8 — Non-Destructive Dodge & Burn Layer Helper plugin.
+

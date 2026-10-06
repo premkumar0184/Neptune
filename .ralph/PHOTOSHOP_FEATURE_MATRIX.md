@@ -22,15 +22,18 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ### Feature: Luminosity Masks Generator
 - **Source topic**: Make selections - Select areas based on color or tone / Channels panel
-- **Photoshop behavior**: Generates 9-18 precision channel masks (Lights 1-3, Darks 1-3, Midtones 1-3) based on pixel luminance, allowing targeted exposure and tonal adjustments without manual edge painting.
-- **GIMP equivalent**: Manual channel duplication, inversion, and subtraction.
-- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity_masks.py`.
-- **Current capability**: Manual channel math only.
-- **Gap**: No automated channel generator for 9 standard tonal zones.
-- **Dependencies**: Python 3 (`gi.repository.Gimp`).
+- **Photoshop behavior**: Generates 9 precision channel masks (Lights 1-3, Darks 1-3, Midtones 1-3) based on pixel luminance, allowing targeted exposure and tonal adjustments without manual edge painting.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-luminosity-masks` in `<Image>/Select/Luminosity Masks...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/luminosity-masks/luminosity-masks.py`.
+- **Current capability**: Automated one-click generation of all 9 tonal channels: Lights 1/2/3, Darks 1/2/3, Midtones 1/2/3. Each channel uses iterative GEGL buffer copy + selection-intersection narrowing for progressively focused tonal ranges.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`), `Gimp.Layer.new_from_drawable`, `Gimp.Channel.combine_masks`.
 - **Implementation priority**: High (Phase 7).
-- **Verification strategy**: Headless GIMP test executing mask generation and checking channel list for Lights/Darks/Midtones.
-- **Status**: Planned.
+- **Verification strategy**: Headless GIMP test confirms 9 channels created with correct names and verifies pixel luminance mathematics on test splits (exit 0).
+- **Verification evidence** (Iteration 9):
+  1. Headless Script-Fu: `gimp --no-interface --batch '...' --quit` → `Channel count: 9 / Midtones 3 / Midtones 2 / Midtones 1 / Darks 3 / Darks 2 / Darks 1 / Lights 3 / Lights 2 / Lights 1 / batch command executed successfully` (exit code 0).
+  2. Objective pixel behavioral assertion: `gimp --no-interface --batch-interpreter=python-fu-eval` sampled pixel RGB values on split white/black test canvas: `Lights 1` white side = 1.000, black side = 0.000; `Darks 1` white side = 0.000, black side = 1.000 (exit code 0).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 9).
 
 ---
 

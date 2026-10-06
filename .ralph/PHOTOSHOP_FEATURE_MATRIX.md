@@ -204,6 +204,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Color Balance & Tonal Grading Helper
+- **Source topic**: Adjust image color and tone - Correct color balance / Apply Color Balance adjustment in Photoshop (`Topics.txt` line 328, `photoshop_docs.md` Section 3072 & 3216)
+- **Photoshop behavior**: Changes overall color cast with 3-way color grading across Shadows, Midtones, and Highlights with Cyan-Red, Magenta-Green, and Yellow-Blue controls and luminosity preservation.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-color-balance` in `<Image>/Colors/Color Balance...` and `<Image>/Filters/Retouching/Color Balance...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable and applies 3-way color grading using `gimp-drawable-color-balance` across Shadows, Midtones, and Highlights. Features cinematic presets (Teal & Orange, Warm Sunset, Cool Moonlight, Vintage Cross-Process, Custom sliders), preserve luminosity toggle, layer opacity control, attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: PDB `gimp-drawable-color-balance`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 18).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Shadows teal shift (B > R), Midtones warm orange shift (R > B), Highlights golden amber shift (R > B), custom shadow blue shift, and base layer preservation.
+- **Verification evidence** (Iteration 20):
+  1. `verify_config.py`: Section 6 passed with 12 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Teal & Orange preset verified with Teal shadows (B=0.133 > R=0.018, delta +0.115), Warm orange midtones (R=0.888 > B=0.238, delta +0.650), Golden highlights (R=1.000 > B=0.708, delta +0.292), Custom shadow blue shift (B=0.198 > R=0.005), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 20).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

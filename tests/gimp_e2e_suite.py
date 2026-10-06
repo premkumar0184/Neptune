@@ -76,6 +76,7 @@ def test_pdb_registration():
         ("python-fu-black-and-white", "Black & White Conversion & Toning"),
         ("python-fu-photo-filter", "Photo Filter Optical Lens Effect"),
         ("python-fu-vibrance", "Vibrance & Smart Saturation Helper"),
+        ("python-fu-color-balance", "Color Balance & Tonal Grading Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1212,6 +1213,133 @@ def test_vibrance():
 
 
 # ==============================================================================
+# TEST 13: Non-Destructive Color Balance & Tonal Grading (Phase 18)
+# ==============================================================================
+def test_color_balance():
+    print("\n--- Test Suite 13: Non-Destructive Color Balance & Tonal Grading ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-color-balance")
+    if proc is None:
+        record_fail("CB-01", "Procedure lookup", "Procedure not found")
+        return
+
+    image = Gimp.Image.new(120, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with 3 tonal zones:
+        # 1. Deep shadows (10..35): rgb(0.06, 0.06, 0.06)
+        # 2. Midtones (45..75): rgb(0.50, 0.50, 0.50)
+        # 3. Highlights (85..110): rgb(0.85, 0.85, 0.85)
+        base = Gimp.Layer.new(image, "Base", 120, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.06, 0.06, 0.06)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 25, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.50, 0.50, 0.50)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 45, 10, 30, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.85, 0.85, 0.85)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 85, 10, 25, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_sh = base.get_pixel(20, 50).get_rgba()
+        p_base_mid = base.get_pixel(60, 50).get_rgba()
+        p_base_hl = base.get_pixel(95, 50).get_rgba()
+
+        # 13a: Run Teal & Orange preset
+        cfg_to = proc.create_config()
+        cfg_to.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_to.set_property("image", image)
+        cfg_to.set_property("preset", "teal-orange")
+        cfg_to.set_property("preserve-luminosity", True)
+        cfg_to.set_property("opacity", 100.0)
+        cfg_to.set_property("add-mask", True)
+
+        res = proc.run(cfg_to)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CB-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("CB-01", "Execution status", "SUCCESS")
+
+        cb_layer = image.get_layers()[0]
+        if cb_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("CB-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {cb_layer.get_mode()}")
+            return
+        record_pass("CB-02", "Layer mode & name", f"{cb_layer.get_name()} ({cb_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = cb_layer.get_mask()
+        if mask is None:
+            record_fail("CB-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("CB-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 13b: Cinematic Teal & Orange tonal split:
+        # Shadows shift to Teal (Blue > Red)
+        p_sh = cb_layer.get_pixel(20, 50).get_rgba()
+        sh_teal_delta = p_sh[2] - p_sh[0]
+        if sh_teal_delta < 0.05:
+            record_fail("CB-04", "Shadows teal shift", f"Expected Blue > Red (delta > 0.05), got R={p_sh[0]:.3f}, B={p_sh[2]:.3f} (delta {sh_teal_delta:.3f})")
+            return
+        record_pass("CB-04", "Shadows teal shift", f"Teal shadows: B={p_sh[2]:.3f} > R={p_sh[0]:.3f} (delta +{sh_teal_delta:.3f})")
+
+        # Midtones shift to Warm Orange (Red > Blue)
+        p_mid = cb_layer.get_pixel(60, 50).get_rgba()
+        mid_warm_delta = p_mid[0] - p_mid[2]
+        if mid_warm_delta < 0.25:
+            record_fail("CB-05", "Midtones warm shift", f"Expected Red > Blue (delta > 0.25), got R={p_mid[0]:.3f}, B={p_mid[2]:.3f} (delta {mid_warm_delta:.3f})")
+            return
+        record_pass("CB-05", "Midtones warm orange shift", f"Warm midtones: R={p_mid[0]:.3f} > B={p_mid[2]:.3f} (delta +{mid_warm_delta:.3f})")
+
+        # Highlights shift to Warm Amber (Red > Blue)
+        p_hl = cb_layer.get_pixel(95, 50).get_rgba()
+        hl_warm_delta = p_hl[0] - p_hl[2]
+        if hl_warm_delta < 0.15:
+            record_fail("CB-06", "Highlights golden shift", f"Expected Red > Blue (delta > 0.15), got R={p_hl[0]:.3f}, B={p_hl[2]:.3f} (delta {hl_warm_delta:.3f})")
+            return
+        record_pass("CB-06", "Highlights golden amber shift", f"Golden highlights: R={p_hl[0]:.3f} > B={p_hl[2]:.3f} (delta +{hl_warm_delta:.3f})")
+
+        # 13c: Custom tonal sliders on separate canvas
+        image.remove_layer(cb_layer)
+        cfg_custom = proc.create_config()
+        cfg_custom.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_custom.set_property("image", image)
+        cfg_custom.set_property("preset", "custom")
+        cfg_custom.set_property("tonal-range", "shadows")
+        cfg_custom.set_property("cyan-red", -40.0)
+        cfg_custom.set_property("magenta-green", 0.0)
+        cfg_custom.set_property("yellow-blue", 40.0)
+        cfg_custom.set_property("preserve-luminosity", True)
+        cfg_custom.set_property("opacity", 100.0)
+        cfg_custom.set_property("add-mask", False)
+
+        proc.run(cfg_custom)
+        custom_layer = image.get_layers()[0]
+        p_c_sh = custom_layer.get_pixel(20, 50).get_rgba()
+        if not (p_c_sh[2] > p_c_sh[0]):
+            record_fail("CB-07", "Custom tonal range control", f"Expected Blue > Red in custom shadows, got R={p_c_sh[0]:.3f}, B={p_c_sh[2]:.3f}")
+            return
+        record_pass("CB-07", "Custom tonal range control", f"Custom shadow blue shift: B={p_c_sh[2]:.3f} > R={p_c_sh[0]:.3f}")
+
+        # 13d: Non-destructive base layer invariance
+        p_base_after = base.get_pixel(20, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_sh[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("CB-08", "Non-destructive invariance", f"Base layer altered by {base_diff:.6f} > 0")
+            return
+        record_pass("CB-08", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CB-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1233,6 +1361,7 @@ def run_all_tests():
     test_black_and_white()
     test_photo_filter()
     test_vibrance()
+    test_color_balance()
 
 
     elapsed = time.time() - start_time

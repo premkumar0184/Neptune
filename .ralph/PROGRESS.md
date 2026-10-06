@@ -422,3 +422,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `e17c686`.
 - **Result**: Success.
 - **Next**: Phase 18 — Non-Destructive Color Balance & Tonal Grading Helper Plugin.
+
+## Iteration 20 — Non-Destructive Color Balance & Tonal Grading Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Color Balance & Tonal Grading Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 328, `photoshop_docs.md` Section 3072 & 3216: "Color Balance: Changes overall color cast"). Replaces destructive color balance edits with an isolated non-destructive layer applying 3-way color grading across Shadows (`Gimp.TransferMode.SHADOWS`), Midtones (`Gimp.TransferMode.MIDTONES`), and Highlights (`Gimp.TransferMode.HIGHLIGHTS`) with Cyan-Red, Magenta-Green, and Yellow-Blue controls, cinematic presets (Teal & Orange, Warm Sunset, Cool Moonlight, Vintage Cross-Process, Custom), luminosity preservation, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-color-balance` with 3-way tonal color grading, presets, preserve-luminosity toggle, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `color-balance`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 13 (asserting PDB registration, layer modes, mask attachment, Teal & Orange split-toning with Shadows teal delta +0.115, Midtones warm orange delta +0.650, Highlights golden amber delta +0.292, custom shadow blue shift, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Color Balance & Tonal Grading Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 18 complete and scheduled Phase 19 (Gradient Map & Cinematic Color Grading).
+- **Technical discoveries**:
+  - `gimp-drawable-color-balance` applies bell-shaped transfer curves across Shadows (0.0 to ~0.3), Midtones (~0.15 to ~0.85), and Highlights (~0.7 to 1.0). For cinematic split-toning (such as Teal & Orange), tuning deep shadow luminance (<=0.10) ensures clean separation from warm midtone bias.
+  - Preserve luminosity toggle guarantees that aggressive color cast adjustments do not darken or blowout image tonal lightness.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 12 plugins verified).
+    - Stage 2: `install.sh --batch` passed (12 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 85 tests across 13 test suites in 4.50s.
+    - Final quality gate: SUCCESS across all stages in 15.19s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `6e26538`.
+- **Result**: Success.
+- **Next**: Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin.
+

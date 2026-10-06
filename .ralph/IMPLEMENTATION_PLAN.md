@@ -102,11 +102,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate muted color boost, saturated tone protection, layer mask attachment, and non-destructive base layer isolation via headless GIMP test.
 
 ### Phase 18 — Non-Destructive Color Balance & Tonal Grading Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `color-balance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`.
-- [ ] Create dedicated non-destructive Color Balance adjustment layer duplicating the active drawable.
-- [ ] Support independent 3-way color grading across Shadows, Midtones, and Highlights with Cyan-Red, Magenta-Green, and Yellow-Blue controls.
-- [ ] Support preserve luminosity toggle and attached reveal-all white layer mask for local brush masking.
-- [ ] Register under menu path `<Image>/Colors/Color Balance...` and `<Image>/Filters/Retouching/Color Balance...`.
-- [ ] Validate tonal range color shifts, preserve luminosity stability, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `color-balance` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-balance/color-balance.py`.
+- [x] Create dedicated non-destructive Color Balance adjustment layer duplicating the active drawable.
+- [x] Support independent 3-way color grading across Shadows, Midtones, and Highlights with Cyan-Red, Magenta-Green, and Yellow-Blue controls.
+- [x] Support preserve luminosity toggle and attached reveal-all white layer mask for local brush masking.
+- [x] Register under menu path `<Image>/Colors/Color Balance...` and `<Image>/Filters/Retouching/Color Balance...`.
+- [x] Validate tonal range color shifts, preserve luminosity stability, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 19 — Non-Destructive Gradient Map & Cinematic Color Grading Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-map` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-map/gradient-map.py`.
+- [ ] Create dedicated non-destructive Gradient Map adjustment layer powered by GEGL `gegl:gradient-map`.
+- [ ] Map luminance tones of active image to curated photographic and cinematic palettes (Teal & Orange, Sepia Vintage, Cyberpunk Neon, Copper Patina, Fine Art Monochrome, Custom colors).
+- [ ] Support configurable blend modes (Soft Light, Overlay, Color, Normal), layer opacity, and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Gradient Map...` and `<Image>/Filters/Retouching/Gradient Map...`.
+- [ ] Validate tonal luminance mapping, smooth multi-stop color transitions, blend mode interaction, and non-destructive source layer preservation via headless GIMP test.
+
 
 

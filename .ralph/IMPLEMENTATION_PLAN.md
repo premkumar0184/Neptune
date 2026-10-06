@@ -126,14 +126,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate cross-channel gain shifts, infrared color inversion, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 21 — Non-Destructive Color Temperature & White Balance Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `color-temperature` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`.
-- [ ] Create dedicated non-destructive Color Temperature adjustment layer powered by GEGL `gegl:color-temperature`.
-- [ ] Support physical Kelvin white balance correction and creative temperature styling (Candlelight 1850K, Tungsten 3200K, Fluorescent 4000K, Daylight 5500K, Cloudy 6500K, Shade 7500K, Blue Sky 10000K, Custom Kelvin sliders).
-- [ ] Support layer opacity control, blend modes, and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Colors/Color Temperature...` and `<Image>/Filters/Retouching/Color Temperature...`.
-- [ ] Validate Kelvin temperature shifts (cooling shifts B>R, warming shifts R>B), layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `color-temperature` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`.
+- [x] Create dedicated non-destructive Color Temperature adjustment layer powered by GEGL `gegl:color-temperature`.
+- [x] Support physical Kelvin white balance correction and creative temperature styling (Golden Hour Sunset 6500K->9000K, Tungsten Indoor Glow 5500K->7500K, Shade / Blue Hour 6500K->4800K, Nocturnal Moonlight 6500K->3800K, Candlelight Glow 5500K->10500K, Daylight Normalization 4000K->5500K, Custom Kelvin sliders 1000K-12000K).
+- [x] Support layer opacity control, blend modes, and attached reveal-all layer mask.
+- [x] Register under menu path `<Image>/Colors/Color Temperature...` and `<Image>/Filters/Retouching/Color Temperature...`.
+- [x] Validate Kelvin temperature shifts (cooling shifts B>R, warming shifts R>B), layer mask attachment, and non-destructive source layer preservation via headless GIMP test.
 
-
-
-
-
+### Phase 22 — Non-Destructive Clarity & Dehaze Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `clarity-dehaze` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/clarity-dehaze/clarity-dehaze.py`.
+- [ ] Create dedicated non-destructive Clarity & Dehaze adjustment layer duplicating active drawable.
+- [ ] Support midtone local contrast enhancement (Clarity slider -100 to +100) using wide-radius edge-preserving unsharp masking / local contrast filtering.
+- [ ] Support atmospheric haze reduction and contrast restoration (Dehaze slider -100 to +100) using contrast stretching and black point recovery.
+- [ ] Support curated presets (Landscape Punch, Soft Portrait Glow, Cut Mountain Haze, Heavy Fog / Dreamy, Dramatic Architecture, Custom sliders).
+- [ ] Support layer opacity control (10% to 100%) and attached reveal-all layer mask.
+- [ ] Register under menu path `<Image>/Colors/Clarity and Dehaze...` and `<Image>/Filters/Enhance/Clarity and Dehaze...`.
+- [ ] Validate midtone contrast enhancement, haze penetration, layer mask attachment, and non-destructive source layer preservation via headless GIMP test.

@@ -79,6 +79,7 @@ def test_pdb_registration():
         ("python-fu-color-balance", "Color Balance & Tonal Grading Helper"),
         ("python-fu-gradient-map", "Gradient Map & Cinematic Grading Helper"),
         ("python-fu-channel-mixer", "Channel Mixer & Infrared Helper"),
+        ("python-fu-color-temperature", "Color Temperature & White Balance Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -1639,6 +1640,117 @@ def test_channel_mixer():
 
 
 # ==============================================================================
+# 16. COLOR TEMPERATURE TEST SUITE
+# ==============================================================================
+def test_color_temperature():
+    print("\n--- Test Suite 16: Color Temperature & White Balance Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-color-temperature")
+    if proc is None:
+        record_fail("CT-01", "Procedure lookup", "Procedure python-fu-color-temperature not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseNeutralGray", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Fill with neutral mid-gray (0.5, 0.5, 0.5)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        p_base_orig = base.get_pixel(40, 40).get_rgba()
+
+        # 16a: Run Warming Preset (Golden Hour Sunset)
+        cfg_warm = proc.create_config()
+        cfg_warm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_warm.set_property("image", image)
+        cfg_warm.set_property("preset", "warm-sunset")
+        cfg_warm.set_property("opacity", 100.0)
+        cfg_warm.set_property("add-mask", True)
+
+        res = proc.run(cfg_warm)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CT-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("CT-01", "Execution status", "SUCCESS")
+
+        warm_layer = image.get_layers()[0]
+        if warm_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("CT-02", "Layer mode", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}), got {warm_layer.get_mode()}")
+            return
+        record_pass("CT-02", "Layer mode & name", f"{warm_layer.get_name()} ({warm_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = warm_layer.get_mask()
+        if mask is None:
+            record_fail("CT-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("CT-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Verify warming optical shift: Red > Blue, Red > 0.5, Blue < 0.5
+        p_warm = warm_layer.get_pixel(40, 40).get_rgba()
+        if not (p_warm[0] > p_warm[2] and (p_warm[0] - p_warm[2]) > 0.15):
+            record_fail("CT-04", "Warming optical shift", f"Expected Red > Blue by >= 0.15, got R={p_warm[0]:.3f}, B={p_warm[2]:.3f}")
+            return
+        record_pass("CT-04", "Warming optical shift", f"Golden Hour amber warmth: R={p_warm[0]:.3f} > B={p_warm[2]:.3f} (delta {p_warm[0] - p_warm[2]:.3f})")
+
+        # 16b: Run Cooling Preset (Nocturnal Moonlight)
+        image.remove_layer(warm_layer)
+        cfg_cool = proc.create_config()
+        cfg_cool.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cool.set_property("image", image)
+        cfg_cool.set_property("preset", "cool-night")
+        cfg_cool.set_property("opacity", 100.0)
+        cfg_cool.set_property("add-mask", False)
+
+        proc.run(cfg_cool)
+        cool_layer = image.get_layers()[0]
+        p_cool = cool_layer.get_pixel(40, 40).get_rgba()
+        if not (p_cool[2] > p_cool[0] and (p_cool[2] - p_cool[0]) > 0.25):
+            record_fail("CT-05", "Cooling optical shift", f"Expected Blue > Red by >= 0.25, got R={p_cool[0]:.3f}, B={p_cool[2]:.3f}")
+            return
+        record_pass("CT-05", "Cooling optical shift", f"Nocturnal moonlight cool: B={p_cool[2]:.3f} > R={p_cool[0]:.3f} (delta {p_cool[2] - p_cool[0]:.3f})")
+
+        # 16c: Test Custom Kelvin sliders and opacity
+        image.remove_layer(cool_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("original-temperature", 5000.0)
+        cfg_cust.set_property("intended-temperature", 8500.0)
+        cfg_cust.set_property("opacity", 80.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 80.0) > 0.01:
+            record_fail("CT-06", "Custom opacity", f"Expected 80.0%, got {cust_layer.get_opacity()}%")
+            return
+        p_cust = cust_layer.get_pixel(40, 40).get_rgba()
+        if not (p_cust[0] > p_cust[2]):
+            record_fail("CT-06", "Custom Kelvin shift", f"Expected warm shift R > B, got R={p_cust[0]:.3f}, B={p_cust[2]:.3f}")
+            return
+        record_pass("CT-06", "Custom Kelvin sliders & opacity", f"Opacity 80.0%, R={p_cust[0]:.3f} > B={p_cust[2]:.3f} (delta {p_cust[0] - p_cust[2]:.3f})")
+
+        # 16d: Non-destructive base layer invariance
+        p_base_after = base.get_pixel(40, 40).get_rgba()
+        max_base_diff = max(abs(p_base_after[i] - p_base_orig[i]) for i in range(3))
+        if max_base_diff > 0.000001:
+            record_fail("CT-07", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("CT-07", "Non-destructive layer preservation", f"Base pixels 100% untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CT-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -1663,6 +1775,7 @@ def run_all_tests():
     test_color_balance()
     test_gradient_map()
     test_channel_mixer()
+    test_color_temperature()
 
 
     elapsed = time.time() - start_time

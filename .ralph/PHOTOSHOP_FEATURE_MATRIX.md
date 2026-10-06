@@ -255,6 +255,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Color Temperature & White Balance Helper
+- **Source topic**: Adjust image color and tone - Correct color balance with Color and vibrance (`Topics.txt` line 100, `photoshop_docs.md` Section 104 line 3184 & 3192: "Adjust Temperature, Tint, Vibrance, Saturation and fix White Balance to achieve balanced and natural-looking colors")
+- **Photoshop behavior**: Adjusts image color temperature along the physical blackbody radiation spectrum (Kelvin) to warm up golden hour tones, cool down shade/nocturnal tones, or calibrate neutral white balance.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-color-temperature` in `<Image>/Colors/Color Temperature...` and `<Image>/Filters/Retouching/Color Temperature...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating the target drawable and applies GEGL `gegl:color-temperature`. Features authentic physical Kelvin presets (Warming: Golden Hour / Sunset Glow 6500K -> 9000K, Warming: Tungsten Indoor Glow 5500K -> 7500K, Cooling: Shade / Blue Hour 6500K -> 4800K, Cooling: Nocturnal Moonlight 6500K -> 3800K, Candlelight Glow 5500K -> 10500K, Daylight Normalization 4000K -> 5500K, Custom Kelvin sliders 1000K-12000K), layer opacity slider (10% to 100%), attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:color-temperature`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 21).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Warming shift (R > B, delta > 0.15), Cooling shift (B > R, delta > 0.25), Custom Kelvin sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 23):
+  1. `verify_config.py`: Section 6 passed with 15 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Golden Hour sunset warming verified (R=0.578 > B=0.386, delta 0.191), Nocturnal moonlight cooling verified (B=1.000 > R=0.356, delta 0.644), Custom Kelvin sliders with 80.0% opacity verified (R=0.658 > B=0.296, delta 0.362), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 23).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

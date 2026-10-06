@@ -499,5 +499,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 21 — Non-Destructive Color Temperature & White Balance Helper Plugin.
 
+## Iteration 23 — Non-Destructive Color Temperature & White Balance Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Color Temperature & White Balance Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 100, `photoshop_docs.md` Section 104 line 3184 & 3192: "Adjust Temperature, Tint, Vibrance, Saturation and fix White Balance to achieve balanced and natural-looking colors" and "Temperature: Adjusts the warmth or coolness of the colors"). Replaces destructive color temperature filters with an isolated non-destructive layer applying GEGL `gegl:color-temperature` along the physical blackbody radiation spectrum (Kelvin) with authentic presets (Warming: Golden Hour Sunset 6500K->9000K, Warming: Tungsten Indoor Glow 5500K->7500K, Cooling: Shade / Blue Hour 6500K->4800K, Cooling: Nocturnal Moonlight 6500K->3800K, Candlelight Glow 5500K->10500K, Daylight Normalization 4000K->5500K, Custom Kelvin sliders 1000K-12000K), opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-temperature/color-temperature.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-color-temperature` with physical Kelvin presets, custom temperature sliders, opacity slider, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `color-temperature`.
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions.
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 16 (asserting PDB registration, layer modes, mask attachment, Golden Hour amber warming with R=0.578>B=0.386 delta 0.191, Nocturnal moonlight cooling with B=1.000>R=0.356 delta 0.644, custom Kelvin sliders with 80.0% opacity, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Color Temperature & White Balance Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 21 complete and scheduled Phase 22 (Clarity & Dehaze Helper Plugin).
+- **Technical discoveries**:
+  - In GEGL `gegl:color-temperature`, adjusting `intended-temperature > original-temperature` simulates moving a scene illuminated by neutral light into a warmer light environment, generating an authentic optical blackbody warm amber glow (Red > Blue).
+  - Adjusting `intended-temperature < original-temperature` produces a cool ambient shift (Blue > Red) characteristic of shade or moonlight.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 15 plugins verified).
+    - Stage 2: `install.sh --batch` passed (15 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 112 tests across 16 test suites in 5.77s.
+    - Final quality gate: SUCCESS across all stages in 16.90s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `6ac04ad`.
+- **Result**: Success.
+- **Next**: Phase 22 — Non-Destructive Clarity & Dehaze Helper Plugin.
+
+
 
 

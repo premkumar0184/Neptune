@@ -35,8 +35,8 @@ Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience us
 ---
 
 ## Phase 3 — Single-Window Workspace & Theme UI Polish
-- [ ] Inspect and refine `sessionrc` dockable layout for GIMP 3.2 (Layers, Channels, Paths, Undo History, Tool Options).
-- [ ] Polish `theme.css` to match dark Photoshop UI styling and ensure GTK3 theme compatibility.
+- [x] Inspect and refine `sessionrc` dockable layout for GIMP 3.2 (Layers, Channels, Paths, Undo History, Tool Options) — added gimp-undo-history; enforce single-window-mode yes in gimprc.
+- [x] Polish `theme.css` to match dark Photoshop UI styling and ensure GTK3 theme compatibility — removed hardcoded Flatpak /app/ paths; added portable dark overrides.
 - [ ] Verify splash screen installation (`splashes/`) and desktop application launcher integration (`.local/share/applications/org.gimp.GIMP.desktop`).
 
 ---

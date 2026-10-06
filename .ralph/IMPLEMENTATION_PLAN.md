@@ -1,77 +1,61 @@
-# Implementation Plan — Linux Photo Editor
+# Implementation Plan — Linux Photo Editor (PhotoGIMP / GIMP 3.x)
 
-Status: BOOTSTRAP_PENDING
+Status: IN_PROGRESS
 
-This file is the authoritative list of project work.
+This file is the authoritative list of project work for transforming GIMP/PhotoGIMP into a polished Linux photo editor.
 
 ## Product objective
 
-Create a polished Linux photo editor from the supplied GIMP repository while preserving useful existing capabilities.
+Transform GIMP 3.x on Linux into a seamless Photoshop-like editing experience using the PhotoGIMP framework, custom configuration files (`gimprc`, `sessionrc`, `shortcutsrc`, `toolrc`, `theme.css`, `contextrc`), tool options, and desktop integration scripts.
 
-Do not invent major product requirements. Derive the concrete plan from:
-1. the supplied repository;
-2. explicit user requirements;
-3. technical constraints discovered during inspection.
+---
 
-## Phase 0 — Repository archaeology
+## Phase 0 — Repository Archaeology & Baseline Analysis
+- [x] Identify GIMP version (`GNU Image Manipulation Program version 3.2.6`).
+- [x] Inspect PhotoGIMP repository structure and configuration assets (`PhotoGIMP/`).
+- [x] Verify system GIMP installation (`/usr/bin/gimp`) and user config directory (`~/.config/GIMP/3.2`).
+- [x] Build comprehensive Photoshop Feature Matrix (`.ralph/PHOTOSHOP_FEATURE_MATRIX.md`).
+- [x] Initialize Git tracking and create baseline commit.
 
-- [ ] Identify repository version/commit and current Git state.
-- [ ] Identify build system and supported build procedure.
-- [ ] Identify test suites and strongest practical verification commands.
-- [ ] Map application entry point and major UI/toolkit components.
-- [ ] Map image/document data structures and core editing pipeline.
-- [ ] Identify plugin/extension interfaces.
-- [ ] Build the unmodified repository, or document the exact blocker.
-- [ ] Record architecture findings in `.ralph/DECISIONS.md`.
+---
 
-## Phase 1 — Product foundation
+## Phase 1 — GIMP 3.2+ Installer Compatibility & Automated Deployment
+- [x] Update `PhotoGIMP/install.sh` to detect and support GIMP 3.2+ configuration directory (`~/.config/GIMP/3.2/` alongside `3.0/`).
+- [x] Add non-interactive installation flag (`--batch` / `-y` / `--yes`) to `PhotoGIMP/install.sh` for automated verification and CI environments.
+- [ ] Ensure installer safely backs up and updates both native GIMP 3.x and Flatpak installations.
+- [x] Verify installation against the live system GIMP 3.2.6 configuration directory.
 
-- [ ] Define target Linux UX and supported desktop environments.
-- [ ] Define initial product feature set from the user's brief.
-- [ ] Define window/layout/navigation behavior.
-- [ ] Define document lifecycle: create/open/save/export/close/recovery.
-- [ ] Define explicit non-goals to prevent scope growth.
+---
 
-## Phase 2 — Core editing experience
+## Phase 2 — Photoshop Keybinding Audit & Alignment
+- [ ] Audit `PhotoGIMP/.config/GIMP/3.0/shortcutsrc` for action path compatibility with GIMP 3.2 action names.
+- [ ] Map missing Photoshop shortcuts (e.g. Deselect `Ctrl+D`, Select All `Ctrl+A`, Invert Selection `Ctrl+Shift+I`, Layer via Copy `Ctrl+J`, Free Transform `Ctrl+T`, Levels `Ctrl+L`, Curves `Ctrl+M`, Hue/Saturation `Ctrl+U`).
+- [ ] Create automated syntax validator for `shortcutsrc` to prevent broken keybindings.
 
-- [ ] Reliable image import/display.
-- [ ] Required selections/transforms.
-- [ ] Required layers/layer operations.
-- [ ] Undo/redo.
-- [ ] Required photo adjustments.
-- [ ] Focused regression tests for modified behavior.
+---
 
-## Phase 3 — Linux application UX
+## Phase 3 — Single-Window Workspace & Theme UI Polish
+- [ ] Inspect and refine `sessionrc` dockable layout for GIMP 3.2 (Layers, Channels, Paths, Undo History, Tool Options).
+- [ ] Polish `theme.css` to match dark Photoshop UI styling and ensure GTK3 theme compatibility.
+- [ ] Verify splash screen installation (`splashes/`) and desktop application launcher integration (`.local/share/applications/org.gimp.GIMP.desktop`).
 
-- [ ] Startup/shutdown.
-- [ ] File dialogs/recent documents.
-- [ ] Keyboard shortcuts.
-- [ ] HiDPI/scaling.
-- [ ] Theme behavior if required.
-- [ ] Packaging/distribution.
-- [ ] Desktop integration.
+---
 
-## Phase 4 — Reliability/performance
+## Phase 4 — Tool Options & Retouching Workflows
+- [ ] Audit tool configuration (`toolrc` and `tool-options/`) for Brush, Eraser, Healing Brush, Clone Stamp, Marquee, Lasso, Wand, and Transform tools.
+- [ ] Standardize default tool options to match Photoshop default tool behaviors (feathering, anti-aliasing, sample merged).
 
-- [ ] Measure startup bottlenecks.
-- [ ] Measure expensive image operations.
-- [ ] Verify memory behavior with large images.
-- [ ] Verify undo/redo under realistic workloads.
-- [ ] Add regression coverage for discovered failures.
-- [ ] Do not optimize without measurements.
+---
 
-## Phase 5 — Quality gate
+## Phase 5 — Verification & Automated Quality Gate
+- [ ] Build automated verification script (`scripts/verify_photogimp.py` or `.ralph/verify.sh`) to check configuration syntax and file structure.
+- [ ] Run headless GIMP validation (`gimp --no-interface --batch ...`) with the installed PhotoGIMP configuration.
+- [ ] Document manual smoke testing steps for Linux desktop DEs (GNOME/KDE/XFCE).
 
-- [ ] Full build succeeds.
-- [ ] Relevant automated tests pass.
-- [ ] Static checks pass where available.
-- [ ] Basic manual smoke test documented.
-- [ ] No release-blocking issue remains.
-- [ ] Final Git state is clean or intentionally documented.
+---
 
-## Planning rules
+## Task Execution Guidelines
 
-- Split tasks that cannot be implemented and verified in one iteration.
-- Keep tasks ordered by dependency.
-- Never check a box without evidence.
-- Update the plan when new verified information changes the order or scope.
+- Work on exactly ONE bounded task per iteration.
+- Never mark a task complete without empirical verification evidence.
+- Commit verified changes to Git after each iteration.

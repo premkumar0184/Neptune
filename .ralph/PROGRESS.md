@@ -165,3 +165,28 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 8 — Non-Destructive Dodge & Burn Layer Helper plugin.
 
+
+## Iteration 10 — Non-Destructive Dodge & Burn Layer Helper Plugin
+- **Date**: 2026-10-06
+- **Account**: `account-A`
+- **Task**: Implement native GIMP 3.x Python 3 Dodge & Burn Layer helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge-burn-layer.py`.
+- **Why this task**: Dodge and Burn is a fundamental Photoshop retouching workflow (`topics.txt` line 266: "Dodge or burn image areas"). In Photoshop, non-destructive dodging/burning relies on a 50% neutral gray layer set to Soft Light or Overlay. In stock GIMP, setting this up requires a multi-step manual process. This plugin provides a one-click helper with mode selection, opacity control, and automated brush color preparation.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge-burn-layer.py`: Created native Python 3 GObject-Introspection plugin implementing automated neutral gray layer creation, blend mode selection (Soft Light / Overlay), opacity control, brush setup (White foreground for dodging, Black background for burning), and active layer selection.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Updated Non-Destructive Dodge & Burn Layer entry to IMPLEMENTED_VERIFIED.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Checked off all Phase 8 items.
+- **Technical discoveries**:
+  - In GIMP 3's GEGL pipeline, `#808080` (sRGB 128/255 perceptual midpoint) produces EXACTLY 0.000000 composite difference (perfect mathematical identity) in both `OVERLAY` and `SOFTLIGHT` blend modes. Filling with `rgb(0.5, 0.5, 0.5)` linear light brightens the image by +0.68.
+  - `Gimp.context_pop()` cleanly restores the user's color context without leaving `#808080` as the active brush color; brush colors are then configured to White and Black for immediate painting.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Exit 0, all 6 sections passing, 3 active Python plugins verified.
+  - Automated 5-test suite via `gimp --no-interface --batch-interpreter=python-fu-eval`:
+    1. PDB procedure registered (`python-fu-dodge-burn-layer`).
+    2. Soft Light layer created with requested name, mode, opacity, and brush colors.
+    3. Soft Light neutrality verified: exactly 0.000000 composite difference against underlying image.
+    4. Overlay neutrality verified: exactly 0.000000 composite difference against underlying image.
+    5. Dodging and burning verified: White paint brightens pixels (0.352 -> 0.871), Black paint darkens pixels (0.352 -> 0.112).
+  - All tests passed, exit code 0.
+- **Commit**: PhotoGIMP sub-repo `3c74d07`.
+- **Result**: Success.
+- **Next**: Phase 9 — High Pass Sharpening Helper Plugin.

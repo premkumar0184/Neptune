@@ -40,14 +40,17 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 ### Feature: Non-Destructive Dodge & Burn Layer
 - **Source topic**: Retouch and correct - Dodge and burn image areas
 - **Photoshop behavior**: Creates a 50% neutral gray layer in Overlay or Soft Light blend mode, allowing non-destructive exposure painting with black/white brush without directly modifying source pixels.
-- **GIMP equivalent**: Manual layer creation, bucket filling with `#808080`, and setting blend mode to Overlay.
-- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge_burn_layer.py`.
-- **Current capability**: Manual workflow only.
-- **Gap**: Missing one-click helper plugin with blend mode choice (Soft Light / Overlay) and layer naming.
-- **Dependencies**: Python 3 (`gi.repository.Gimp`).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-dodge-burn-layer` in `<Image>/Layer/New Dodge & Burn Layer...` and `<Image>/Filters/Retouching/Dodge & Burn Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge-burn-layer.py`.
+- **Current capability**: One-click creation of 50% neutral gray overlay layer with interactive dialog for blend mode choice (Soft Light subtle vs Overlay high contrast), layer name, and opacity; prepares White/Black brush colors and selects layer for immediate painting.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
 - **Implementation priority**: Medium (Phase 8).
-- **Verification strategy**: Headless GIMP test creating dodge & burn layer and checking 50% gray fill + overlay mode.
-- **Status**: Planned.
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer creation, neutral gray fill (`#808080`), 0.000000 composite difference (perfect neutrality), and pixel brightening/darkening when painting.
+- **Verification evidence** (Iteration 10):
+  1. `verify_config.py`: Section 6 passed with 3 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Soft Light neutrality diff = 0.000000, Overlay neutrality diff = 0.000000; dodged luminance = 0.871 (base 0.352), burned luminance = 0.112 (base 0.352). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 10).
 
 ---
 

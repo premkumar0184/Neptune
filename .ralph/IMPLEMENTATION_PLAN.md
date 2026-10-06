@@ -33,10 +33,10 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate channel generation on test image via headless GIMP test (exit 0, 9 channels named correctly).
 
 ### Phase 8 — Non-Destructive Dodge & Burn Layer Helper
-- [ ] Implement native GIMP 3.x Python 3 plugin `dodge-burn-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge_burn_layer.py`.
-- [ ] Create 50% neutral gray overlay layer (`#808080`) set to Overlay or Soft Light blend mode.
-- [ ] Register under menu path `<Image>/Layer/New Dodge & Burn Layer...`.
-- [ ] Validate layer creation and properties via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `dodge-burn-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/dodge-burn-layer/dodge-burn-layer.py`.
+- [x] Create 50% neutral gray overlay layer (`#808080`) set to Overlay or Soft Light blend mode.
+- [x] Register under menu path `<Image>/Layer/New Dodge & Burn Layer...` and `<Image>/Filters/Retouching/Dodge & Burn Layer...`.
+- [x] Validate layer creation, neutrality (0.000000 diff), and dodging/burning properties via headless GIMP test.
 
 ### Phase 9 — High Pass Sharpening Helper
 - [ ] Implement native GIMP 3.x Python 3 plugin `high-pass-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/high-pass-sharpen/high_pass_sharpen.py`.

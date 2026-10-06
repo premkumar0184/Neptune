@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "run_id": null,
+  "status": "not_started",
+  "iteration": 0,
+  "current_task": null,
+  "account_label": null,
+  "model": null,
+  "last_commit": null,
+  "last_verified_task": null,
+  "verification": {},
+  "last_transition": null,
+  "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
+}

@@ -1,0 +1,681 @@
+Get started  - Technical requirements and installation    - Adobe Photoshop on desktop technical requirements
+    - Use the graphics processor
+    - Graphics processor (GPU) card usage
+    - Windows HEIF and HEVC codecs
+    - Photoshop language availability
+    - Supported Photoshop versions
+  - Learn the basics    - Adobe Photoshop on desktop FAQ
+    - Home screen overview
+    - Workspace overview
+    - Access the Discover panel
+    - Save custom workspaces
+    - Switch workspaces
+    - Delete workspaces
+    - Restore workspaces
+    - Boost workflows with the Contextual Task Bar
+    - Rearrange document windows
+    - Hide or show all panels
+    - Dock or undock panels
+    - Move panels
+    - Add and remove panels
+    - Stack floating panels
+    - Expand or collapse panel icons
+    - Change text size in panels and tooltips
+    - Use simple math in number fields
+    - High-density monitor support and per-monitor scaling
+    - Arrange and group panels
+    - Creative Cloud Libraries in Photoshop
+    - Request access to test experimental features
+  - Set up toolbars and panels    - Customize toolbar
+    - Tooltips overview
+    - Create tool presets
+    - Use spring-loaded shortcuts
+    - Use Undo and Redo commands
+    - History panel settings
+    - Set History Log preferences
+    - View history logs
+    - Use snapshots in the History panel
+    - Paint with image states from the History panel
+    - Manage image states
+    - Restore parts of an image to a previous state
+    - Edit images with AI Assistant
+    - View and synchronize multiple images
+  - Settings and preferences    - Adjust preferences
+    - Backup and restore preferences
+    - Reset preferences
+    - View keyboard shortcuts
+    - Change tool pointers
+    - Change Photoshop language settings
+    - Configure Photoshop performance preferences
+    - Connect social media accounts for Content Credentials (Beta)
+    - Display file information in the info panel and document status bar
+    - Photoshop preferences locations
+    - Migrate presets, actions, and settings
+Generative AI in Photoshop  - Generative AI features in Photoshop on Desktop FAQ
+  - Generative AI features overview
+  - Get new variations of generated content
+  - Use Firefly Boards with Photoshop
+  - Use AI Assisted Editor
+  - AI Assisted Editor FAQ
+Create, open, and import images  - Import files    - Browse, select, and import Adobe Stock assets
+    - Import images from a digital camera
+    - Understand raster and vector files
+    - Place a file in Photoshop
+    - Open DICOM files
+    - Use stock images in your Photoshop documents
+    - Open and import files in Photoshop
+  - Create images    - Generate an image with descriptive text prompts
+    - Edit images with Generative Fill
+    - Generate sharper variations with Enhance Detail
+    - Explore beyond the canvas with Generative Expand
+    - Use reference images for consistent results
+    - Generate images guided by a reference image
+    - Edit images with Prompt to edit
+    - Use Markup for AI image generation
+    - Create documents using presets
+Create and manage layers  - Get started with layers    - Layers overview
+    - Organize layers with layer groups
+    - Work with the Layers panel
+    - Video Layers overview
+    - Convert background and regular layers
+    - Duplicate layers
+    - Create document from layer or group
+    - Change transparency preferences
+    - Sample from all visible layers
+    - Rasterize layers
+    - Organize layers in the Layers panel
+  - Transform and manipulate layers    - Select layers
+    - Group and ungroup layers
+    - Link and unlink layers
+    - Display layer edges and handles
+    - Clean up image layers
+    - Reorder and move layers
+  - Color adjustment and fill layers    - Adjustment and fill layers overview
+    - Work with adjustment layers
+    - Use layer masks to target adjustment or fill layers
+    - Create adjustment layers
+    - Merging adjustment or fill layers
+    - Adjustment presets overview
+    - Create custom presets
+    - Correct color balance with Color and vibrance
+    - Create fill layers
+    - Adjustment layer options
+    - Change adjustment and fill layer options
+    - Adjust contrast with Clarity and Dehaze
+    - Adjust texture with Grain
+    - Adjust image lighting with Light
+  - Apply layer effects    - Add layer styles
+    - Work with preset styles
+    - Layer style effects and options overview
+    - Manage preset styles
+    - Display or hide layer styles
+    - Copy and paste layer styles
+    - Import preset style libraries
+    - Manage contours
+    - Set a global lighting angle for all layers
+    - Scale layer effects
+    - Remove layer effects
+    - Work with layer styles
+    - Convert layer styles to image layers
+    - Create texture effects with Knockout
+    - Set layer opacity and blending modes
+  - Smart objects    - Smart Objects - overview and benefits
+    - Create embedded Smart Objects
+    - Create linked Smart Objects
+    - Update Linked Smart Objects
+    - View Linked Smart Object properties
+    - Embed Linked Smart Objects
+    - Package and locate linked Smart Objects
+    - Convert embedded Smart Objects to linked
+    - Filter the Layers panel by Smart Objects
+    - Duplicate an embedded Smart Object
+    - Edit the contents of a Smart Object
+    - Replace the contents of a Smart Object
+    - Convert Smart Objects to layers
+    - Rasterize Smart Objects
+    - Export the contents of an embedded Smart Object
+    - Reset Smart Object transforms
+  - Create layer compositions    - Align layers
+    - Auto-align image layers
+    - Distribute layers
+    - Create and manage layer comps
+    - Create collages and montages using layers
+    - Create layers and layer groups
+    - Non-destructive editing techniques
+    - Create and process image stacks
+  - Layout and design tools    - Get started with artboards
+    - Artboard properties and behaviors
+    - Create artboard documents
+    - Add artboards to the current document
+    - Draw frames
+    - Convert shapes or text to frames
+    - Place an image into a frame
+    - Select a frame and its content
+    - Add a stroke to a frame
+    - Apply patterns to template images
+Crop, resize, and transform  - Resize and adjust resolution    - Printed image resolution
+    - Set image size and resolution
+    - Resample option in the Image Size dialog
+    - Monitor resolution and image display size
+    - File size
+    - Printer resolution
+    - Resolution specs for printing images
+    - Preserve visual content when scaling images
+    - Specify content to protect when scaling
+    - Resize images
+    - Resampling options in Photoshop
+    - Change the pixel dimensions of images
+    - Change print dimensions and resolution
+    - Manage image file size
+    - Resizing parameters in Photoshop
+    - Change the canvas size
+    - Image size, resolution, and resampling
+    - Transform images, shapes, and paths
+  - Crop and straighten    - Resize the canvas using the crop tool
+    - Crop photos
+    - Crop tool options
+    - Apply Content-Aware Fill while cropping images
+    - Straighten tilted photos
+    - Transform perspective while cropping
+  - Transform, manipulate, and reshape    - Transformation options in Photoshop
+    - Rotate or flip images
+    - Adjust scale, rotation, and perspective
+    - Duplicate objects as you transform
+    - Apply transformations
+    - Move reference point for transformations
+    - Rotate objects
+    - Combine images in Photoshop
+Make selections  - Get started with selections    - Selection tools overview
+    - Use the Object Selection tool
+    - Isolate image areas with Lasso tools
+    - Load selections from layer content or masks
+    - Make selections with the Marquee tools
+  - Automatic and color-based selections    - Improve Select Subject and Remove Background results
+    - Make precise selections using Select People
+    - Remove objects with Delete and Fill Selection
+    - Improve hair selections with the Refine Hair tool
+    - Mask all objects in a layer
+    - Detect subject using Select Subject
+    - Paint a selection with Quick Selection tool
+    - Select areas by color with the Magic Wand tool
+  - Freehand selections    - Create quick selections with the Selection Brush Tool
+    - Select a Color Range in Photoshop
+    - Draw freeform selections with the Lasso tool
+    - Draw straight-edged segments of a selection border
+    - Snap to image edges using Magnetic Lasso tool
+    - Save Skin Tones settings as a preset
+  - Refine and modify selections    - Move a selection or selection border
+    - Refine your selection and mask
+    - Hover layer bounds in the Move tool
+    - Copy and paste selections
+    - Create multiple copies of a selection within an image
+    - Paste one selection into or outside another
+    - Delete or cut selected pixels
+    - Control the movement of a selection
+    - Hide or show selection edges
+    - Inverse selection
+    - Adjust a selection manually
+    - Select only an area intersected by other selections
+    - Refine and soften selection edges
+    - Select pixels using anti-aliasing
+    - Define a feathered edge for a selection tool
+    - Create a selection around a selection border
+    - Expand or contract a selection
+    - Clean up stray pixels in a color-based selection
+    - Fringe pixels around a selection
+    - Decrease the fringe on a selection
+    - Remove a matte from a selection
+    - Use selections for generative editing
+    - Select areas and pixels of images in focus
+Create masks  - Layer masks    - Add layer masks
+    - Create layer masks for all detected objects in a layer
+    - Unlink layers and masks
+    - Disable or enable layer masks
+    - Apply or delete layer masks
+    - Alpha channels and masks in Photoshop
+    - Create and manage clipping masks
+    - Edit and refine existing layer masks
+    - Mask layers with vector masks
+    - Position elements with snapping
+  - Blend images    - Auto-Blend Layers command overview
+    - Create a composite with extended depth of field
+    - Combine multiple images into a group portrait
+Repair and retouch  - Remove objects and fill space    - Remove background in your images
+    - Replace background with Generate Background
+    - Retouch tools overview
+    - Blend objects and people into any background with Harmonize
+    - Remove objects and fill the area with Content-Aware Fill
+    - Adjust Content-Aware Fill settings
+    - Tools to fine-tune sampling and fill areas
+    - Apply or cancel Content-Aware fill changes
+    - View full-resolution preview in the Preview panel
+    - Remove objects from within the Contextual Task Bar
+    - Remove tool known issues and workarounds
+    - Remove tool minimum and recommended hardware requirements
+    - Remove objects
+    - Remove wires, people, and general distractions
+    - Review and refine general distractions
+    - Fill selections with Multi-Image Content-Aware Fill
+    - Use the Content-Aware Patch tool
+  - Heal and clone    - Clone Source panel
+    - Retouch images with the Clone Stamp tool
+    - Set sample sources for cloning and healing
+    - Adjust the sample source overlay options
+    - Scale or rotate the sample source
+  - Adjust light and tone    - Blending mode descriptions
+    - Dodge or burn image areas
+    - Darken the edges of your image to bring focus to the center
+    - Adjust color saturation in selected image areas
+    - Adjust image shadows and highlights
+    - Use the Adjustment Brush tool
+  - Clean and restore images    - Enhance image quality with Generative Upscale
+    - Define planes to adjust perspective
+    - Manipulate the planes to adjust perspective
+    - Edit different perspectives in the same image
+    - Keyboard shortcuts to adjust perspective
+    - Get started with Photomerge
+    - Create panoramic images with Photomerge
+    - Create 360-degree panoramas
+    - Remove imperfections with the Spot Healing Brush
+    - Retouch a large area with the Healing Brush tool
+    - Repair an area with the Patch tool
+    - Remove red eye in flash photos
+    - Define an image as a preset pattern
+    - Erase parts of an image with the Eraser tool
+    - Auto Erase with the Pencil tool
+    - Create smoother brush strokes using stroke smoothing
+    - Change pixels to transparent with the Background Eraser tool
+    - Remove similar pixels with the Magic Eraser tool
+    - Remove reflections
+    - Remove small spots with the Spot Healing Brush
+Adjust color  - Color profiles    - About color profiles
+    - Embed color profiles
+    - Change color profile for documents
+    - Color management in Photoshop
+    - Color management in video layers
+    - Color profiles
+    - Work with OpenColorIO color management
+    - Set up color management in Photoshop
+    - Manage document colors for online viewing
+    - Add swatches from HTML CSS and SVG
+    - Download Adobe Color Management Module
+  - Choose colors    - Set foreground and background colors
+    - Choose colors with the Adobe Color Picker
+    - Choose a color while painting
+    - Choose web-safe colors
+    - Choose a CMYK equivalent for a non-printable color
+    - Choose a spot color
+    - Spot color libraries
+    - Manage color profiles when opening images
+    - Choose colors in the Color panel
+    - Change the color picker
+    - Color modes in Photoshop
+    - Color profiles for imported images
+  - Color modes    - Convert an image to another color mode
+    - Convert an image to Bitmap mode
+    - Convert a color photo to Grayscale mode
+    - Convert a Bitmap mode image to Grayscale mode
+    - Convert a grayscale or RGB image to indexed color
+    - Conversion options for indexed-color images
+    - Bit depth in Photoshop
+  - Color corrections    - Apply a Hue or Saturation adjustment
+    - Colorize a grayscale image or create a monotone effect
+    - Adjust color and tone with Curves
+    - Adjust color saturation using a Vibrance adjustment layer
+    - Adjust color and tone with Levels and Curves eyedroppers
+    - Adjust tonal range and color balance using Levels
+    - Apply the Brightness/Contrast adjustment
+    - Apply Color Balance adjustment in Photoshop
+    - Color adjustment basics in Photoshop
+    - Use Auto Tone, Auto Contrast, and Auto Color
+    - Use the Histogram panel
+    - Adjust image color and tone
+  - Selective color adjustments    - Match color in different images
+    - Match color between two images
+    - Match color of two layers in the same image
+    - Save and apply settings in Match Color
+    - Replace Object Colors by Applying a Hue or Saturation Adjustment
+    - Customize indexed color tables
+    - Make selective color adjustments
+    - Mix color channels with Channel Mixer
+  - Color effects and techniques    - Convert a color image to black and white
+    - Apply a gradient fill
+    - Edit a gradient
+    - Work with spot color channels
+    - Color working spaces
+    - Apply special color effects to images
+  - HDR and channel manipulation    - Adjust HDR exposure and toning
+    - Set up HDR display support in Photoshop
+    - Duplicate, split, and merge channels
+    - Blend channels with Apply Image and Calculations
+    - Channels in Photoshop
+    - HDR images in Photoshop
+Apply painting techniques  - Fill objects, selections, and layers    - Painting tools overview
+    - Fill adjacent areas with similar colors
+    - Stroke a selection or layer with color
+    - Use Content-Aware, Pattern, or History fills
+    - Fill the work canvas
+    - Fill a selection or layer with color
+    - Create a new layer when brushing
+    - Smudge image areas
+  - Create and fill with patterns    - Pattern Preview best practices
+    - Create a new pattern
+    - Fill paths with color
+    - Generate patterns with Pattern Maker
+    - Paint symmetrical patterns
+    - Paint with the Mixer Brush
+    - Manage patterns in the Patterns panel
+    - Use the Pattern Stamp tool for a hand-painted look
+    - Paint stylized strokes with the Art History Brush
+  - Brushes and presets    - Get started with brush presets
+    - Display the Brush Settings panel and brush options
+    - Create a brush tip from an image
+    - Create a brush and set painting options
+    - Select a preset brush
+    - Create a new preset brush
+    - Create preset brush groups
+    - Rename preset brushes
+    - Delete preset brushes
+    - Import brushes and brush packs
+    - Create a textured brush in Photoshop
+    - Migrate presets from earlier Photoshop versions
+    - Paint with the Brush or Pencil tool
+    - Sync presets on multiple devices
+    - Improve painting and cloning performance
+Draw shapes and paths  - Create shapes    - Drawing tools overview
+    - Draw shapes
+    - Modify fill and stroke for shapes
+    - Draw custom shapes
+    - Create star shapes
+    - Add legacy custom shapes
+    - Count objects in images
+    - Draw rectangles with the Rectangle tool
+    - Manage paths in the Paths panel
+    - Paths in Photoshop
+  - Draw lines and curves    - Draw a circle, square, or rectangle
+    - Draw lines and line segments
+    - Shape, path, and pixel mode options
+    - Draw an arrow
+    - Trace images with the Content-Aware Tracing tool
+    - Draw curves and straight segments
+    - Draw paths with the Pen tool
+    - Overview of Pen tool settings
+    - Understand shapes, paths, and drawing modes
+Text and typography  - Get started with text    - Add text
+    - Edit text
+    - Add bulleted and numbered lists
+    - Copy and paste text
+    - Resize text
+    - Move text
+    - Change text color
+    - Set up paragraph formatting
+    - Rotate text
+    - Update text layers for vector-based output
+    - Edit text on a type layer
+  - Select and manage fonts    - About fonts
+    - Replace missing fonts
+    - Match fonts
+    - Search for and apply font styles
+    - Overview of OpenType fonts
+    - Apply OpenType features
+    - Use OpenType variable fonts
+    - Change the font across multiple layers
+  - Type layers and creation    - Fill text with image
+    - Type layers in Photoshop
+    - Fill text with an image in Photoshop
+  - Text on paths and shapes    - Add text along paths or inside shapes
+    - Flip or move text along a path
+    - Modify text paths
+    - Warp and unwarp text
+    - Convert text to shapes or work paths
+    - Create text selection borders
+    - Add drop shadows to text
+  - Characters and glyphs    - Work with OpenType SVG fonts
+    - Add Emoji glyphs
+    - Enable glyph protection
+    - Add glyphs
+    - Use on-canvas glyph alternatives
+    - Adjust line and character spacing
+    - Create composite glyphs
+    - Create and manage character styles
+  - International text and languages    - Overview of Unified Text Engine
+    - Create documents using international languages, scripts, and text
+    - Supported international scripts
+    - Format Asian type characters
+  - Work with Dynamic Text    - Dynamic Text Overview
+    - Adjust formatting and resize text
+    - Reposition start and end points
+Effects and filters  - Get started with filters    - Filters overview
+    - Apply filters
+    - Apply filters from the filter gallery
+    - Filter Gallery overview
+    - Blend and fade filter effects
+    - Tips for creating special effects
+  - Smart filters    - Sharpening overview
+    - Sharpen controls with smart sharpen
+    - Sharpen images with the unsharp mask
+    - Sharpen a selection
+    - Sharpen image using edge mask
+    - Apply and manage Smart Filters
+  - Blur and sharpen filters    - Overview of adding blur to images
+    - Create depth of field with lens blur
+    - Soften hard edges or reduce detail with the Blur tool
+    - Enhance edge contrast with the Sharpen tool
+    - Filter effects in Photoshop
+    - Use Blur Gallery depth-of-field effects
+    - Work with Arabic and Hebrew type
+  - Artistic and stylize filters    - Reshape and distort images with Transform Warp
+    - Warp a Layer with Cylindrical Transform
+    - Get precise distortions with Split Warp
+    - Distort specific image areas with Puppet Warp
+    - Overview of Liquify filter
+    - Overview of distortion tools
+    - Use Liquify to distort an image
+    - Freeze or thaw areas
+    - Work with meshes
+    - Work with backdrops
+    - Reconstruct distortions
+    - Replace the sky in images
+    - Select and manage sky presets
+    - Enhance images with generative AI filters
+    - Apply texture and surface effects to filters
+    - Correct lens distortion and perspective
+    - Correct wide-angle lens distortion
+    - Vanishing Point in Photoshop
+    - Oil Paint filter settings
+  - Neural filters    - Overview of Neural Filters
+    - Use Neural Filters to enhance images
+    - Neural Filter categories and output options
+    - Colorize images with Neural Filters
+    - Smooth skin in portrait photos
+    - Neural Filters gallery
+    - Neural Filters known limitations
+Use grids and measurement guides  - Alignment grids and guides    - Overview of navigation and measuring tools
+    - Overview of guides, grids, and smart guides
+    - Show or hide guides, grids, and smart guides
+    - Create guides
+    - Move guides
+    - Edit guides
+    - Remove guides
+    - Set guide and grid preferences
+    - Work efficiently with Smart Guides
+    - Show or hide Extras
+  - Measure and scale    - Manage measurement scales
+    - Manage scale markers
+    - Use the measurement log for performing measurements
+    - Measurement data points overview
+    - Create, edit, and delete data point presets
+    - Manage measurement logs
+    - About the measurement scale and scale markers
+    - Use rulers in Photoshop
+    - Measure and position with the Ruler tool
+Add video and animation  - Create animation frames    - Create frame-based animations
+    - Add frames to animations
+    - Select animation frames
+    - Edit animation frames
+    - Unify layer properties in animation frames
+    - Copy frames with layer properties
+    - Create frames using tweening
+    - Manage layer visibility in animation frames
+    - Specify a delay time in frame animations
+    - Choose a frame disposal method
+    - Specify looping in frame animations
+    - Delete animations
+    - Create and manage video layers
+    - Create images for videos
+    - Video layers in Photoshop
+  - Use keyframes    - Create a timeline animation workflow
+    - Overview of animating layer properties
+    - Preview video and animations
+  - Organize and manage video groups    - Import video files and image sequences
+    - Edit video clips and audio in the Timeline
+Automate tasks  - Create and record actions    - Record an action
+    - Record a path
+    - Insert a stop
+    - Change settings when playing an action
+    - Exclude commands from an action
+    - Insert a non-recordable menu command
+    - Overwrite a single command
+    - Add commands to an action
+    - Rearrange commands within an action
+    - Record an action again
+  - Process a batch of files    - Image Processor overview
+    - Convert files with the Image Processor
+    - Batch-process files
+    - Create a droplet from an action
+    - Batch and droplet processing options
+  - Automation settings and presets    - Use the Actions panel
+    - Apply actions in the Actions panel
+    - Add conditional actions
+    - Add conditional mode changes to actions
+    - Image asset generator naming syntax
+    - Play actions in the Actions panel
+    - Record tools in actions
+    - Automate Photoshop with scripts
+  - Data-driven graphics    - Create data-driven graphics
+Save and export  - Save files    - Save your work
+    - Save large documents
+    - Revert to legacy Save As options
+    - File saving properties and preferences
+    - macOS image preview options
+    - Common questions on Photoshop cloud documents
+    - Save as Photoshop PDF
+    - Save for Web
+    - Customize the file format list
+    - Save and open WebP files in Photoshop
+    - Save images in TIFF format
+    - Slices overview
+    - PDF does not open automatically after saving on a Mac
+    - Manage slices in Photoshop
+  - Export files to different formats    - Video and animation export formats
+    - Enhance animation frames
+    - Flatten frames into layers
+    - Export video files or image sequences
+    - Photoshop file formats overview
+    - File compression in Photoshop
+    - Supported file formats in Photoshop
+    - Image file formats supported in Photoshop
+    - Export your work using the Quick Export as option
+    - Fine-tune export settings with Export As
+    - Export settings and export location preferences
+    - Export files in different sizes
+    - Export layers as files
+    - Export artboards as PDF
+    - Export artboards as files
+    - Save and export to cloud
+    - Export color lookup tables
+  - Metadata, CSS, and content credentials    - Content Credentials in Adobe Photoshop
+    - Preview Content Credentials
+    - Export your work with Content Credentials
+    - Work with notes in Photoshop
+    - Generate CSS from layers
+    - Customize Slice Metadata and HTML attributes
+Share and collaborate  - Collaborate and edit    - Create Projects and add files
+    - Share and collaborate with Projects
+    - Search cloud files
+    - Export images with Quick Export in Photoshop
+    - Collaborative editing for cloud documents
+    - Use Content Credentials for NFTs
+    - Share your documents for review
+App integrations  - Access Adobe Express Templates
+  - Refine Firefly-generated images
+  - Transform image to video
+  - Open Photoshop files in Illustrator
+  - Work with optional extensions
+  - Install and manage Marketplace plugins
+  - Install the ScriptingListener plug-in
+  - Set up MATLAB to work with Photoshop
+  - Share images to Slack from Photoshop
+  - Share Photoshop work to Trello
+  - Save and manage cloud documents
+  - Install and manage plugins using the Plugin Marketplace
+  - Create a contact sheet
+  - Paste Illustrator artwork as layers
+  - Use Photoshop images in Adobe Illustrator
+  - Photoshop file behavior in InDesign
+  - Photoshop cloud documents overview
+  - Photoshop plugins and extensions
+Troubleshoot  - Tools and resources    - Set up and manage scratch disks
+    - Check GPU compatibility
+    - Troubleshoot issues with the Adobe Photoshop system information
+    - Locate and interpret Adobe Photoshop crash reports on macOS
+    - Submit crash reports
+  - Performance and stability issues    - Known issues in Adobe Photoshop on desktop
+    - Resolve graphics processor (GPU) and graphics driver issues
+    - Troubleshoot scratch disk full errors in Photoshop
+    - Memory allocation in Adobe Photoshop
+    - Adobe Photoshop crashes or freezes on startup
+    - Fix Adobe Photoshop lag, freezing, and slow performance
+    - Fix the Generator error when launching Adobe Photoshop
+  - File and format issues    - Resolve program error while saving files
+    - Cloud documents file access error
+    - Adobe Photoshop cannot open supported file formats on macOS
+    - Unable to create or save a cloud document
+    - Exported images have incorrect dimensions
+    - Adobe Photoshop library asset is not editable
+    - Unable to import Lr photos
+    - Recover damaged or corrupted Photoshop files
+    - Fix the Adobe Photoshop invalid document error
+  - Tool and feature issues    - Photoshop crashes while using bullets and numbers
+    - Keyboard shortcuts not working
+    - Limitations while working with Illustrator
+    - Resolve video rendering issues
+    - Tools missing from the toolbar
+    - Troubleshoot fonts
+    - Solve Photoshop cloud document errors
+    - Capture diagnostic logs for Adobe Photoshop input issues
+    - Errors using Adobe Photoshop scripts
+    - Issues while using filters and effects
+    - Adobe Photoshop crashes, lags, or freezes
+    - Troubleshoot Photoshop droplets on Windows
+    - Text randomly changes or is corrupted
+    - Plug-in folder locations in Photoshop
+    - Photoshop for Apple Silicon limitations
+    - My presets, actions, or plug-ins are missing
+    - Oil Paint filter is grayed out
+    - Print settings option unavailable in Print dialog box
+    - Actions are missing
+    - Extension could not be loaded because it was not properly signed
+Quick actions  - Blur image backgrounds
+  - Add duotone effect to images
+  - Adjust lighting in images
+  - Apply Charcoal filter to images
+  - Apply diffuse glow to images
+  - Swirling night sky filter
+  - Woodcut print filter
+  - Colorize old photographs
+  - Desaturate image backgrounds to black and white
+  - Convert images to black and white
+  - Select backgrounds in images
+  - Select skies in images
+  - Select subject in images
+  - Smooth skin in your images
+  - Remove JPEG artifacts from images
+Print  - Prepare images for commercial printing
+  - Color profiles for print output
+  - Print with color management
+  - Printing basics in Photoshop
+  - Specify columns for images
+  - Adjust duotone ink curves
+  - Create image clipping paths for transparency
+  - Print a hard proof

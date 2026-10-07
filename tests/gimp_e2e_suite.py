@@ -114,6 +114,9 @@ def test_pdb_registration():
         ("python-fu-create-tween", "Create Tween Frames Helper"),
         ("python-fu-pingpong-animation", "Ping-Pong Loop Animation Helper"),
         ("python-fu-remove-animation-tags", "Remove Animation Tags Helper"),
+        ("python-fu-seamless-pattern", "Seamless Pattern Generator Helper"),
+        ("python-fu-pattern-preview", "Pattern Tile Preview Helper"),
+        ("python-fu-pattern-fill", "Fill with Pattern Tile Helper"),
     ]
 
 
@@ -7969,6 +7972,310 @@ def test_frame_animation():
 
 
 # ==============================================================================
+# TEST 46: Seamless Pattern Generator & Tile Preview Helper Plugin (Phase 51)
+# ==============================================================================
+def test_seamless_pattern():
+    import numpy as np
+
+    print("\n--- Test Suite 46: Seamless Pattern Generator & Tile Preview Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_seamless = pdb.lookup_procedure("python-fu-seamless-pattern")
+    proc_prev = pdb.lookup_procedure("python-fu-pattern-preview")
+    proc_fill = pdb.lookup_procedure("python-fu-pattern-fill")
+
+    if proc_seamless is None or proc_prev is None or proc_fill is None:
+        record_fail("SP-01", "Procedure lookup", "One or more seamless pattern procedures not found in PDB")
+        return
+
+    # SP-01: Procedure arguments verification
+    seamless_args = [p.name for p in proc_seamless.get_arguments()]
+    prev_args = [p.name for p in proc_prev.get_arguments()]
+    fill_args = [p.name for p in proc_fill.get_arguments()]
+
+    has_s_args = all(a in seamless_args for a in ["method", "blend-width", "output-mode", "mask-type"])
+    has_p_args = all(a in prev_args for a in ["grid-size", "destination"])
+    has_f_args = all(a in fill_args for a in ["blend-mode", "opacity", "mask-type"])
+
+    if not (has_s_args and has_p_args and has_f_args):
+        record_fail("SP-01", "Procedure argument signatures", f"Missing expected arguments: seamless={seamless_args}, prev={prev_args}, fill={fill_args}")
+        return
+    record_pass("SP-01", "Procedure signatures & argument audit", f"All arguments verified across all 3 procedures (seamless: {len(seamless_args)}, prev: {len(prev_args)}, fill: {len(fill_args)})")
+
+    # Create synthetic test pattern: 40x40 image with linear gradients along X and Y
+    img = Gimp.Image.new(40, 40, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(img, "TileBase", 40, 40, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        img.set_selected_layers([base])
+
+        buf = base.get_buffer()
+        rect = Gegl.Rectangle.new(0, 0, 40, 40)
+        x_coords = np.linspace(10, 240, 40, dtype=np.uint8)
+        y_coords = np.linspace(20, 220, 40, dtype=np.uint8)
+        xx, yy = np.meshgrid(x_coords, y_coords)
+        arr = np.zeros((40, 40, 4), dtype=np.uint8)
+        arr[..., 0] = xx
+        arr[..., 1] = yy
+        arr[..., 2] = 128
+        arr[..., 3] = 255
+        buf.set(rect, "RGBA u8", arr.tobytes())
+        buf.flush()
+        base.update(0, 0, 40, 40)
+
+        # Record original base layer sample pixels for invariance check
+        orig_px_samples = [base.get_pixel(x, y).get_rgba() for x in (0, 10, 20, 39) for y in (0, 10, 20, 39)]
+
+        # SP-02 & SP-03: Kaleidoscope synthesis (PDB SUCCESS and boundary continuity)
+        cfg_k = proc_seamless.create_config()
+        cfg_k.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_k.set_property("image", img)
+        cfg_k.set_property("method", "kaleidoscope")
+        cfg_k.set_property("output-mode", "new-layer")
+        cfg_k.set_property("mask-type", "none")
+        res_k = proc_seamless.run(cfg_k)
+        if res_k.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SP-02", "Kaleidoscope run status", f"Expected SUCCESS (3), got {res_k.index(0)}")
+            return
+        record_pass("SP-02", "Execution status", "SUCCESS")
+
+        k_layer = img.get_layers()[0]
+        k_raw = k_layer.get_buffer().get(rect, 1.0, "RGBA u8", Gegl.AbyssPolicy.NONE)
+        k_arr = np.frombuffer(bytes(k_raw), dtype=np.uint8).reshape((40, 40, 4))
+
+        diff_k_x = int(np.max(np.abs(k_arr[:, 0, :3].astype(int) - k_arr[:, -1, :3].astype(int))))
+        diff_k_y = int(np.max(np.abs(k_arr[0, :, :3].astype(int) - k_arr[-1, :, :3].astype(int))))
+        if diff_k_x != 0 or diff_k_y != 0:
+            record_fail("SP-03", "Kaleidoscope boundary continuity", f"Expected diff_x == 0 and diff_y == 0, got diff_x={diff_k_x}, diff_y={diff_k_y}")
+            return
+        record_pass("SP-03", "Kaleidoscope 4-quadrant reflection", f"100% boundary continuity verified (diff_x={diff_k_x}, diff_y={diff_k_y})")
+        img.remove_layer(k_layer)
+
+        # SP-04: Crossfade edge-wrap synthesis
+        cfg_cf = proc_seamless.create_config()
+        cfg_cf.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cf.set_property("image", img)
+        cfg_cf.set_property("method", "crossfade")
+        cfg_cf.set_property("blend-width", 25.0)
+        cfg_cf.set_property("output-mode", "new-layer")
+        cfg_cf.set_property("mask-type", "none")
+        res_cf = proc_seamless.run(cfg_cf)
+        if res_cf.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SP-04", "Crossfade run status", f"Expected SUCCESS (3), got {res_cf.index(0)}")
+            return
+
+        cf_layer = img.get_layers()[0]
+        cf_raw = cf_layer.get_buffer().get(rect, 1.0, "RGBA u8", Gegl.AbyssPolicy.NONE)
+        cf_arr = np.frombuffer(bytes(cf_raw), dtype=np.uint8).reshape((40, 40, 4))
+
+        raw_diff_x = float(np.mean(np.abs(arr[:, 0, 0].astype(int) - arr[:, -1, 0].astype(int))))
+        cf_diff_x = float(np.mean(np.abs(cf_arr[:, 0, 0].astype(int) - cf_arr[:, -1, 0].astype(int))))
+        reduct_ratio = (raw_diff_x - cf_diff_x) / max(raw_diff_x, 1e-6)
+        if reduct_ratio < 0.90:
+            record_fail("SP-04", "Crossfade edge discontinuity reduction", f"Expected reduction >= 90%, got {reduct_ratio*100:.1f}% (raw={raw_diff_x:.2f}, cf={cf_diff_x:.2f})")
+            return
+        record_pass("SP-04", "Dual-axis edge-wrap crossfade blending", f"Boundary discontinuity reduced by {reduct_ratio*100:.1f}% ({raw_diff_x:.1f} -> {cf_diff_x:.1f})")
+        img.remove_layer(cf_layer)
+
+        # SP-05: Horizontal mirror mode (mirror-x)
+        cfg_mx = proc_seamless.create_config()
+        cfg_mx.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mx.set_property("image", img)
+        cfg_mx.set_property("method", "mirror-x")
+        cfg_mx.set_property("output-mode", "new-layer")
+        cfg_mx.set_property("mask-type", "none")
+        proc_seamless.run(cfg_mx)
+
+        mx_layer = img.get_layers()[0]
+        mx_raw = mx_layer.get_buffer().get(rect, 1.0, "RGBA u8", Gegl.AbyssPolicy.NONE)
+        mx_arr = np.frombuffer(bytes(mx_raw), dtype=np.uint8).reshape((40, 40, 4))
+        diff_mx_x = int(np.max(np.abs(mx_arr[:, 0, 0].astype(int) - mx_arr[:, -1, 0].astype(int))))
+        if diff_mx_x != 0:
+            record_fail("SP-05", "Horizontal mirror continuity", f"Expected diff_x == 0, got {diff_mx_x}")
+            return
+        record_pass("SP-05", "Horizontal symmetrical reflection (mirror-x)", f"Horizontal boundary diff == 0 verified (diff_x={diff_mx_x})")
+        img.remove_layer(mx_layer)
+
+        # SP-06: Vertical mirror mode (mirror-y)
+        cfg_my = proc_seamless.create_config()
+        cfg_my.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_my.set_property("image", img)
+        cfg_my.set_property("method", "mirror-y")
+        cfg_my.set_property("output-mode", "new-layer")
+        cfg_my.set_property("mask-type", "none")
+        proc_seamless.run(cfg_my)
+
+        my_layer = img.get_layers()[0]
+        my_raw = my_layer.get_buffer().get(rect, 1.0, "RGBA u8", Gegl.AbyssPolicy.NONE)
+        my_arr = np.frombuffer(bytes(my_raw), dtype=np.uint8).reshape((40, 40, 4))
+        diff_my_y = int(np.max(np.abs(my_arr[0, :, 1].astype(int) - my_arr[-1, :, 1].astype(int))))
+        if diff_my_y != 0:
+            record_fail("SP-06", "Vertical mirror continuity", f"Expected diff_y == 0, got {diff_my_y}")
+            return
+        record_pass("SP-06", "Vertical symmetrical reflection (mirror-y)", f"Vertical boundary diff == 0 verified (diff_y={diff_my_y})")
+        img.remove_layer(my_layer)
+
+        # SP-07: Pattern Preview 3x3 grid (new document)
+        cfg_p3 = proc_prev.create_config()
+        cfg_p3.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_p3.set_property("image", img)
+        cfg_p3.set_property("grid-size", "3x3")
+        cfg_p3.set_property("destination", "new-image")
+        res_p3 = proc_prev.run(cfg_p3)
+        if res_p3.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SP-07", "Pattern preview 3x3 status", f"Expected SUCCESS (3), got {res_p3.index(0)}")
+            return
+
+        all_imgs = Gimp.get_images()
+        p3_imgs = [im for im in all_imgs if im.get_width() == 120 and im.get_height() == 120]
+        if not p3_imgs:
+            record_fail("SP-07", "Pattern preview document dimensions", f"Expected preview document of 120x120 (3x40), found none")
+            return
+        record_pass("SP-07", "Pattern Preview 3x3 grid document", f"3x3 preview document created with dimensions {p3_imgs[0].get_width()}x{p3_imgs[0].get_height()}")
+        for im in p3_imgs:
+            im.delete()
+
+        # SP-08: Pattern Preview layer mode (2x2 grid in current document)
+        cfg_p2 = proc_prev.create_config()
+        cfg_p2.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_p2.set_property("image", img)
+        cfg_p2.set_property("grid-size", "2x2")
+        cfg_p2.set_property("destination", "new-layer")
+        res_p2 = proc_prev.run(cfg_p2)
+        if res_p2.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SP-08", "Pattern preview 2x2 status", f"Expected SUCCESS (3), got {res_p2.index(0)}")
+            return
+
+        p2_layer = img.get_layers()[0]
+        if p2_layer.get_width() != 80 or p2_layer.get_height() != 80:
+            record_fail("SP-08", "Pattern preview layer dimensions", f"Expected 80x80 (2x40), got {p2_layer.get_width()}x{p2_layer.get_height()}")
+            return
+        record_pass("SP-08", "Pattern Preview layer mode (2x2)", f"Layer '{p2_layer.get_name()}' added with dimensions {p2_layer.get_width()}x{p2_layer.get_height()}")
+        img.remove_layer(p2_layer)
+
+        # SP-09: Pattern Fill full canvas tiling
+        # Create larger canvas 100x80 to verify multi-tile expansion
+        img_canvas = Gimp.Image.new(100, 80, Gimp.ImageBaseType.RGB)
+        try:
+            base_tile = Gimp.Layer.new(img_canvas, "ActiveTile", 40, 40, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+            img_canvas.insert_layer(base_tile, None, 0)
+            img_canvas.set_selected_layers([base_tile])
+            write_buf = base_tile.get_buffer()
+            write_buf.set(rect, "RGBA u8", arr.tobytes())
+            write_buf.flush()
+            base_tile.update(0, 0, 40, 40)
+
+            cfg_fill = proc_fill.create_config()
+            cfg_fill.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_fill.set_property("image", img_canvas)
+            cfg_fill.set_property("blend-mode", "normal")
+            cfg_fill.set_property("opacity", 100.0)
+            cfg_fill.set_property("mask-type", "reveal-all")
+            res_fill = proc_fill.run(cfg_fill)
+            if res_fill.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("SP-09", "Pattern fill status", f"Expected SUCCESS (3), got {res_fill.index(0)}")
+                return
+
+            fill_layer = img_canvas.get_layers()[0]
+            if fill_layer.get_width() != 100 or fill_layer.get_height() != 80:
+                record_fail("SP-09", "Pattern fill dimensions", f"Expected 100x80, got {fill_layer.get_width()}x{fill_layer.get_height()}")
+                return
+
+            # Verify periodicity across tiles: pixel at (10, 10) must match pixel at (10+40, 10)
+            p_t0 = fill_layer.get_pixel(10, 10).get_rgba()
+            p_t1 = fill_layer.get_pixel(50, 10).get_rgba()
+            p_t2 = fill_layer.get_pixel(90, 10).get_rgba()
+            tile_diff = max(abs(p_t0.red - p_t1.red), abs(p_t0.red - p_t2.red))
+            if tile_diff > 0.000001:
+                record_fail("SP-09", "Pattern fill tiling periodicity", f"Tile periodicity diff {tile_diff:.6f} > 0")
+                return
+            record_pass("SP-09", "Pattern fill full canvas tiling", f"100x80 canvas completely tiled with 40x40 seamless pattern (tile diff {tile_diff:.6f})")
+            img_canvas.remove_layer(fill_layer)
+
+            # SP-10: Pattern Fill blend mode (Multiply, Screen, Overlay, Soft Light)
+            for bname, expected_mode in [("multiply", Gimp.LayerMode.MULTIPLY), ("screen", Gimp.LayerMode.SCREEN), ("overlay", Gimp.LayerMode.OVERLAY), ("soft-light", Gimp.LayerMode.SOFTLIGHT)]:
+                cfg_b = proc_fill.create_config()
+                cfg_b.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+                cfg_b.set_property("image", img_canvas)
+                cfg_b.set_property("blend-mode", bname)
+                cfg_b.set_property("opacity", 75.0)
+                cfg_b.set_property("mask-type", "reveal-all")
+                proc_fill.run(cfg_b)
+                b_l = img_canvas.get_layers()[0]
+                if b_l.get_mode() != expected_mode or abs(b_l.get_opacity() - 75.0) > 0.01:
+                    record_fail("SP-10", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got mode {int(b_l.get_mode())}, opacity {b_l.get_opacity()}%")
+                    return
+                img_canvas.remove_layer(b_l)
+            record_pass("SP-10", "Pattern fill blend modes & opacity", "Multiply, Screen, Overlay, Soft Light & 75% opacity validated")
+
+            # SP-11: Conceal-All black layer mask
+            cfg_blk = proc_fill.create_config()
+            cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_blk.set_property("image", img_canvas)
+            cfg_blk.set_property("blend-mode", "normal")
+            cfg_blk.set_property("opacity", 100.0)
+            cfg_blk.set_property("mask-type", "conceal-all")
+            proc_fill.run(cfg_blk)
+            blk_l = img_canvas.get_layers()[0]
+            if blk_l.get_mask() is None:
+                record_fail("SP-11", "Conceal-all mask", "Expected attached mask, got None")
+                return
+
+            p_comp_blk = get_composite_pixel(img_canvas, 20, 20)
+            p_base_blk = base_tile.get_pixel(20, 20).get_rgba()
+            blk_diff = max(abs(p_comp_blk.red - p_base_blk.red), abs(p_comp_blk.green - p_base_blk.green), abs(p_comp_blk.blue - p_base_blk.blue))
+            if blk_diff > 0.000001:
+                record_fail("SP-11", "Conceal-all composite invariance", f"Composite altered by {blk_diff:.6f} > 0")
+                return
+            record_pass("SP-11", "Conceal-all black layer mask", f"Black mask attached for selective brush painting (composite diff {blk_diff:.6f})")
+            img_canvas.remove_layer(blk_l)
+
+            # SP-12: Active selection mask confinement
+            img_canvas.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 30, 30)
+            cfg_sel = proc_fill.create_config()
+            cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_sel.set_property("image", img_canvas)
+            cfg_sel.set_property("blend-mode", "normal")
+            cfg_sel.set_property("opacity", 100.0)
+            cfg_sel.set_property("mask-type", "selection")
+            proc_fill.run(cfg_sel)
+            Gimp.Selection.none(img_canvas)
+
+            sel_l = img_canvas.get_layers()[0]
+            if sel_l.get_mask() is None:
+                record_fail("SP-12", "Selection mask attachment", "Expected attached selection mask, got None")
+                return
+
+            # Outside selection (5, 5) composite pixel must be identical to base (diff == 0)
+            p_comp_out = get_composite_pixel(img_canvas, 5, 5)
+            p_base_out = base_tile.get_pixel(5, 5).get_rgba()
+            out_diff = max(abs(p_comp_out.red - p_base_out.red), abs(p_comp_out.green - p_base_out.green), abs(p_comp_out.blue - p_base_out.blue))
+            if out_diff > 0.000001:
+                record_fail("SP-12", "Selection mask outside invariance", f"Outside pixels altered by {out_diff:.6f} > 0")
+                return
+            record_pass("SP-12", "Active selection mask confinement", f"Pattern confined to active selection, outside 100% untouched (diff {out_diff:.6f})")
+            img_canvas.remove_layer(sel_l)
+
+        finally:
+            img_canvas.delete()
+
+        # SP-13: Base layer pixel preservation
+        after_px_samples = [base.get_pixel(x, y).get_rgba() for x in (0, 10, 20, 39) for y in (0, 10, 20, 39)]
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_px_samples, after_px_samples)
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SP-13", "Base layer preservation", f"Base pixels altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SP-13", "Base layer pixel preservation", f"Original source pixels 100% untouched across all operations (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SP-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -8023,6 +8330,7 @@ def run_all_tests():
     test_texturizer()
     test_guide_layout()
     test_frame_animation()
+    test_seamless_pattern()
 
 
 

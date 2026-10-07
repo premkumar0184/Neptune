@@ -1,76 +1,70 @@
-# Current Task — Iteration 52
+# Current Task — Iteration 53
 
 ## Task
-**Phase 50 — Frame Animation & Tweening Helper Plugin (`python-fu-frame-animation-setup`, `python-fu-create-tween`, `python-fu-pingpong-animation`, `python-fu-remove-animation-tags`)**
+**Phase 51 — Seamless Pattern Generator & Tile Preview Helper Plugin (`python-fu-seamless-pattern`, `python-fu-pattern-preview`, `python-fu-pattern-fill`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 512-523: "Create animation frames, Edit animation frames, Unify layer properties in animation frames, Copy frames with layer properties, Create frames using tweening, Manage layer visibility in animation frames, Specify a delay time in frame animations, Choose a frame disposal method, Specify looping in frame animations, Delete animations", and `photoshop_docs.md` Section 472-477 lines 13880-14010: "Window > Timeline: Create Frame Animation", "Create frames using tweening", "Specify a delay time in frame animations", "Choose a frame disposal method", "Specify looping in frame animations", "Delete animations"), timeline and frame animation controls are vital for creating web banners, UI animations, animated GIFs, sprite sheets, and cinematic motion graphics.
+In Adobe Photoshop (`Topics.txt` lines 361-368: "Create and fill with patterns, Pattern Preview best practices, Create a new pattern, Generate patterns with Pattern Maker, Paint symmetrical patterns, Manage patterns in the Patterns panel, Use the Pattern Stamp tool for a hand-painted look", and `photoshop_docs.md` Section 348 lines 10390-10400: "Edit > Fill: Contents: Pattern", Section 350-351 lines 10439-10480: "View > Pattern Preview: design repeating patterns", "Edit > Define Pattern"), seamless pattern creation, tiling preview, and pattern fills are core creative techniques for textile design, digital backgrounds, wallpaper design, 3D texture synthesis, and graphic illustration.
 
-Stock GIMP's animation model uses layers as frames (from bottom to top) and parses animation metadata from layer name suffixes (e.g. `Layer (100ms) (replace)`). However, stock GIMP provides NO workflow dialogs to:
-1. Batch set/update frame delay (in ms or standard FPS rates: 10, 12, 24, 30 fps) across layers without tedious manual layer renaming.
-2. Batch configure frame disposal methods (`(replace)` for Photoshop Dispose vs `(combine)` for Photoshop Do Not Dispose).
-3. Automatically generate smooth crossfade intermediate frames via **Tweening** between keyframes.
-4. Automatically generate seamless **Ping-Pong bounce loops** by reversing intermediate frames.
-5. Cleanly strip animation tags from layer names to return documents to static artwork.
+Stock GIMP provides only primitive pattern bucket filling and an unparameterized GEGL operation (`gegl:tile-seamless`). It lacks:
+1. Parameterized seamless tile synthesis (kaleidoscopic 4-quadrant mirroring with 100% boundary continuity, dual-axis edge-wrap crossfade blending with adjustable feather/overlap width, and horizontal/vertical directional mirroring).
+2. Photoshop-style **Pattern Tile Preview** (`View > Pattern Preview` equivalent: `python-fu-pattern-preview`) to visually verify repeating patterns in 2x2, 3x3, or 4x4 tiled layouts before deployment.
+3. Dedicated **Pattern Fill Layer** (`Edit > Fill > Pattern` equivalent: `python-fu-pattern-fill`) generating a full-canvas tiled pattern layer in professional blend modes (Normal, Multiply, Screen, Overlay, Soft Light) with attached editable layer masks, preserving the underlying source artwork with zero pixel degradation (`diff == 0.000000`).
 
-Implementing native GIMP 3.x Python 3 plugin `frame-animation` provides complete Photoshop parity:
-1. `python-fu-frame-animation-setup`:
-   - Configures uniform frame timing with standard FPS presets (10 fps [100ms], 12 fps [83ms], 24 fps [42ms], 30 fps [33ms], 20 fps [50ms], 5 fps [200ms], 2 fps [500ms], or custom ms).
-   - Configures frame disposal method (`replace`, `combine`, or preserve).
-   - Allows targeting all layers or active layer only.
-   - Allows reversing playback order.
-2. `python-fu-create-tween`:
-   - Interpolates intermediate frames between keyframes with mathematically linear opacity crossfading.
-   - Allows tweening consecutive pairs across the entire stack or active pair only.
-   - Configures number of tween frames to insert ($N=1\dots 50$), delay tag, and disposal mode.
-   - Inserts generated composite tween layers at exact stack positions between keyframes.
-3. `python-fu-pingpong-animation`:
-   - Duplicates layers in reverse order (excluding turnaround endpoints) to produce seamless infinite loop playback without jump cuts.
-4. `python-fu-remove-animation-tags`:
-   - Cleans all `(\d+ms)` and `(combine|replace)` tags from layer names.
-5. Menu Integration:
-   - Registered under `<Image>/Filters/Animation/` and `<Image>/Image/Animation/`.
-6. Undo Grouping:
-   - Full 1-step `Ctrl+Z` undo protection for all batch operations.
+Implementing native GIMP 3.x Python 3 plugin `seamless-pattern` provides complete Photoshop parity:
+1. `python-fu-seamless-pattern`:
+   - Methods:
+     - `kaleidoscope`: 4-quadrant reflection providing 100% mathematical zero-discontinuity seamlessness at boundaries.
+     - `crossfade`: Dual-axis half-offset with cosine edge-wrap blending over adjustable overlap width (5-50%).
+     - `mirror-x`: Horizontal reflection for horizontal seamless runner strips.
+     - `mirror-y`: Vertical reflection for vertical seamless borders.
+   - Output options: New layer or in-place, with optional layer mask attachment.
+2. `python-fu-pattern-preview`:
+   - Replicates active tile across a 2x2, 3x3, or 4x4 grid into a new preview document or preview layer.
+3. `python-fu-pattern-fill`:
+   - Seamlessly tiles the active pattern across the entire document canvas as a dedicated layer.
+   - Supports blend modes (Normal, Multiply, Screen, Overlay, Soft Light) and editable layer masks (Reveal-All, Conceal-All, Active Selection).
+4. Zero Base Layer Modification:
+   - Base source pixels remain 100% mathematically untouched (`diff == 0.000000`).
+5. Single-Step Undo Protection:
+   - Full 1-step `Ctrl+Z` undo protection for all operations.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py` (New plugin implementing all 4 animation procedures)
-- `PhotoGIMP/scripts/verify_config.py` (Register `frame-animation` in `REQUIRED_PLUGINS`, updating audit inventory to 44 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/seamless-pattern.py` (New plugin implementing all 3 pattern procedures)
+- `PhotoGIMP/scripts/verify_config.py` (Register `seamless-pattern` in `REQUIRED_PLUGINS`, updating audit inventory to 45 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 45: `test_frame_animation`, assertions FA-01 through FA-14)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Frame Animation & Tweening Helper entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 50 status)
-- `.ralph/PROGRESS.md` (Log Iteration 52 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 52 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 46: `test_seamless_pattern`, assertions SP-01 through SP-13)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Seamless Pattern Generator & Tile Preview Helper entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 51 status and schedule Phase 52)
+- `.ralph/PROGRESS.md` (Log Iteration 53 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 53 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/` created with `frame-animation.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/` created with `seamless-pattern.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
 3. [x] PDB procedures registered in GIMP PDB:
-   - `python-fu-frame-animation-setup` under `<Image>/Filters/Animation/Frame Animation Setup...`, `<Image>/Image/Animation`
-   - `python-fu-create-tween` under `<Image>/Filters/Animation/Create Tween Frames...`, `<Image>/Image/Animation`
-   - `python-fu-pingpong-animation` under `<Image>/Filters/Animation/Ping-Pong Loop...`, `<Image>/Image/Animation`
-   - `python-fu-remove-animation-tags` under `<Image>/Filters/Animation/Remove Animation Tags`, `<Image>/Image/Animation`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 45):
-   - FA-01: Procedure arguments verified across all 4 procedures.
-   - FA-02: Execution status verified (PDB status SUCCESS).
-   - FA-03: Frame Animation Setup 24 fps preset verified (`(42ms)` tag attached to all layers).
-   - FA-04: Frame Animation Setup disposal method verified (`(replace)` tag attached to all layers).
-   - FA-05: Frame Animation Setup `(combine)` mode verified (`(combine)` tag attached).
-   - FA-06: Custom frame delay verified (e.g. `(175ms)` custom duration).
-   - FA-07: Reverse layer order verified (inverts playback stack).
-   - FA-08: Selected-layer-only targeting verified (only active layer tagged with 33ms, others untouched).
-   - FA-09: Single-pair crossfade tweening verified (3 intermediate frames generated between Black and White layers, total 5 layers).
-   - FA-10: Crossfade opacity interpolation verified (linear progression: 0.00 -> 0.250 -> 0.503 -> 0.753 -> 1.00).
-   - FA-11: Full sequence consecutive-pair tweening verified across multiple keyframes (7 total frames).
-   - FA-12: Ping-Pong loop generation verified (4-frame sequence [1, 2, 3, 4] expanded to 6-frame loop [1, 2, 3, 4, 3, 2]).
-   - FA-13: Remove animation tags verified (all `(\d+ms)` and `(replace|combine)` tags cleanly removed from layer names).
-   - FA-14: Base keyframe pixel preservation verified (original keyframe pixels 100% untouched: kf_a=0.000000, kf_b=1.000000).
-5. [x] `verify_config.py` Section 6 passes with all 44 required plugins audited.
-6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (457/457 tests passing in 46.66s, all stages in 60.93s).
+   - `python-fu-seamless-pattern` under `<Image>/Filters/Map/Create Seamless Pattern Tile...`, `<Image>/Filters/Pattern`
+   - `python-fu-pattern-preview` under `<Image>/View/Pattern Tile Preview...`, `<Image>/Filters/Map`
+   - `python-fu-pattern-fill` under `<Image>/Edit/Fill with Pattern Tile...`, `<Image>/Layer/New`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 46):
+   - SP-01: Procedure arguments verified across all 3 procedures.
+   - SP-02: Execution status verified (PDB status SUCCESS).
+   - SP-03: Kaleidoscope synthesis verified (boundary diff X == 0 and boundary diff Y == 0 on asymmetric test pattern).
+   - SP-04: Crossfade edge-wrap synthesis verified (boundary discontinuity reduced by >90% compared to raw unblended boundary).
+   - SP-05: Horizontal mirror mode verified (boundary diff X == 0).
+   - SP-06: Vertical mirror mode verified (boundary diff Y == 0).
+   - SP-07: Pattern Preview 3x3 grid verified (preview image dimensions equal to 3x tile width and 3x tile height).
+   - SP-08: Pattern Preview layer mode verified (layer added to current document with 2x2 tiling).
+   - SP-09: Pattern Fill full canvas tiling verified (canvas completely covered with seamless pattern tile).
+   - SP-10: Pattern Fill blend mode verified (Multiply, Screen, Overlay, Soft Light validated).
+   - SP-11: Conceal-All black layer mask verified (composite diff == 0.000000).
+   - SP-12: Active selection mask confinement verified (pattern confined to selection, outside untouched).
+   - SP-13: Base layer pixel preservation verified (original source pixels 100% untouched with diff == 0.000000).
+5. [x] `verify_config.py` Section 6 passes with all 45 required plugins audited.
+6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0.
 
 ## Verification Commands
 ```bash
@@ -80,5 +74,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement frame animation and tweening helper plugin` (`b70d02e`)
-- Outer repository commit: `feat(ralph): complete iteration 52 - frame animation plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement seamless pattern generator and tile preview helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 53 - seamless pattern generator plugin`

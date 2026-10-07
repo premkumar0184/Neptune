@@ -763,6 +763,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Seamless Pattern Generator & Tile Preview Helper
+- **Source topic**: Create and fill with patterns - Create and fill with patterns / Pattern Preview best practices / Create a new pattern / Generate patterns with Pattern Maker / Paint symmetrical patterns / Manage patterns in the Patterns panel / Use the Pattern Stamp tool for a hand-painted look (`Topics.txt` lines 361-368, `photoshop_docs.md` Section 348 lines 10390-10400, Section 350-351 lines 10439-10480)
+- **Photoshop behavior**: Photoshop provides `View > Pattern Preview` (repeating canvas display for verifying repeating patterns), `Edit > Define Pattern`, and `Edit > Fill: Contents: Pattern` (or Pattern Fill adjustment layers) with blend modes and layer masks.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `seamless-pattern` providing `python-fu-seamless-pattern`, `python-fu-pattern-preview`, and `python-fu-pattern-fill` in `<Image>/Filters/Map/Create Seamless Pattern Tile...`, `<Image>/View/Pattern Tile Preview...`, and `<Image>/Edit/Fill with Pattern Tile...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/seamless-pattern.py`.
+- **Current capability**: Parameterized seamless pattern tile synthesis using 4 synthesis algorithms: 4-quadrant kaleidoscope / symmetrical mirroring (100% mathematical zero-discontinuity boundary continuity), dual-axis cosine edge-wrap crossfade blending with adjustable overlap width (5-50%), horizontal mirroring (`mirror-x`), and vertical mirroring (`mirror-y`). Full Pattern Tile Preview (`View > Pattern Preview` equivalent) replicating the active tile across 2x2, 3x3, or 4x4 grid into a standalone preview document or active document preview layer. Full Canvas Pattern Fill layer (`Edit > Fill > Pattern` equivalent) tiling the active pattern across the document canvas in professional blend modes (Normal, Multiply, Screen, Overlay, Soft Light), layer opacity, and attached editable layer masks (Reveal-All, Conceal-All, Active Selection). Base artwork pixels remain 100% untouched (`diff == 0.000000`). All operations protected with single-step `Ctrl+Z` undo groups.
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.get_selected_layers`, `image.insert_layer`, `image.get_layers`), GEGL 0.4 buffer I/O (`buf.set`, `buf.get`, `Gegl.AbyssPolicy.NONE`), NumPy array manipulation.
+- **Implementation priority**: High (Phase 51).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration of all 3 procedures, procedure argument schema, execution status (SUCCESS), kaleidoscope boundary continuity (`diff_x == 0` and `diff_y == 0`), crossfade edge-wrap discontinuity reduction (>90% reduction), horizontal mirror continuity (`diff_x == 0`), vertical mirror continuity (`diff_y == 0`), Pattern Preview 3x3 document dimensions (3x tile size), Pattern Preview 2x2 layer dimensions (2x tile size), Pattern Fill full canvas tiling periodicity, blend modes (Multiply, Screen, Overlay, Soft Light) & 75% opacity, Conceal-All black layer mask composite preservation, active selection mask confinement, and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 53):
+  1. `verify_config.py`: Section 6 passed with 45 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-seamless-pattern`, `python-fu-pattern-preview`, and `python-fu-pattern-fill`), procedure arguments verified across all 3 procedures, Kaleidoscope 4-quadrant reflection verified with 100% boundary continuity (`diff_x=0, diff_y=0`), Dual-axis edge-wrap crossfade verified with boundary discontinuity reduction of 100% (255.0 -> 0.0), Horizontal symmetrical reflection verified (`diff_x=0`), Vertical symmetrical reflection verified (`diff_y=0`), Pattern Preview 3x3 grid document created with dimensions 120x120, Pattern Preview 2x2 layer mode added with dimensions 80x80, Pattern Fill full canvas tiling verified on 100x80 canvas (periodic tile diff 0.000000), Multiply, Screen, Overlay, Soft Light blend modes and 75% opacity validated, Conceal-All black layer mask composite invariance verified (diff 0.000000), Active selection mask confinement verified (diff 0.000000 outside), and original base layer pixels 100% untouched (`diff == 0.000000`). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 53).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

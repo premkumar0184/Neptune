@@ -368,11 +368,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate frame delay formatting in layer names, disposal tags, tween layer interpolation, ping-pong sequence generation, and headless GIMP test suite.
 
 ### Phase 51 — Seamless Pattern Generator & Tile Preview Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `seamless-pattern` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/seamless-pattern.py`.
-- [ ] Create dedicated Seamless Pattern & Tile Preview helper simulating Photoshop Pattern Maker, Pattern Preview, and Edit > Fill > Pattern workflows.
-- [ ] Support seamless tile synthesis methods: edge-wrap blending with adjustable feather/overlap width (1-50%), 4-quadrant kaleidoscope / symmetrical mirroring for 100% boundary continuity, and multi-repetition tiled preview (2x2, 3x3, 4x4 tiling grid on expanded preview canvas).
-- [ ] Register under menu path `<Image>/Filters/Map/Create Seamless Pattern...`, `<Image>/Filters/Map/Pattern Tile Preview...`, and `<Image>/Edit/Fill with Pattern...`.
-- [ ] Validate seamless edge continuity, kaleidoscope symmetry, multi-tile preview dimensions, layer mask attachment, base layer pixel preservation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `seamless-pattern` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/seamless-pattern.py`.
+- [x] Create dedicated Seamless Pattern & Tile Preview helper simulating Photoshop Pattern Maker, Pattern Preview, and Edit > Fill > Pattern workflows.
+- [x] Support seamless tile synthesis methods: edge-wrap blending with adjustable feather/overlap width (5-50%), 4-quadrant kaleidoscope / symmetrical mirroring for 100% boundary continuity, and multi-repetition tiled preview (2x2, 3x3, 4x4 tiling grid on expanded preview canvas).
+- [x] Register under menu path `<Image>/Filters/Map/Create Seamless Pattern Tile...`, `<Image>/View/Pattern Tile Preview...`, and `<Image>/Edit/Fill with Pattern Tile...`.
+- [x] Validate seamless edge continuity, kaleidoscope symmetry, multi-tile preview dimensions, layer mask attachment, base layer pixel preservation, and headless GIMP test suite.
+
+### Phase 52 — Non-Destructive Selection & Layer Stroke Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `stroke-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`.
+- [ ] Create dedicated Non-Destructive Stroke Layer helper simulating Photoshop `Edit > Stroke...` and Layer Style Stroke effect.
+- [ ] Support stroke position geometries: `inside`, `center`, and `outside` relative to active selection boundary or layer alpha boundary.
+- [ ] Support stroke width (1 to 100px), stroke color (R, G, B, A), layer blend modes (Normal, Multiply, Screen, Overlay, Soft Light), layer opacity, and dedicated stroke layer generation preserving base layers (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Edit/Stroke Selection (Non-Destructive)...`, `<Image>/Layer/Stroke Layer...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate stroke width, positioning (inside/center/outside), color fidelity, blend mode assignment, non-destructive layer preservation, and headless GIMP test suite.
+
 
 
 

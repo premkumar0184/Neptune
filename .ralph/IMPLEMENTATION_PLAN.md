@@ -361,11 +361,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate guide placement coordinates, rule-of-thirds offsets, golden-ratio geometry, margin spacing, clear guides action, and headless GIMP test suite.
 
 ### Phase 50 — Frame Animation & Tweening Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `frame-animation` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`.
-- [ ] Create dedicated Frame Animation helper simulating Photoshop Timeline > Create Frame Animation and Tweening controls.
-- [ ] Support animation setup: uniform frame delay (ms / standard FPS presets: 12 fps, 24 fps, 30 fps, 10 fps), frame disposal mode (`replace` vs `combine`), ping-pong reverse loop creation, and crossfade opacity tweening between adjacent keyframes.
-- [ ] Register under menu path `<Image>/Filters/Animation/Frame Animation Setup...`, `<Image>/Image/Animation/Frame Animation Setup...`, and `<Image>/Filters/Animation/Create Tween Frames...`.
-- [ ] Validate frame delay formatting in layer names, disposal tags, tween layer interpolation, ping-pong sequence generation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `frame-animation` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`.
+- [x] Create dedicated Frame Animation helper simulating Photoshop Timeline > Create Frame Animation and Tweening controls.
+- [x] Support animation setup: uniform frame delay (ms / standard FPS presets: 12 fps, 24 fps, 30 fps, 10 fps), frame disposal mode (`replace` vs `combine`), ping-pong reverse loop creation, and crossfade opacity tweening between adjacent keyframes.
+- [x] Register under menu path `<Image>/Filters/Animation/Frame Animation Setup...`, `<Image>/Image/Animation/Frame Animation Setup...`, `<Image>/Filters/Animation/Create Tween Frames...`, `<Image>/Filters/Animation/Ping-Pong Loop...`, and `<Image>/Filters/Animation/Remove Animation Tags`.
+- [x] Validate frame delay formatting in layer names, disposal tags, tween layer interpolation, ping-pong sequence generation, and headless GIMP test suite.
+
+### Phase 51 — Seamless Pattern Generator & Tile Preview Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `seamless-pattern` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/seamless-pattern/seamless-pattern.py`.
+- [ ] Create dedicated Seamless Pattern & Tile Preview helper simulating Photoshop Pattern Maker, Pattern Preview, and Edit > Fill > Pattern workflows.
+- [ ] Support seamless tile synthesis methods: edge-wrap blending with adjustable feather/overlap width (1-50%), 4-quadrant kaleidoscope / symmetrical mirroring for 100% boundary continuity, and multi-repetition tiled preview (2x2, 3x3, 4x4 tiling grid on expanded preview canvas).
+- [ ] Register under menu path `<Image>/Filters/Map/Create Seamless Pattern...`, `<Image>/Filters/Map/Pattern Tile Preview...`, and `<Image>/Edit/Fill with Pattern...`.
+- [ ] Validate seamless edge continuity, kaleidoscope symmetry, multi-tile preview dimensions, layer mask attachment, base layer pixel preservation, and headless GIMP test suite.
 
 
 

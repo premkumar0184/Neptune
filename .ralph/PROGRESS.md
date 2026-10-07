@@ -1257,6 +1257,34 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 50 — Frame Animation & Tweening Helper Plugin.
 
+## Iteration 52 — Frame Animation & Tweening Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Frame Animation & Tweening Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 512-523: "Create animation frames, Edit animation frames, Unify layer properties in animation frames, Copy frames with layer properties, Create frames using tweening, Manage layer visibility in animation frames, Specify a delay time in frame animations, Choose a frame disposal method, Specify looping in frame animations, Delete animations", and `photoshop_docs.md` Section 472-477 lines 13880-14010: "Window > Timeline: Create Frame Animation", "Create frames using tweening", "Specify a delay time in frame animations", "Choose a frame disposal method", "Specify looping in frame animations", "Delete animations"). In Photoshop, timeline and frame animation controls are fundamental for web animations, animated GIFs, UI prototypes, and banner design. Stock GIMP uses layers as frames (from bottom to top) and parses animation metadata from layer name suffixes (e.g. `Layer (100ms) (replace)`). However, stock GIMP provides no workflow dialogs to batch configure frame delays (FPS presets), frame disposal modes (`replace` vs `combine`), crossfade tweening between keyframes, ping-pong reverse looping, or 1-click stripping of animation tags. Implementing `frame-animation.py` brings complete Photoshop parity to Linux photo editing with 4 registered PDB procedures: `python-fu-frame-animation-setup`, `python-fu-create-tween`, `python-fu-pingpong-animation`, and `python-fu-remove-animation-tags`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`: Created native Python 3 GObject-Introspection plugin implementing all 4 animation procedures: 7 standard FPS presets (10, 12, 24, 30, 20, 5, 2 fps) and custom ms delay, disposal methods (`replace` vs `combine`), stack reversal, active layer targeting, linear opacity crossfade tweening between consecutive keyframe pairs (or active pair), ping-pong reverse loop expansion, and 1-click removal of animation tags, all protected by single-step `Ctrl+Z` undo groups.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `frame-animation` with its 4 procedures (44 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (44 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 45: `test_frame_animation` (asserting PDB registration of all 4 procedures, procedure argument schema, 24 fps delay tag [42ms], [replace] disposal tag, [combine] disposal mode [100ms combine], custom 175ms delay tag, layer playback reversal, active-layer-only targeting, single-pair crossfade tweening [3 in-between frames], linear opacity interpolation [0.00 -> 0.250 -> 0.503 -> 0.753 -> 1.00], multi-keyframe consecutive tweening [7 frames across 3 keyframes], ping-pong loop generation [4 frames -> 6 frames with Loop Reverse], animation tag removal [all tags cleanly stripped], and keyframe pixel preservation [diff == 0.000000]). Total tests increased to 457 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Frame Animation & Tweening Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 50 complete and scheduled Phase 51 (Seamless Pattern Generator & Tile Preview Helper).
+- **Technical discoveries**:
+  - In `Gimp.ImageProcedure.new`, the callback signature in PyGObject is `(self, procedure, run_mode, image, drawables, config, data)` (6 args + self). Including `n_drawables` as a separate argument causes Python to shift arguments and raise `TypeError: missing 1 required positional argument: 'data'`.
+  - In GIMP animation architecture, layers play from bottom to top. To place tween frames in ascending chronological order between bottom keyframe `lA` and top keyframe `lB`, inserting tween frames $k=1 \dots N$ at `pos_top + 1` in order places them with $k=1$ (25%) nearest to `lA` and $k=N$ (75%) nearest to `lB`, resulting in exact bottom-up playback `lA` -> `T1` -> `T2` -> `T3` -> `lB`.
+  - Duplicating keyframe layers, setting top duplicate opacity to $\alpha$, and calling `image.merge_down(dup_top, Gimp.MergeType.CLIP_TO_BOTTOM_LAYER)` generates self-contained intermediate frames with exact linear photometric interpolation without altering original source layers (`diff == 0.000000`).
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 44 plugins verified).
+    - Stage 2: `install.sh --batch` passed (44 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 457 tests across 45 test suites in 46.66s.
+    - Final quality gate: SUCCESS across all stages in 60.93s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `b70d02e`.
+- **Result**: Success.
+- **Next**: Phase 51 — Seamless Pattern Generator & Tile Preview Helper Plugin.
+
+
 
 
 

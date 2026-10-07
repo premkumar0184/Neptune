@@ -746,6 +746,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Frame Animation & Tweening Helper
+- **Source topic**: Add video and animation - Create animation frames / Create frames using tweening / Specify a delay time in frame animations / Choose a frame disposal method / Specify looping in frame animations / Delete animations (`Topics.txt` lines 512-523, `photoshop_docs.md` Section 472-477)
+- **Photoshop behavior**: Timeline panel in Frame Animation mode: configure frame delay (presets and custom ms), disposal methods (`Dispose` / replace vs `Do Not Dispose` / combine), tweening intermediate frames with opacity crossfading across keyframes, ping-pong reverse looping, and deleting animation tags.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `frame-animation` providing `python-fu-frame-animation-setup`, `python-fu-create-tween`, `python-fu-pingpong-animation`, and `python-fu-remove-animation-tags` in `<Image>/Filters/Animation` and `<Image>/Image/Animation`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`.
+- **Current capability**: Frame animation timing setup with 7 standard FPS presets (10 fps [100ms], 12 fps [83ms], 24 fps [42ms], 30 fps [33ms], 20 fps [50ms], 5 fps [200ms], 2 fps [500ms]) and custom ms delay, disposal method configuration (`replace` vs `combine`), stack reversal, active-layer-only targeting, crossfade tweening with linear opacity interpolation between consecutive keyframe pairs (or active pair), ping-pong reverse loop generation (expanding $M$-frame sequences into seamless $2M-2$ loops without jump cuts), and 1-click removal of animation metadata tags. All operations protected with single-step `Ctrl+Z` undo groups. Original keyframe pixels remain 100% untouched (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.get_layers`, `image.insert_layer`, `image.reorder_item`, `image.merge_down`, `Gimp.MergeType.CLIP_TO_BOTTOM_LAYER`).
+- **Implementation priority**: High (Phase 50).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration of all 4 procedures, procedure argument schema, 24 fps delay tag (`(42ms)`), `(replace)` disposal tag, `(combine)` disposal mode (`(100ms) (combine)`), custom 175ms delay tag, layer playback reversal, active-layer-only targeting, single-pair crossfade tweening (3 in-between frames), linear opacity interpolation (0.00 -> 0.250 -> 0.503 -> 0.753 -> 1.00), multi-keyframe sequence tweening (7 frames across 3 keyframes), ping-pong loop generation (4 frames expanded to 6 frames with `(Loop Reverse)`), animation tag removal, and original keyframe pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 52):
+  1. `verify_config.py`: Section 6 passed with 44 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-frame-animation-setup`, `python-fu-create-tween`, `python-fu-pingpong-animation`, and `python-fu-remove-animation-tags`), procedure arguments verified, Frame Animation Setup 24 fps preset verified (`(42ms)`), `(replace)` disposal verified, `(combine)` mode verified (`(100ms) (combine)`), custom 175ms delay verified, reverse layer order verified, selected-layer-only targeting verified, single-pair crossfade tweening verified (3 intermediate frames generated), crossfade opacity interpolation verified (0.00 -> 0.250 -> 0.503 -> 0.753 -> 1.00), multi-keyframe consecutive tweening verified (7 frames), ping-pong loop generation verified (4 frames -> 6 frames with `Loop Reverse`), animation tag removal verified (all tags cleanly stripped), and keyframe pixels 100% untouched (`kf_a=0.000000, kf_b=1.000000`). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 52).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

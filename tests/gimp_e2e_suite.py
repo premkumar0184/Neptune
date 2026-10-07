@@ -8,6 +8,7 @@ Runs under:
 """
 
 import os
+import re
 import shutil
 import struct
 import sys
@@ -109,6 +110,10 @@ def test_pdb_registration():
         ("python-fu-texturizer", "Texturizer & Surface Canvas Helper"),
         ("python-fu-guide-layout", "Guide Layout & Compositional Alignment Helper"),
         ("python-fu-clear-guides", "Clear Guides Helper"),
+        ("python-fu-frame-animation-setup", "Frame Animation Setup Helper"),
+        ("python-fu-create-tween", "Create Tween Frames Helper"),
+        ("python-fu-pingpong-animation", "Ping-Pong Loop Animation Helper"),
+        ("python-fu-remove-animation-tags", "Remove Animation Tags Helper"),
     ]
 
 
@@ -7680,6 +7685,289 @@ def test_guide_layout():
         image.delete()
 
 
+
+# ==============================================================================
+# TEST 45: Frame Animation & Tweening Helper Plugin
+# ==============================================================================
+def test_frame_animation():
+    print("\n--- Test Suite 45: Frame Animation & Tweening Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    proc_setup = pdb.lookup_procedure("python-fu-frame-animation-setup")
+    proc_tween = pdb.lookup_procedure("python-fu-create-tween")
+    proc_pingpong = pdb.lookup_procedure("python-fu-pingpong-animation")
+    proc_remove = pdb.lookup_procedure("python-fu-remove-animation-tags")
+
+    if not all([proc_setup, proc_tween, proc_pingpong, proc_remove]):
+        record_fail("FA-01", "Procedure lookup", "One or more animation procedures could not be found")
+        return
+
+    # FA-01: Procedure arguments verification
+    cfg_s = proc_setup.create_config()
+    cfg_t = proc_tween.create_config()
+    cfg_p = proc_pingpong.create_config()
+    cfg_r = proc_remove.create_config()
+
+    expected_s = ["fps-preset", "custom-delay", "disposal", "target-layers", "reverse-order"]
+    expected_t = ["tween-mode", "frames-to-add", "delay-ms", "disposal"]
+    expected_p = ["include-endpoints"]
+
+    missing_s = [k for k in expected_s if not cfg_s.find_property(k)]
+    missing_t = [k for k in expected_t if not cfg_t.find_property(k)]
+    missing_p = [k for k in expected_p if not cfg_p.find_property(k)]
+
+    if missing_s or missing_t or missing_p:
+        record_fail("FA-01", "Procedure arguments", f"Missing properties: s={missing_s}, t={missing_t}, p={missing_p}")
+        return
+    record_pass("FA-01", "Procedure arguments verified", "All properties verified across 4 procedures")
+
+    # Create test document with 3 frames
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        f1 = Gimp.Layer.new(image, "Frame 1", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(f1, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 0.0)"))
+        f1.edit_fill(Gimp.FillType.FOREGROUND)
+
+        f2 = Gimp.Layer.new(image, "Frame 2", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(f2, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        f2.edit_fill(Gimp.FillType.FOREGROUND)
+
+        f3 = Gimp.Layer.new(image, "Frame 3", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(f3, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 1.0, 1.0)"))
+        f3.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # FA-02 & FA-03 & FA-04: Frame Animation Setup 24 fps preset & (replace) disposal
+        cfg_24 = proc_setup.create_config()
+        cfg_24.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_24.set_property("image", image)
+        cfg_24.set_property("fps-preset", "24fps")
+        cfg_24.set_property("disposal", "replace")
+        cfg_24.set_property("target-layers", "all-layers")
+        cfg_24.set_property("reverse-order", False)
+        res = proc_setup.run(cfg_24)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("FA-02", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("FA-02", "Execution status", "SUCCESS")
+
+        names_24 = [l.get_name() for l in image.get_layers()]
+        all_42ms = all("(42ms)" in n for n in names_24)
+        all_replace = all("(replace)" in n for n in names_24)
+        if not all_42ms:
+            record_fail("FA-03", "24 fps delay tag", f"Expected (42ms) in all names: {names_24}")
+            return
+        record_pass("FA-03", "Frame Animation Setup 24 fps preset", f"All layers tagged with 24 fps delay (42ms): {names_24}")
+
+        if not all_replace:
+            record_fail("FA-04", "Disposal method tag", f"Expected (replace) in all names: {names_24}")
+            return
+        record_pass("FA-04", "Frame Animation Setup disposal method", "All layers tagged with (replace)")
+
+        # FA-05: (combine) mode verification
+        cfg_comb = proc_setup.create_config()
+        cfg_comb.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_comb.set_property("image", image)
+        cfg_comb.set_property("fps-preset", "10fps")
+        cfg_comb.set_property("disposal", "combine")
+        cfg_comb.set_property("target-layers", "all-layers")
+        cfg_comb.set_property("reverse-order", False)
+        proc_setup.run(cfg_comb)
+        names_comb = [l.get_name() for l in image.get_layers()]
+        all_comb = all("(100ms) (combine)" in n for n in names_comb)
+        if not all_comb:
+            record_fail("FA-05", "Combine disposal mode", f"Expected (100ms) (combine) in all names: {names_comb}")
+            return
+        record_pass("FA-05", "Frame Animation Setup (combine) mode", f"All layers tagged with (100ms) (combine): {names_comb}")
+
+        # FA-06: Custom frame delay verification
+        cfg_cust = proc_setup.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("fps-preset", "custom")
+        cfg_cust.set_property("custom-delay", 175)
+        cfg_cust.set_property("disposal", "replace")
+        cfg_cust.set_property("target-layers", "all-layers")
+        cfg_cust.set_property("reverse-order", False)
+        proc_setup.run(cfg_cust)
+        names_cust = [l.get_name() for l in image.get_layers()]
+        all_175ms = all("(175ms)" in n for n in names_cust)
+        if not all_175ms:
+            record_fail("FA-06", "Custom frame delay", f"Expected (175ms) in all names: {names_cust}")
+            return
+        record_pass("FA-06", "Custom frame delay verification", f"Custom 175ms delay applied across all layers: {names_cust}")
+
+        # FA-07: Reverse layer order verification
+        layers_before_rev = [l.get_name() for l in image.get_layers()]
+        cfg_rev = proc_setup.create_config()
+        cfg_rev.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rev.set_property("image", image)
+        cfg_rev.set_property("fps-preset", "custom")
+        cfg_rev.set_property("custom-delay", 175)
+        cfg_rev.set_property("disposal", "replace")
+        cfg_rev.set_property("target-layers", "all-layers")
+        cfg_rev.set_property("reverse-order", True)
+        proc_setup.run(cfg_rev)
+        layers_after_rev = [l.get_name() for l in image.get_layers()]
+        if layers_after_rev != list(reversed(layers_before_rev)):
+            record_fail("FA-07", "Reverse layer order", f"Expected {list(reversed(layers_before_rev))}, got {layers_after_rev}")
+            return
+        record_pass("FA-07", "Reverse layer playback order", f"Inverted stack order verified: {layers_after_rev}")
+
+        # FA-08: Selected-layer-only targeting
+        target_layer = image.get_layers()[0]
+        image.set_selected_layers([target_layer])
+        cfg_sel = proc_setup.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("fps-preset", "30fps")
+        cfg_sel.set_property("disposal", "replace")
+        cfg_sel.set_property("target-layers", "selected-layer")
+        cfg_sel.set_property("reverse-order", False)
+        proc_setup.run(cfg_sel)
+        names_sel = [l.get_name() for l in image.get_layers()]
+        if "(33ms)" not in names_sel[0] or "(33ms)" in names_sel[1] or "(33ms)" in names_sel[2]:
+            record_fail("FA-08", "Selected layer targeting", f"Expected only first layer tagged with (33ms): {names_sel}")
+            return
+        record_pass("FA-08", "Selected-layer-only targeting", f"Only active layer updated to 33ms: {names_sel}")
+
+    finally:
+        image.delete()
+
+    # FA-09 & FA-10 & FA-14: Tweening & Opacity Interpolation Verification
+    img_tween = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Keyframe A (Bottom: Black 0.0)
+        kf_a = Gimp.Layer.new(img_tween, "Keyframe A (Black)", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img_tween.insert_layer(kf_a, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 0.0)"))
+        kf_a.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Keyframe B (Top: White 1.0)
+        kf_b = Gimp.Layer.new(img_tween, "Keyframe B (White)", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img_tween.insert_layer(kf_b, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 1.0, 1.0)"))
+        kf_b.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # FA-09: Create 3 tween frames between Keyframe A and B
+        cfg_tw = proc_tween.create_config()
+        cfg_tw.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_tw.set_property("image", img_tween)
+        cfg_tw.set_property("tween-mode", "consecutive-pairs")
+        cfg_tw.set_property("frames-to-add", 3)
+        cfg_tw.set_property("delay-ms", 83)
+        cfg_tw.set_property("disposal", "replace")
+        res_tw = proc_tween.run(cfg_tw)
+        if res_tw.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("FA-09", "Create tween status", f"Expected SUCCESS, got {res_tw.index(0)}")
+            return
+
+        tw_layers = list(img_tween.get_layers())
+        if len(tw_layers) != 5:
+            record_fail("FA-09", "Tween layer count", f"Expected 5 layers, got {len(tw_layers)}: {[l.get_name() for l in tw_layers]}")
+            return
+        record_pass("FA-09", "Single-pair crossfade tweening", f"Generated 3 in-between frames (total 5 layers): {[l.get_name() for l in tw_layers]}")
+
+        # FA-10: Opacity interpolation verification
+        # Playback bottom-to-top order: [kf_a (0%), tween 1 (25%), tween 2 (50%), tween 3 (75%), kf_b (100%)]
+        tw_layers_bottom_up = list(reversed(tw_layers))
+        r0 = tw_layers_bottom_up[0].get_pixel(50, 50).get_rgba().red
+        r1 = tw_layers_bottom_up[1].get_pixel(50, 50).get_rgba().red
+        r2 = tw_layers_bottom_up[2].get_pixel(50, 50).get_rgba().red
+        r3 = tw_layers_bottom_up[3].get_pixel(50, 50).get_rgba().red
+        r4 = tw_layers_bottom_up[4].get_pixel(50, 50).get_rgba().red
+
+        # Expect r0 == 0.0, r1 ~ 0.25, r2 ~ 0.50, r3 ~ 0.75, r4 == 1.0
+        if not (abs(r1 - 0.25) < 0.03 and abs(r2 - 0.50) < 0.03 and abs(r3 - 0.75) < 0.03):
+            record_fail("FA-10", "Crossfade interpolation", f"Expected [0.0, ~0.25, ~0.50, ~0.75, 1.0], got [{r0:.3f}, {r1:.3f}, {r2:.3f}, {r3:.3f}, {r4:.3f}]")
+            return
+        record_pass("FA-10", "Crossfade opacity interpolation", f"Linear progression verified: 0.00 -> {r1:.3f} (25%) -> {r2:.3f} (50%) -> {r3:.3f} (75%) -> 1.00 (100%)")
+
+        # FA-14: Base keyframe pixel preservation
+        if abs(r0 - 0.0) > 0.000001 or abs(r4 - 1.0) > 0.000001:
+            record_fail("FA-14", "Keyframe preservation", f"Keyframe pixels altered: r0={r0}, r4={r4}")
+            return
+        record_pass("FA-14", "Base keyframe pixel preservation", f"Original keyframe pixels 100% untouched (kf_a={r0:.6f}, kf_b={r4:.6f})")
+
+    finally:
+        img_tween.delete()
+
+    # FA-11: Multi-keyframe sequence tweening verification
+    img_multi = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # 3 keyframes
+        for name, col in [("Frame 1", "rgb(0,0,0)"), ("Frame 2", "rgb(0.5,0.5,0.5)"), ("Frame 3", "rgb(1,1,1)")]:
+            l = Gimp.Layer.new(img_multi, name, 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+            img_multi.insert_layer(l, None, 0)
+            Gimp.context_set_foreground(Gegl.Color.new(col))
+            l.edit_fill(Gimp.FillType.FOREGROUND)
+
+        cfg_m = proc_tween.create_config()
+        cfg_m.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_m.set_property("image", img_multi)
+        cfg_m.set_property("tween-mode", "consecutive-pairs")
+        cfg_m.set_property("frames-to-add", 2)
+        cfg_m.set_property("delay-ms", 100)
+        cfg_m.set_property("disposal", "replace")
+        proc_tween.run(cfg_m)
+
+        multi_layers = img_multi.get_layers()
+        if len(multi_layers) != 7:
+            record_fail("FA-11", "Multi-keyframe tween count", f"Expected 7 layers, got {len(multi_layers)}")
+            return
+        record_pass("FA-11", "Full sequence consecutive-pair tweening", f"7 total frames generated across 3 keyframes: {[l.get_name() for l in multi_layers]}")
+    finally:
+        img_multi.delete()
+
+    # FA-12 & FA-13: Ping-Pong Loop & Remove Animation Tags
+    img_loop = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        for name in ["Frame 1 (100ms) (replace)", "Frame 2 (100ms) (replace)", "Frame 3 (100ms) (replace)", "Frame 4 (100ms) (replace)"]:
+            l = Gimp.Layer.new(img_loop, name, 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+            img_loop.insert_layer(l, None, 0)
+
+        cfg_pp = proc_pingpong.create_config()
+        cfg_pp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pp.set_property("image", img_loop)
+        cfg_pp.set_property("include-endpoints", False)
+        res_pp = proc_pingpong.run(cfg_pp)
+        if res_pp.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("FA-12", "Ping-pong status", f"Expected SUCCESS, got {res_pp.index(0)}")
+            return
+
+        loop_layers = list(img_loop.get_layers())
+        if len(loop_layers) != 6:
+            record_fail("FA-12", "Ping-pong layer count", f"Expected 6 layers, got {len(loop_layers)}")
+            return
+
+        top_two_names = [loop_layers[0].get_name(), loop_layers[1].get_name()]
+        if not ("Loop Reverse" in top_two_names[0] and "Loop Reverse" in top_two_names[1]):
+            record_fail("FA-12", "Ping-pong names", f"Expected Loop Reverse in top layers: {top_two_names}")
+            return
+        record_pass("FA-12", "Ping-Pong loop generation", f"4-frame sequence expanded to seamless 6-frame loop: {[l.get_name() for l in loop_layers[::-1]]}")
+
+        # FA-13: Remove animation tags
+        cfg_rm = proc_remove.create_config()
+        cfg_rm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rm.set_property("image", img_loop)
+        res_rm = proc_remove.run(cfg_rm)
+        if res_rm.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("FA-13", "Remove tags status", f"Expected SUCCESS, got {res_rm.index(0)}")
+            return
+
+        cleaned_names = [l.get_name() for l in img_loop.get_layers()]
+        has_any_tag = any(re.search(r'\(\s*(?:\d+ms|replace|combine)\s*\)', n, re.I) for n in cleaned_names)
+        if has_any_tag:
+            record_fail("FA-13", "Cleaned tag check", f"Animation tags still present: {cleaned_names}")
+            return
+        record_pass("FA-13", "Remove animation tags", f"All timing and disposal tags cleanly stripped: {cleaned_names}")
+
+    finally:
+        img_loop.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -7734,6 +8022,7 @@ def run_all_tests():
     test_lens_blur()
     test_texturizer()
     test_guide_layout()
+    test_frame_animation()
 
 
 

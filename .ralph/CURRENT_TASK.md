@@ -1,63 +1,76 @@
-# Current Task — Iteration 51
+# Current Task — Iteration 52
 
 ## Task
-**Phase 49 — Guide Layout & Compositional Alignment Helper Plugin (`python-fu-guide-layout`)**
+**Phase 50 — Frame Animation & Tweening Helper Plugin (`python-fu-frame-animation-setup`, `python-fu-create-tween`, `python-fu-pingpong-animation`, `python-fu-remove-animation-tags`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 493-502: "Use grids and measurement guides: Alignment grids and guides, Overview of guides, grids, and smart guides, Create guides, Move guides, Edit guides, Remove guides", and `photoshop_docs.md` Section 450-454 lines 13150-13290: "View > New Guide Layout: Create guides in columns, rows, or margins", "View > Guides > Clear Guides"), compositional alignment guides are fundamental to professional photography, retouching, typography, and graphic layout.
+In Adobe Photoshop (`Topics.txt` lines 512-523: "Create animation frames, Edit animation frames, Unify layer properties in animation frames, Copy frames with layer properties, Create frames using tweening, Manage layer visibility in animation frames, Specify a delay time in frame animations, Choose a frame disposal method, Specify looping in frame animations, Delete animations", and `photoshop_docs.md` Section 472-477 lines 13880-14010: "Window > Timeline: Create Frame Animation", "Create frames using tweening", "Specify a delay time in frame animations", "Choose a frame disposal method", "Specify looping in frame animations", "Delete animations"), timeline and frame animation controls are vital for creating web banners, UI animations, animated GIFs, sprite sheets, and cinematic motion graphics.
 
-Stock GIMP provides only primitive single-guide insertion (`Image > Guides > New Guide (by Orientation)...`), requiring users to manually calculate pixel coordinates for every third, golden ratio, gutter, and margin. There is no automated dialog in GIMP to generate structured compositional guide layouts or multi-column grids.
+Stock GIMP's animation model uses layers as frames (from bottom to top) and parses animation metadata from layer name suffixes (e.g. `Layer (100ms) (replace)`). However, stock GIMP provides NO workflow dialogs to:
+1. Batch set/update frame delay (in ms or standard FPS rates: 10, 12, 24, 30 fps) across layers without tedious manual layer renaming.
+2. Batch configure frame disposal methods (`(replace)` for Photoshop Dispose vs `(combine)` for Photoshop Do Not Dispose).
+3. Automatically generate smooth crossfade intermediate frames via **Tweening** between keyframes.
+4. Automatically generate seamless **Ping-Pong bounce loops** by reversing intermediate frames.
+5. Cleanly strip animation tags from layer names to return documents to static artwork.
 
-Implementing native GIMP 3.x Python 3 plugin `python-fu-guide-layout` (and companion `python-fu-clear-guides`) provides full Photoshop parity:
-1. **Curated Compositional Presets**:
-   - *Rule of Thirds* (3x3 grid dividing canvas at 33.33% and 66.67% horizontally and vertically).
-   - *Golden Ratio / Phi Grid* (dividing canvas by $\phi \approx 1.618$ at 38.2% and 61.8% for classical artistic balance).
-   - *Center Crosshairs* (50% horizontal and vertical guides for central symmetry and quadrant alignment).
-   - *Safe Margins Frame* (outer boundary frame at 5% or 10% margins).
-   - *Web 12-Column Grid* (12 columns with 16px gutters and 5% margins for responsive layout).
-   - *Print Editorial 3x2 Grid* (3 columns, 2 rows with 12px gutters and margins).
-   - *Custom Grid Layout* (arbitrary columns, rows, gutters in pixels, margins in percentages).
-2. **Clear Existing Guides Option**:
-   - Checkbox to remove all prior canvas guides before generating new layout (matching Photoshop's "Clear Existing Guides").
-3. **Companion Clear Guides Procedure**:
-   - `python-fu-clear-guides` for instant 1-click removal of all canvas guides (`View > Guides > Clear Guides`).
-4. **Registration**:
-   - Registered under `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides/New Guide Layout...`, `<Image>/View/New Guide Layout...`, `<Image>/View/Guides/Clear Guides`, and `<Image>/View/Clear Guides`.
+Implementing native GIMP 3.x Python 3 plugin `frame-animation` provides complete Photoshop parity:
+1. `python-fu-frame-animation-setup`:
+   - Configures uniform frame timing with standard FPS presets (10 fps [100ms], 12 fps [83ms], 24 fps [42ms], 30 fps [33ms], 20 fps [50ms], 5 fps [200ms], 2 fps [500ms], or custom ms).
+   - Configures frame disposal method (`replace`, `combine`, or preserve).
+   - Allows targeting all layers or active layer only.
+   - Allows reversing playback order.
+2. `python-fu-create-tween`:
+   - Interpolates intermediate frames between keyframes with mathematically linear opacity crossfading.
+   - Allows tweening consecutive pairs across the entire stack or active pair only.
+   - Configures number of tween frames to insert ($N=1\dots 50$), delay tag, and disposal mode.
+   - Inserts generated composite tween layers at exact stack positions between keyframes.
+3. `python-fu-pingpong-animation`:
+   - Duplicates layers in reverse order (excluding turnaround endpoints) to produce seamless infinite loop playback without jump cuts.
+4. `python-fu-remove-animation-tags`:
+   - Cleans all `(\d+ms)` and `(combine|replace)` tags from layer names.
+5. Menu Integration:
+   - Registered under `<Image>/Filters/Animation/` and `<Image>/Image/Animation/`.
+6. Undo Grouping:
+   - Full 1-step `Ctrl+Z` undo protection for all batch operations.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py` (New plugin implementing `python-fu-guide-layout` and `python-fu-clear-guides`)
-- `PhotoGIMP/scripts/verify_config.py` (Register `guide-layout` in `REQUIRED_PLUGINS`, updating audit inventory to 43 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py` (New plugin implementing all 4 animation procedures)
+- `PhotoGIMP/scripts/verify_config.py` (Register `frame-animation` in `REQUIRED_PLUGINS`, updating audit inventory to 44 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 44: `test_guide_layout`, assertions GL-01 through GL-12)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Guide Layout entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 49 status and schedule Phase 50)
-- `.ralph/PROGRESS.md` (Log Iteration 51 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 51 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 45: `test_frame_animation`, assertions FA-01 through FA-14)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Frame Animation & Tweening Helper entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 50 status)
+- `.ralph/PROGRESS.md` (Log Iteration 52 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 52 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/` created with `guide-layout.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/` created with `frame-animation.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
 3. [x] PDB procedures registered in GIMP PDB:
-   - `python-fu-guide-layout` under `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides`, `<Image>/View`
-   - `python-fu-clear-guides` under `<Image>/View/Guides/Clear Guides`, `<Image>/View/Clear Guides`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 44):
-   - GL-01: Procedure arguments verified (preset, clear-existing, columns, rows, col-gutter, row-gutter, margin-top, margin-bottom, margin-left, margin-right).
-   - GL-02: Execution status verified (PDB status SUCCESS).
-   - GL-03: Rule of Thirds preset verified on 300x300 image (exact horizontal guides at y=100, y=200; vertical guides at x=100, x=200).
-   - GL-04: Golden Ratio / Phi Grid preset verified on 1000x1000 image (guides at 382px and 618px horizontally and vertically).
-   - GL-05: Center Crosshairs preset verified on 400x600 image (guides at x=200, y=300).
-   - GL-06: Safe Margins preset verified on 200x200 image (margins at 5% = 10px, 95% = 190px).
-   - GL-07: Custom multi-column grid with gutters verified (12 columns with 16px gutters generating 24 vertical guides).
-   - GL-08: Custom multi-row grid with gutters verified (3 rows with 20px gutters generating 4 horizontal guides).
-   - GL-09: Clear Existing Guides option verified (wipes old guides before generating new layout).
-   - GL-10: Standalone `python-fu-clear-guides` procedure verified (removes all guides to 0).
-   - GL-11: Asymmetrical margins verified (Top=30px, Bottom=240px, Left=15px, Right=255px on 300x300 canvas).
-   - GL-12: Zero layer modification verified (guide creation leaves layer pixels 100% untouched, diff == 0.000000).
-5. [x] `verify_config.py` Section 6 passes with all 43 required plugins audited.
-6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (439/439 tests passing in 40.71s).
+   - `python-fu-frame-animation-setup` under `<Image>/Filters/Animation/Frame Animation Setup...`, `<Image>/Image/Animation`
+   - `python-fu-create-tween` under `<Image>/Filters/Animation/Create Tween Frames...`, `<Image>/Image/Animation`
+   - `python-fu-pingpong-animation` under `<Image>/Filters/Animation/Ping-Pong Loop...`, `<Image>/Image/Animation`
+   - `python-fu-remove-animation-tags` under `<Image>/Filters/Animation/Remove Animation Tags`, `<Image>/Image/Animation`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 45):
+   - FA-01: Procedure arguments verified across all 4 procedures.
+   - FA-02: Execution status verified (PDB status SUCCESS).
+   - FA-03: Frame Animation Setup 24 fps preset verified (`(42ms)` tag attached to all layers).
+   - FA-04: Frame Animation Setup disposal method verified (`(replace)` tag attached to all layers).
+   - FA-05: Frame Animation Setup `(combine)` mode verified (`(combine)` tag attached).
+   - FA-06: Custom frame delay verified (e.g. `(175ms)` custom duration).
+   - FA-07: Reverse layer order verified (inverts playback stack).
+   - FA-08: Selected-layer-only targeting verified (only active layer tagged with 33ms, others untouched).
+   - FA-09: Single-pair crossfade tweening verified (3 intermediate frames generated between Black and White layers, total 5 layers).
+   - FA-10: Crossfade opacity interpolation verified (linear progression: 0.00 -> 0.250 -> 0.503 -> 0.753 -> 1.00).
+   - FA-11: Full sequence consecutive-pair tweening verified across multiple keyframes (7 total frames).
+   - FA-12: Ping-Pong loop generation verified (4-frame sequence [1, 2, 3, 4] expanded to 6-frame loop [1, 2, 3, 4, 3, 2]).
+   - FA-13: Remove animation tags verified (all `(\d+ms)` and `(replace|combine)` tags cleanly removed from layer names).
+   - FA-14: Base keyframe pixel preservation verified (original keyframe pixels 100% untouched: kf_a=0.000000, kf_b=1.000000).
+5. [x] `verify_config.py` Section 6 passes with all 44 required plugins audited.
+6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (457/457 tests passing in 46.66s, all stages in 60.93s).
 
 ## Verification Commands
 ```bash
@@ -67,5 +80,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement guide layout and compositional alignment helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 51 - guide layout plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement frame animation and tweening helper plugin` (`b70d02e`)
+- Outer repository commit: `feat(ralph): complete iteration 52 - frame animation plugin`

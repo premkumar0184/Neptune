@@ -49,4 +49,4 @@ python3 tests/run_all_tests.py
 
 ## Checkpoint
 - PhotoGIMP submodule commit: `2386055`
-- Outer repository commit: Pending
+- Outer repository commit: `096f408`

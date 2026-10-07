@@ -289,12 +289,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate edge luminance extraction, neon glow colorization, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `oil-paint` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`.
-- [ ] Create dedicated non-destructive Oil Paint & Fine Art Impasto adjustment layer duplicating active drawable and simulating thick oil brush strokes and canvas texture.
-- [ ] Support painterly stroke parameters: Stylization (stroke clustering radius 1 to 30), Cleanliness / Smoothness (0.0 to 10.0), Brush Scale / Impasto relief thickness (0.1 to 10.0), Bristle Detail (micro-grooves in stroke flow), and Directional Surface Lighting (Light Angle 0° to 360°, Shine / Specular luster 0.0 to 5.0).
-- [ ] Support curated artistic presets (Classic Impressionist Oil, Thick Impasto Palette Knife, Smooth Glaze Portrait, Expressionist Dynamic, Fine Canvas Detail, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Artistic/Oil Paint...`, `<Image>/Filters/Stylize/Oil Paint...`, and `<Image>/Layer`.
-- [ ] Validate painterly stroke clustering, high-frequency edge preservation, surface relief shine response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `oil-paint` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`.
+- [x] Create dedicated non-destructive Oil Paint & Fine Art Impasto adjustment layer duplicating active drawable and simulating thick oil brush strokes and canvas texture.
+- [x] Support painterly stroke parameters: Stylization (stroke clustering radius 1 to 30 via gegl:snn-mean), Cleanliness / Smoothness (0.0 to 10.0), Brush Scale / Impasto relief thickness (0.1 to 10.0), Bristle Detail (micro-grooves in stroke flow), and Directional Surface Lighting (Light Angle 0° to 360°, Shine / Specular luster 0.0 to 5.0).
+- [x] Support curated artistic presets (Classic Impressionist Oil, Thick Impasto Palette Knife, Smooth Glaze Portrait, Expressionist Dynamic, Fine Canvas Detail, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Artistic/Oil Paint...`, `<Image>/Filters/Stylize/Oil Paint...`, and `<Image>/Layer`.
+- [x] Validate painterly stroke clustering, high-frequency edge preservation, surface relief shine response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `iris-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`.
+- [ ] Create dedicated non-destructive Iris Blur adjustment layer duplicating active drawable and simulating optical Blur Gallery iris depth-of-field.
+- [ ] Support elliptical focal region controls: focal center (x, y), inner clear ellipse (rx, ry), outer feather ellipse transition (fade radius), rotation angle, optical blur radius (1 to 100px), and optical bokeh highlight boost.
+- [ ] Support curated photographic presets (Portrait Face Isolation, Macro Flower Subject, Street Photography Pinpoint, Cinematic Oval Anamorphic, Vignette Edge Defocus, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Blur/Iris Blur...`, `<Image>/Filters/Blur Gallery/Iris Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate inner focal zone pin-sharp preservation, elliptical gradient falloff, outer defocus depth, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

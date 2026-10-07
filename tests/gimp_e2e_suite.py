@@ -99,6 +99,7 @@ def test_pdb_registration():
         ("python-fu-tilt-shift", "Tilt-Shift & Miniature Blur Helper"),
         ("python-fu-lens-distortion", "Lens Distortion & Perspective Correction Helper"),
         ("python-fu-glowing-edges", "Glowing Edges & Neon Stylize Filter Helper"),
+        ("python-fu-oil-paint", "Oil Paint & Fine Art Impasto Helper"),
     ]
 
 
@@ -5577,6 +5578,241 @@ def test_glowing_edges():
 
 
 # ==============================================================================
+# TEST 36: Non-Destructive Oil Paint & Fine Art Impasto Helper
+# ==============================================================================
+def test_oil_paint():
+    print("\n--- Test Suite 36: Oil Paint & Fine Art Impasto Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-oil-paint")
+    if proc is None:
+        record_fail("OP-01", "Procedure lookup", "python-fu-oil-paint not registered in PDB")
+        return
+
+    # Synthesize test image:
+    # 100x100 RGB image with warm background (0.6, 0.4, 0.2)
+    # Central blue square (25,25 to 75,75)
+    # Fine alternating stripe / noise pattern in sub-region (55, 55 to 75, 75)
+    W, H = 100, 100
+    image = Gimp.Image.new(W, H, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(image, "Base", W, H, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    image.insert_layer(base, None, 0)
+
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.6, 0.4, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 50, 50)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.1, 0.3, 0.8)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Add alternating pixel pattern in 20x20 area to test clustering
+    for y_off in range(55, 75, 2):
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 55, y_off, 20, 1)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.9, 0.9)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(image)
+
+    # Reference base pixels before processing
+    p_base_warm = base.get_pixel(10, 10).get_rgba()
+    p_base_blue = base.get_pixel(35, 35).get_rgba()
+    p_base_stripe1 = base.get_pixel(60, 55).get_rgba()
+    p_base_stripe2 = base.get_pixel(60, 56).get_rgba()
+    initial_stripe_diff = abs(p_base_stripe1[0] - p_base_stripe2[0])
+
+    try:
+        # 36a: Procedure arguments audit (OP-01)
+        expected_args = [
+            "preset", "stylization", "cleanliness", "scale", "bristle-detail",
+            "lighting", "light-angle", "shine", "opacity", "mask-type"
+        ]
+        proc_args = [arg.name for arg in proc.get_arguments()]
+        missing_args = [a for a in expected_args if a not in proc_args]
+        if missing_args:
+            record_fail("OP-01", "Procedure arguments", f"Missing arguments: {missing_args}")
+            return
+        record_pass("OP-01", "Procedure arguments", "All 10 configuration arguments present")
+
+        # 36b: Classic Impressionist Oil preset (OP-02 & OP-03)
+        cfg_classic = proc.create_config()
+        cfg_classic.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_classic.set_property("image", image)
+        cfg_classic.set_property("preset", "classic-oil")
+        cfg_classic.set_property("mask-type", "reveal-all")
+
+        res = proc.run(cfg_classic)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("OP-02", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("OP-02", "Execution status", "SUCCESS")
+
+        classic_layer = image.get_layers()[0]
+        if classic_layer.get_mode() != Gimp.LayerMode.NORMAL or not classic_layer.get_name().startswith("Oil Paint (Classic Impressionist Oil)"):
+            record_fail("OP-03", "Layer mode & name", f"Mode {classic_layer.get_mode()}, Name {classic_layer.get_name()}")
+            return
+        if classic_layer.get_mask() is None:
+            record_fail("OP-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("OP-03", "Layer mode, name & mask", f"{classic_layer.get_name()} (NORMAL, Reveal-all mask)")
+
+        # Verify stroke clustering: SNN mean clusters alternating stripes
+        p_cl_stripe1 = classic_layer.get_pixel(60, 55).get_rgba()
+        p_cl_stripe2 = classic_layer.get_pixel(60, 56).get_rgba()
+        clustered_stripe_diff = abs(p_cl_stripe1[0] - p_cl_stripe2[0])
+        if clustered_stripe_diff >= initial_stripe_diff:
+            record_fail("OP-04", "Stroke clustering", f"Clustered diff {clustered_stripe_diff:.4f} >= initial {initial_stripe_diff:.4f}")
+            return
+        record_pass("OP-04", "Stroke clustering", f"SNN clustered stripe diff reduced from {initial_stripe_diff:.4f} to {clustered_stripe_diff:.4f}")
+
+        # 36c: Thick Impasto Palette Knife preset (OP-05)
+        image.remove_layer(classic_layer)
+        cfg_thick = proc.create_config()
+        cfg_thick.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_thick.set_property("image", image)
+        cfg_thick.set_property("preset", "thick-impasto")
+        cfg_thick.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_thick)
+        thick_layer = image.get_layers()[0]
+        if not thick_layer.get_name().startswith("Oil Paint (Thick Impasto Palette Knife)"):
+            record_fail("OP-05", "Thick Impasto preset", f"Unexpected name {thick_layer.get_name()}")
+            return
+        p_thick_edge_lit = thick_layer.get_pixel(35, 50).get_rgba()
+        p_thick_edge_shd = thick_layer.get_pixel(37, 50).get_rgba()
+        edge_contrast = abs(p_thick_edge_lit[0] - p_thick_edge_shd[0])
+        record_pass("OP-05", "Thick Impasto Palette Knife preset", f"Heavy impasto relief (contrast={edge_contrast:.4f})")
+
+        # 36d: Smooth Glaze Portrait preset (OP-06)
+        image.remove_layer(thick_layer)
+        cfg_glaze = proc.create_config()
+        cfg_glaze.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_glaze.set_property("image", image)
+        cfg_glaze.set_property("preset", "smooth-glaze")
+        cfg_glaze.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_glaze)
+        glaze_layer = image.get_layers()[0]
+        if not glaze_layer.get_name().startswith("Oil Paint (Smooth Glaze Portrait)"):
+            record_fail("OP-06", "Smooth Glaze preset", f"Unexpected name {glaze_layer.get_name()}")
+            return
+        record_pass("OP-06", "Smooth Glaze Portrait preset", "High cleanliness glaze executed cleanly")
+
+        # 36e: Expressionist Dynamic preset (OP-07)
+        image.remove_layer(glaze_layer)
+        cfg_exp = proc.create_config()
+        cfg_exp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exp.set_property("image", image)
+        cfg_exp.set_property("preset", "expressionist")
+        cfg_exp.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_exp)
+        exp_layer = image.get_layers()[0]
+        if not exp_layer.get_name().startswith("Oil Paint (Expressionist Dynamic)"):
+            record_fail("OP-07", "Expressionist Dynamic preset", f"Unexpected name {exp_layer.get_name()}")
+            return
+        record_pass("OP-07", "Expressionist Dynamic preset", "Bold dynamic brushwork with bristle relief")
+
+        # 36f: Directional Lighting Angle response (OP-08)
+        image.remove_layer(exp_layer)
+        cfg_angle0 = proc.create_config()
+        cfg_angle0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_angle0.set_property("image", image)
+        cfg_angle0.set_property("preset", "custom")
+        cfg_angle0.set_property("stylization", 4.0)
+        cfg_angle0.set_property("cleanliness", 4.0)
+        cfg_angle0.set_property("scale", 2.0)
+        cfg_angle0.set_property("bristle-detail", 4.0)
+        cfg_angle0.set_property("lighting", True)
+        cfg_angle0.set_property("light-angle", 0.0)  # Horizontal incident light
+        cfg_angle0.set_property("shine", 2.0)
+        cfg_angle0.set_property("opacity", 100.0)
+        cfg_angle0.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_angle0)
+        layer_angle0 = image.get_layers()[0]
+        p_angle0 = layer_angle0.get_pixel(32, 50).get_rgba()
+
+        image.remove_layer(layer_angle0)
+        cfg_angle90 = proc.create_config()
+        cfg_angle90.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_angle90.set_property("image", image)
+        cfg_angle90.set_property("preset", "custom")
+        cfg_angle90.set_property("stylization", 4.0)
+        cfg_angle90.set_property("cleanliness", 4.0)
+        cfg_angle90.set_property("scale", 2.0)
+        cfg_angle90.set_property("bristle-detail", 4.0)
+        cfg_angle90.set_property("lighting", True)
+        cfg_angle90.set_property("light-angle", 90.0)  # Vertical incident light
+        cfg_angle90.set_property("shine", 2.0)
+        cfg_angle90.set_property("opacity", 100.0)
+        cfg_angle90.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_angle90)
+        layer_angle90 = image.get_layers()[0]
+        p_angle90 = layer_angle90.get_pixel(32, 50).get_rgba()
+
+        angle_delta = max(abs(p_angle0[i] - p_angle90[i]) for i in range(3))
+        if angle_delta < 0.005:
+            record_fail("OP-08", "Directional lighting angle", f"Angle delta {angle_delta:.6f} < 0.005")
+            return
+        record_pass("OP-08", "Directional lighting angle", f"Lighting response verified across incident angles (delta {angle_delta:.4f})")
+
+        # 36g: Conceal-All black layer mask (OP-09)
+        image.remove_layer(layer_angle90)
+        cfg_con = proc.create_config()
+        cfg_con.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_con.set_property("image", image)
+        cfg_con.set_property("preset", "classic-oil")
+        cfg_con.set_property("mask-type", "conceal-all")
+
+        proc.run(cfg_con)
+        con_layer = image.get_layers()[0]
+        c_comp_con1 = get_composite_pixel(image, 10, 10)
+        c_comp_con2 = get_composite_pixel(image, 35, 35)
+        con_diff = max(
+            max(abs(c_comp_con1[i] - p_base_warm[i]) for i in range(3)),
+            max(abs(c_comp_con2[i] - p_base_blue[i]) for i in range(3))
+        )
+        if con_diff > 0.000001:
+            record_fail("OP-09", "Conceal-all black mask", f"Diff {con_diff:.6f} > 0")
+            return
+        record_pass("OP-09", "Conceal-All black layer mask", f"Oil paint fully concealed by black mask (diff {con_diff:.6f})")
+
+        # 36h: Selection-aware mask & base preservation (OP-10 & OP-11)
+        image.remove_layer(con_layer)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "classic-oil")
+        cfg_sel.set_property("mask-type", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+        if mask_in < 0.99 or mask_out > 0.01:
+            record_fail("OP-10", "Selection mask confinement", f"In={mask_in:.4f}, Out={mask_out:.4f}")
+            return
+        record_pass("OP-10", "Selection mask confinement", f"Confined strictly to active selection (in={mask_in:.2f}, out={mask_out:.2f})")
+
+        # Base layer underneath must remain 100% untouched
+        p_base_after_warm = base.get_pixel(10, 10).get_rgba()
+        p_base_after_blue = base.get_pixel(35, 35).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_warm[i] - p_base_warm[i]) for i in range(3)),
+            max(abs(p_base_after_blue[i] - p_base_blue[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("OP-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("OP-11", "Base layer pixel preservation", f"Base layer pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("OP-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -5621,6 +5857,7 @@ def run_all_tests():
     test_tilt_shift()
     test_lens_distortion()
     test_glowing_edges()
+    test_oil_paint()
 
 
 

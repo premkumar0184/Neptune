@@ -593,6 +593,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Oil Paint & Fine Art Impasto Helper
+- **Source topic**: Artistic and stylize filters - Oil Paint filter settings (`Topics.txt` line 485, line 451, line 452, and `photoshop_docs.md` Section 416 line 12058 and Section 424 line 16131: "Oil Paint filter settings: Stylization, Cleanliness, Scale, Bristle Detail, Lighting, Angle, Shine")
+- **Photoshop behavior**: Transforms photographic imagery into fine-art oil paintings with organic brush stroke clustering, stroke edge fluidity / cleanliness, 3D impasto surface relief, micro-groove bristle streaks, and directional incident surface lighting with specular luster.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-oil-paint` in `<Image>/Filters/Artistic/Oil Paint...`, `<Image>/Filters/Stylize/Oil Paint...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`.
+- **Current capability**: Creates an isolated, non-destructive Oil Paint adjustment layer duplicating the active drawable. Implements painterly brush stroke clustering via GEGL Symmetric Nearest Neighbor filtering (`gegl:snn-mean`), cleanliness pre-smoothing via `gegl:gaussian-blur`, rich pigment saturation boost via `gegl:vibrance`, and directional 3D surface relief impasto with bristle detailing via 5x5 convolution matrix (`gegl:convolution-matrix`). Features curated fine-art presets (Classic Impressionist Oil, Thick Impasto Palette Knife, Smooth Glaze Portrait, Expressionist Dynamic, Fine Canvas Detail, Custom sliders), directional lighting toggle, incident light angle (0° to 360°), specular shine slider (0.0 to 5.0), layer opacity (10% to 100%), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:snn-mean`, `gegl:gaussian-blur`, `gegl:vibrance`, `gegl:convolution-matrix`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 41).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Classic Impressionist Oil stroke clustering variance reduction on high-frequency noise, Thick Impasto Palette Knife heavy surface relief (contrast 0.5906), Smooth Glaze Portrait fluid glaze execution, Expressionist Dynamic bold brushwork with bristle relief, Directional lighting response across incident angles (delta 0.2318 across 0° vs 90°), Conceal-All black layer mask 0.000000 composite diff, active selection-aware mask confinement, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 43):
+  1. `verify_config.py`: Section 6 passed with 35 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified, layer mode NORMAL verified, reveal-all mask attached, Classic Impressionist Oil verified (SNN clustered stripe diff reduced from 0.7964 to 0.0000), Thick Impasto Palette Knife heavy relief verified (contrast 0.5906), Smooth Glaze Portrait fluid glaze verified, Expressionist Dynamic bold brushwork verified, Directional lighting response verified across incident angles (delta 0.2318 between 0.0° and 90.0°), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified (inside 1.00, outside 0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 43).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

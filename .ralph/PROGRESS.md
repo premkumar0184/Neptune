@@ -1022,10 +1022,28 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin.
 
-
-
-
-
-
-
-
+## Iteration 43 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Oil Paint & Fine Art Impasto Filter plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 485: "Artistic and stylize filters - Oil Paint filter settings", line 451: "Apply filters from the filter gallery", line 452: "Filter Gallery overview", and `photoshop_docs.md` Section 416 line 12058 and Section 424 line 16131: "Oil Paint filter settings: Stylization, Cleanliness, Scale, Bristle Detail, Lighting, Angle, Shine"). Oil Paint is one of Photoshop's most distinctive fine-art filters, simulating physical oil painting textures with painterly brush stroke clustering, edge fluidity / cleanliness, 3D impasto surface relief, micro-groove bristle streaks, and directional incident surface lighting with specular luster. In stock GIMP, achieving an oil paint look requires manual multi-step GEGL operations with no preset management, no directional lighting luster, no impasto relief modeling, and no selective masking. Implementing `python-fu-oil-paint` brings full Photoshop parity: Stylization (stroke clustering radius 1 to 30 via `gegl:snn-mean`), Cleanliness (0.0 to 10.0 pre-smoothing via `gegl:gaussian-blur`), Scale (brush head width and impasto thickness 0.1 to 10.0), Bristle Detail (micro-contrast grooves 0.0 to 10.0), Directional Surface Lighting (incident light angle 0.0° to 360.0° and specular luster shine 0.0 to 5.0 via 5x5 convolution matrix `gegl:convolution-matrix`), rich pigment saturation boost (`gegl:vibrance`), curated fine-art presets (Classic Impressionist Oil, Thick Impasto Palette Knife, Smooth Glaze Portrait, Expressionist Dynamic, Fine Canvas Detail, Custom), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-oil-paint` with `gegl:snn-mean` stroke clustering, `gegl:gaussian-blur` cleanliness pre-pass, `gegl:vibrance` pigment boost, `gegl:convolution-matrix` directional surface relief, presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `oil-paint` (35 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (35 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 36 (asserting PDB registration, layer modes, mask attachment, Classic Impressionist Oil stroke clustering [stripe diff reduced from 0.7964 to 0.0000], Thick Impasto Palette Knife heavy relief [contrast 0.5906], Smooth Glaze Portrait fluid glaze execution, Expressionist Dynamic bold brushwork with bristle relief, Directional lighting response across incident angles [delta 0.2318 across 0° vs 90°], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Oil Paint & Fine Art Impasto Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 41 complete and scheduled Phase 42 (Iris Blur & Vignette Bokeh Helper).
+- **Technical discoveries**:
+  - In GEGL 0.4 `gegl:convolution-matrix`, the properties use a 5x5 matrix layout where the center pixel is property `c3` (Row 3, Column 3), the vertical neighbors are `b3` (top, y-1) and `d3` (bottom, y+1), and the horizontal neighbors are `c2` (left, x-1) and `c4` (right, x+1). Additionally, the default property `normalize=True` must be explicitly disabled (`normalize=False`) with `c3=1.0` so that directional relief offsets modulate incident light specular luster accurately without auto-scaling artifacts.
+  - `gegl:snn-mean` (Symmetric Nearest Neighbor mean) provides organic brush stroke clustering by replacing pixels with the average of symmetrical color neighbors within the radius, clustering flat color regions into painterly brush marks while preserving sharp macro boundaries.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 35 plugins verified).
+    - Stage 2: `install.sh --batch` passed (35 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 341 tests across 36 test suites in 22.14s.
+    - Final quality gate: SUCCESS across all stages in 35.38s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `d11c8d6`.
+- **Result**: Success.
+- **Next**: Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin.

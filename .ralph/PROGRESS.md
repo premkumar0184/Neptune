@@ -1204,6 +1204,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 48 — Non-Destructive Texturizer & Surface Canvas Helper Plugin.
 
+## Iteration 50 — Non-Destructive Texturizer & Surface Canvas Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Texturizer & Surface Canvas Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 481: "Apply texture and surface effects to filters" and `photoshop_docs.md` Section 442 lines 12911-12930: "Filter > Texture > Texturizer / Filter Gallery: Canvas, Burlap, Brick, Sandstone with Scaling, Relief, Light Direction, and Invert"). Photoshop's Texturizer filter is one of Photoshop's signature artistic and physical surface simulation tools. It gives digital paintings and photographs the physical, tactile look of being painted or printed on textured materials such as woven canvas, coarse burlap, architectural brick masonry, sandstone, or cold-press paper. Stock GIMP provides no non-destructive Texturizer filter or adjustment layer helper with native Photoshop texture presets (Canvas, Burlap, Brick, Sandstone) and directional relief lighting. Users must manually construct complex heightmaps, run GEGL bump-map filters, set layer blend modes, and construct masks manually. Implementing `python-fu-texturizer` brings this complete surface embossing workflow into Linux photo editing with mathematical heightmap synthesis (Canvas, Burlap, Brick, Sandstone, Paper), 8-angle directional physical surface lighting, relief scaling, invert texture toggle, neutral-gray (128) emboss layering in Soft Light / Overlay mode, 6 curated artistic presets, versatile layer masks, and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-texturizer` with tactile heightmap generation, physical directional surface lighting with 8 angles, relief scaling (1-50), invert texture toggle, neutral-gray (128) emboss layering in Soft Light / Overlay mode, 6 curated artistic presets (Fine Art Canvas, Rustic Burlap Weave, Weathered Brickwork, Sandstone Block Relief, Watercolor Paper Grain, Custom), attached editable layer masks, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `texturizer` (42 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (42 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 43: `test_texturizer` (asserting PDB registration, procedure arguments, layer modes, mask attachment, Fine Art Canvas weave texture variance [0.014020 > 0.001], Relief depth scaling [Relief 25 variance 0.06346 > Relief 5 variance 0.00288], Directional lighting angle response [Top-Left vs Bottom-Right phase reversal], Invert texture toggle [reverses highlights and shadows], Weathered Brickwork preset [staggered masonry pattern variance 0.00480 > 0.0003], Rustic Burlap Weave preset in OVERLAY mode [variance 0.02269 > 0.001], Conceal-All black layer mask 0.000000 composite diff, active selection mask, and 0.000000 base layer preservation). Total tests increased to 425 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Texturizer & Surface Canvas Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 48 complete and scheduled Phase 49 (Guide Layout & Compositional Alignment Helper).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, active selection emptiness is checked via `Gimp.Selection.is_empty(image)` rather than a method on the `Image` object.
+  - Generating heightmap data with NumPy grid synthesis and writing directly to the layer buffer via `buf.set(Gegl.Rectangle.new(0, 0, W, H), 'RGBA u8', rgba.tobytes())` executes within milliseconds and yields smooth, tileable surface relief.
+  - Per Decision D-003, saving the active selection before writing to the layer buffer and restoring it for `AddMaskType.SELECTION` prevents buffer conflicts and ensures the texture fills the entire layer under the mask.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 42 plugins verified).
+    - Stage 2: `install.sh --batch` passed (42 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 425 tests across 43 test suites in 38.56s.
+    - Final quality gate: SUCCESS across all stages in 62.48s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `b2202a9`.
+- **Result**: Success.
+- **Next**: Phase 49 — Guide Layout & Compositional Alignment Helper Plugin.
+
 
 
 

@@ -1,56 +1,71 @@
-# Current Task — Iteration 49
+# Current Task — Iteration 50
 
 ## Task
-**Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin (`python-fu-lens-blur`)**
+**Phase 48 — Non-Destructive Texturizer & Surface Canvas Helper Plugin (`python-fu-texturizer`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 461: "Create depth of field with lens blur", line 465: "Use Blur Gallery depth-of-field effects", and `photoshop_docs.md` Section 425 lines 12355-12377: "Filter > Blur > Lens Blur: Customize settings in the Lens Blur dialog box: Depth Map Source [None, Transparency, Layer Mask], Blur Focal Distance, Iris [Radius to control blur strength, Blade Curvature], Specular Highlights [Increase Brightness to enhance highlights, Threshold to define bright areas], and Noise [Distribution Uniform or Gaussian, Monochromatic]"), Lens Blur is one of Photoshop's premier optical simulation filters. It simulates the physical characteristics of camera lens diaphragms, rendering circular/polygonal optical bokeh discs and bloom around specular highlights rather than simple Gaussian blurring.
+In Adobe Photoshop (`Topics.txt` line 481: "Apply texture and surface effects to filters" and `photoshop_docs.md` Section 442 lines 12911-12930: "Filter > Texture > Texturizer / Filter Gallery: Canvas, Burlap, Brick, Sandstone with Scaling, Relief, Light Direction, and Invert"), the Texturizer filter is one of Photoshop's signature artistic and physical surface simulation tools. It gives digital paintings and photographs the physical, tactile look of being painted or printed on textured materials such as woven canvas, coarse burlap, architectural brick masonry, sandstone, or cold-press paper.
 
-Stock GIMP provides no built-in `Lens Blur` dialog or depth-of-field adjustment layer helper. Users must manually construct complex channel depth maps, run GEGL operations with manual parameters, and construct masks. Implementing native GIMP 3.x Python 3 plugin `python-fu-lens-blur` brings full Photoshop parity to Linux photo editing:
-- Optical aperture defocus simulation via `gegl:lens-blur` (Iris radius, highlight boost factor, and specular threshold).
-- Specular highlights blooming: bright highlights expand into luminous bokeh circles without burning out midtones.
-- Depth Map simulation modes: Radial Gradient (portrait shallow DOF with sharp focal center), Linear Depth Gradient (planar street/landscape depth), Uniform Defocus, and Active Selection.
-- Monochromatic film grain / sensor texture integration (`noise-amount` via `gegl:noise-rgb` correlated/independent=False).
-- Curated photographic presets (Portrait Fast Prime f/1.4, Street Shallow DOF f/2.0, Macro Extreme Bokeh f/1.2, Dreamy Specular Bokeh, Uniform Defocus, Custom).
-- Layer mask modes (Depth Map Mask, Conceal All, Reveal All, Selection).
-- 100% Non-destructive invariance: Base layer pixels underneath remain 100% mathematically untouched (`diff == 0.000000`).
+Stock GIMP provides no non-destructive Texturizer filter or adjustment layer helper with native Photoshop texture presets (Canvas, Burlap, Brick, Sandstone) and directional relief lighting. Users must manually construct complex heightmaps, run GEGL bump-map filters, set layer blend modes, and construct masks manually.
+
+Implementing native GIMP 3.x Python 3 plugin `python-fu-texturizer` brings full Photoshop parity to Linux photo editing:
+- Mathematical heightmap generation for classic tactile surfaces:
+  1. **Canvas**: Fine orthogonal warp-and-weft woven fabric grid with alternating thread undulating peaks.
+  2. **Burlap**: Coarse rustic jute weave with wider spacing, deeper inter-thread crevices, and fibrous variation.
+  3. **Brick**: Staggered horizontal masonry courses with mortared bed joints and alternating vertical head joints.
+  4. **Sandstone**: Granular porous stone relief with stochastic micro-pits and mineral roughness.
+  5. **Paper**: Subtle organic cold-press watercolor paper grain.
+- Physical directional surface lighting:
+  - 8 directional lighting angles: Top ($\theta=90^\circ$), Top-Left ($135^\circ$), Left ($180^\circ$), Bottom-Left ($225^\circ$), Bottom ($270^\circ$), Bottom-Right ($315^\circ$), Right ($0^\circ$), Top-Right ($45^\circ$).
+  - Surface gradient $\nabla H = (\frac{\partial H}{\partial x}, \frac{\partial H}{\partial y})$ dot-product directional illumination: $\Delta = \text{Relief} \cdot (\vec{L} \cdot \nabla H)$.
+- Invert Texture toggle: Inverts ridges and valleys (reversing highlights and shadows).
+- Scaling control: 50% to 200% texture scale magnification.
+- Relief control: 1 to 50 depth intensity.
+- Curated presets:
+  - *Fine Art Canvas* (Canvas, Scaling 100%, Relief 10, Top-Left light, Soft Light 85%)
+  - *Rustic Burlap Weave* (Burlap, Scaling 120%, Relief 18, Top-Left light, Overlay 90%)
+  - *Weathered Brickwork* (Brick, Scaling 100%, Relief 25, Top-Left light, Soft Light 90%)
+  - *Sandstone Block Relief* (Sandstone, Scaling 100%, Relief 15, Top light, Soft Light 80%)
+  - *Watercolor Paper Grain* (Paper, Scaling 80%, Relief 6, Top-Left light, Soft Light 65%)
+  - *Custom* (Full manual control)
+- Non-destructive neutral gray (128) emboss layer in Soft Light / Overlay mode: Base image colors and hues remain 100% untouched underneath (`diff == 0.000000`), with an editable layer mask attached.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `lens-blur` in `REQUIRED_PLUGINS`, updating audit inventory to 41 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `texturizer` in `REQUIRED_PLUGINS`, updating audit inventory to 42 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 42: `test_lens_blur`, assertions LB-01 through LB-11)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Lens Blur entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 47 status and schedule Phase 48)
-- `.ralph/PROGRESS.md` (Log Iteration 49 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 49 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 43: `test_texturizer`, assertions TX-01 through TX-11)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Texturizer entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 48 status and schedule Phase 49)
+- `.ralph/PROGRESS.md` (Log Iteration 50 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 50 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/` created with `lens-blur.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/` created with `texturizer.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure `python-fu-lens-blur` registered in GIMP PDB under:
-   - `<Image>/Filters/Blur/Lens Blur...`
-   - `<Image>/Filters/Blur Gallery/Lens Blur...`
+3. [x] PDB procedure `python-fu-texturizer` registered in GIMP PDB under:
+   - `<Image>/Filters/Artistic/Texturizer...`
+   - `<Image>/Filters/Texture/Texturizer...`
    - `<Image>/Filters/Retouching`
    - `<Image>/Layer`
-4. [x] Non-destructive adjustment layer created duplicating active drawable with optical lens blur applied.
-5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 42):
-   - LB-01: Procedure arguments verified (preset, radius, highlight-factor, highlight-threshold, depth-source, focal-distance, invert-depth, noise-amount, mask-mode, opacity).
-   - LB-02: Execution status verified (PDB status SUCCESS).
-   - LB-03: Layer mode, name & mask verified (`Lens Blur (Portrait Fast Prime f/1.4)` with NORMAL mode and mask attached).
-   - LB-04: Aperture Bokeh Disc Formation verified (highlight point expanded into circular bokeh disc: disc area luminance 0.301 > 0.125).
-   - LB-05: Specular Highlight Boost verified (highlight factor amplifies specular luminance: 0.880 > 0.136).
-   - LB-06: Portrait Fast Prime f/1.4 preset verified (radial falloff preserves focal center sharp with background defocus: mask 0.00 at center, mask 1.00 at outer).
-   - LB-07: Street Photography Shallow DOF preset verified (linear depth gradient verified: foreground mask 0.00, background mask 0.73).
-   - LB-08: Dreamy Specular Bokeh preset verified (reveal-all bokeh highlights: mask 1.00).
-   - LB-09: Monochromatic film grain noise verified (sensor texture added: variance 0.007453 > 0.0003, monochromatic RGB correlation verified).
-   - LB-10: Conceal-All black layer mask verified (composite diff == 0.000000).
-   - LB-11: Selection confinement & non-destructive preservation verified (effect confined to selection, base layer 100% untouched diff == 0.000000).
-6. [x] `verify_config.py` Section 6 passes with all 41 required plugins audited.
-7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (413/413 tests passing in 37.99s).
+4. [x] Non-destructive adjustment layer created duplicating active drawable with textured emboss applied in Soft Light/Overlay mode.
+5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 43):
+   - TX-01: Procedure arguments verified (preset, texture, scaling, relief, light-dir, invert, blend-mode, mask-mode, opacity).
+   - TX-02: Execution status verified (PDB status SUCCESS).
+   - TX-03: Layer mode, name & mask verified (`Texturizer (Fine Art Canvas)` with SOFTLIGHT mode and mask attached).
+   - TX-04: Fine Art Canvas weave texture variance verified (surface relief variance 0.014020 > 0.001).
+   - TX-05: Relief depth scaling verified (relief 25 variance 0.06346 > relief 5 variance 0.00288).
+   - TX-06: Directional lighting angle response verified (Top-Left vs Bottom-Right phase reversal).
+   - TX-07: Invert texture toggle verified (reverses highlights and shadows).
+   - TX-08: Weathered Brickwork preset verified (staggered masonry courses pattern rendered, variance 0.00480 > 0.0003).
+   - TX-09: Rustic Burlap Weave preset verified (coarse weave rendered with high relief in OVERLAY mode, variance 0.02269 > 0.001).
+   - TX-10: Conceal-All black layer mask verified (composite diff == 0.000000).
+   - TX-11: Selection confinement & non-destructive preservation verified (effect confined to selection [in=1.00, out=0.00], base layer 100% untouched diff == 0.000000).
+6. [x] `verify_config.py` Section 6 passes with all 42 required plugins audited.
+7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (425/425 tests passing in 38.56s).
 
 ## Verification Commands
 ```bash
@@ -60,5 +75,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `42ba0f5` (`feat(plugins): implement non-destructive lens blur and optical depth of field helper plugin`)
-- Outer repository commit: `feat(ralph): complete iteration 49 - non-destructive lens blur plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive texturizer and surface canvas helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 50 - non-destructive texturizer plugin`

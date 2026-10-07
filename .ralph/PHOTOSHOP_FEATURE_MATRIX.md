@@ -712,6 +712,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Texturizer & Surface Canvas Helper
+- **Source topic**: Artistic and stylize filters - Apply texture and surface effects to filters (`Topics.txt` line 481, `photoshop_docs.md` Section 442)
+- **Photoshop behavior**: Filter > Texture > Texturizer / Filter Gallery surface texturing: Canvas, Burlap, Brick, Sandstone with Scaling (50-200%), Relief depth (1-50), Directional Light (Top, Top-Left, Left, Bottom-Left, Bottom, Bottom-Right, Right, Top-Right), and Invert toggle.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-texturizer` in `<Image>/Filters/Artistic/Texturizer...`, `<Image>/Filters/Texture/Texturizer...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`.
+- **Current capability**: Mathematical heightmap generation for Canvas (orthogonal thread warp-and-weft weave), Burlap (coarse rustic jute weave with deep gaps), Brick (staggered masonry courses with pillowed brick face and mortared joints), Sandstone (porous sedimentary stone with mineral pitting), and Paper (cold-press watercolor paper grain). Physical directional surface lighting with 8 angles, relief scaling, invert texture toggle, neutral-gray (128) emboss layering in Soft Light / Overlay mode, curated presets (Fine Art Canvas, Rustic Burlap Weave, Weathered Brickwork, Sandstone Block Relief, Watercolor Paper Grain, Custom), attached editable layer masks, and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`), NumPy (`numpy.meshgrid`, `numpy.gradient`).
+- **Implementation priority**: High (Phase 48).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer mode and mask attachment, Fine Art Canvas weave texture variance (> 0.001), Relief depth scaling (Relief 25 > Relief 5), Directional lighting angle response (Top-Left vs Bottom-Right phase reversal), Invert texture toggle, Weathered Brickwork preset, Rustic Burlap Weave preset in Overlay mode, Conceal-All black layer mask, active selection mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 50):
+  1. `verify_config.py`: Section 6 passed with 42 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-texturizer` with all 9 arguments), layer mode SOFTLIGHT verified with mask attached, Fine Art Canvas weave texture variance verified (0.014020 > 0.001), Relief depth scaling verified (Relief 25 variance 0.06346 > Relief 5 variance 0.00288), Directional lighting angle response verified (Top-Left vs Bottom-Right phase reversal), Invert texture toggle verified (highlight/shadow relief sign inversion), Weathered Brickwork preset verified (staggered masonry pattern variance 0.00480 > 0.0003), Rustic Burlap Weave preset verified in OVERLAY mode (variance 0.02269 > 0.001), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified (in=1.00, out=0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 50).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

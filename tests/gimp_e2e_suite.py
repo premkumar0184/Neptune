@@ -106,6 +106,7 @@ def test_pdb_registration():
         ("python-fu-apply-image", "Apply Image & Channel Math Helper"),
         ("python-fu-replace-color", "Replace Color & Targeted Object Recoloring Helper"),
         ("python-fu-lens-blur", "Lens Blur & Optical Depth of Field Helper"),
+        ("python-fu-texturizer", "Texturizer & Surface Canvas Helper"),
     ]
 
 
@@ -7198,6 +7199,268 @@ def test_lens_blur():
 
 
 # ==============================================================================
+# 43. TEXTURIZER & SURFACE CANVAS HELPER TEST SUITE
+# ==============================================================================
+def test_texturizer():
+    print("\n--- Test Suite 43: Texturizer & Surface Canvas Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-texturizer")
+    if proc is None:
+        record_fail("TX-01", "Procedure lookup", "Procedure python-fu-texturizer not found")
+        return
+
+    # 43a: Procedure Argument Verification (TX-01)
+    args = {arg.name: arg for arg in proc.get_arguments()}
+    expected_args = [
+        "preset", "texture", "scaling", "relief",
+        "light-dir", "invert", "blend-mode", "mask-mode", "opacity"
+    ]
+    missing = [a for a in expected_args if a not in args]
+    if missing:
+        record_fail("TX-01", "Argument check", f"Missing arguments: {missing}")
+        return
+    record_pass("TX-01", "Procedure arguments verified", f"{len(expected_args)} arguments verified")
+
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base midtone layer (0.5, 0.5, 0.5)
+        base = Gimp.Layer.new(image, "BaseTexturizer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base = base.get_pixel(50, 50).get_rgba()
+
+        # 43b: Execution status verified (TX-02)
+        cfg_canvas = proc.create_config()
+        cfg_canvas.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_canvas.set_property("image", image)
+        cfg_canvas.set_property("preset", "fine-art-canvas")
+        res = proc.run(cfg_canvas)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TX-02", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("TX-02", "Execution status", "SUCCESS")
+
+        # 43c: Layer mode, name & mask verified (TX-03)
+        layers = image.get_layers()
+        tex_layer = None
+        for l in layers:
+            if l.get_name().startswith("Texturizer"):
+                tex_layer = l
+                break
+
+        if tex_layer is None:
+            record_fail("TX-03", "Layer creation", "Texturizer layer not found in image")
+            return
+
+        layer_name = tex_layer.get_name()
+        layer_mode = tex_layer.get_mode()
+        has_mask = tex_layer.get_mask() is not None
+
+        if "Fine Art Canvas" not in layer_name or layer_mode != Gimp.LayerMode.SOFTLIGHT or not has_mask:
+            record_fail("TX-03", "Layer properties", f"Name='{layer_name}', mode={layer_mode}, has_mask={has_mask}")
+            return
+        record_pass("TX-03", "Layer mode, name & mask", f"'{layer_name}' in SOFTLIGHT mode with mask attached")
+
+        # 43d: Fine Art Canvas weave texture variance verified (TX-04)
+        samples = []
+        for y in range(40, 60):
+            for x in range(40, 60):
+                c = tex_layer.get_pixel(x, y).get_rgba()
+                samples.append(c[0])
+        mean_val = sum(samples) / len(samples)
+        var_canvas = sum((s - mean_val) ** 2 for s in samples) / len(samples)
+
+        if var_canvas < 0.001:
+            record_fail("TX-04", "Canvas weave variance", f"Variance too low: {var_canvas:.6f}")
+            return
+        record_pass("TX-04", "Canvas weave texture variance", f"Woven canvas relief verified (variance {var_canvas:.6f} > 0.001)")
+        image.remove_layer(tex_layer)
+
+        # 43e: Relief depth scaling verified (TX-05)
+        image.set_selected_layers([base])
+        cfg_r25 = proc.create_config()
+        cfg_r25.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r25.set_property("image", image)
+        cfg_r25.set_property("preset", "custom")
+        cfg_r25.set_property("texture", "canvas")
+        cfg_r25.set_property("relief", 25.0)
+        proc.run(cfg_r25)
+        layer_r25 = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        s_r25 = [layer_r25.get_pixel(x, 50).get_rgba()[0] for x in range(40, 60)]
+        var_r25 = sum((s - (sum(s_r25)/len(s_r25))) ** 2 for s in s_r25) / len(s_r25)
+        image.remove_layer(layer_r25)
+
+        image.set_selected_layers([base])
+        cfg_r5 = proc.create_config()
+        cfg_r5.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r5.set_property("image", image)
+        cfg_r5.set_property("preset", "custom")
+        cfg_r5.set_property("texture", "canvas")
+        cfg_r5.set_property("relief", 5.0)
+        proc.run(cfg_r5)
+        layer_r5 = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        s_r5 = [layer_r5.get_pixel(x, 50).get_rgba()[0] for x in range(40, 60)]
+        var_r5 = sum((s - (sum(s_r5)/len(s_r5))) ** 2 for s in s_r5) / len(s_r5)
+        image.remove_layer(layer_r5)
+
+        if var_r25 <= var_r5 * 1.5:
+            record_fail("TX-05", "Relief scaling", f"Relief 25 ({var_r25:.6f}) not significantly greater than Relief 5 ({var_r5:.6f})")
+            return
+        record_pass("TX-05", "Relief depth scaling", f"Relief 25 variance ({var_r25:.5f}) > Relief 5 ({var_r5:.5f})")
+
+        # 43f: Directional lighting angle response verified (TX-06)
+        image.set_selected_layers([base])
+        cfg_tl = proc.create_config()
+        cfg_tl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_tl.set_property("image", image)
+        cfg_tl.set_property("preset", "custom")
+        cfg_tl.set_property("texture", "canvas")
+        cfg_tl.set_property("light-dir", "top-left")
+        proc.run(cfg_tl)
+        layer_tl = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+
+        image.set_selected_layers([base])
+        cfg_br = proc.create_config()
+        cfg_br.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_br.set_property("image", image)
+        cfg_br.set_property("preset", "custom")
+        cfg_br.set_property("texture", "canvas")
+        cfg_br.set_property("light-dir", "bottom-right")
+        proc.run(cfg_br)
+        layer_br = [l for l in image.get_layers() if l.get_name().startswith("Texturizer") and l != layer_tl][0]
+
+        found_inverted = False
+        for x in range(40, 55):
+            v_tl = layer_tl.get_pixel(x, 50).get_rgba()[0] - 0.50
+            v_br = layer_br.get_pixel(x, 50).get_rgba()[0] - 0.50
+            if abs(v_tl) > 0.03 and (v_tl * v_br) < 0:
+                found_inverted = True
+                break
+
+        image.remove_layer(layer_tl)
+        image.remove_layer(layer_br)
+
+        if not found_inverted:
+            record_fail("TX-06", "Directional lighting angle", "Top-Left vs Bottom-Right did not show phase reversal")
+            return
+        record_pass("TX-06", "Directional lighting angle response", "Opposite lighting angles produce phase reversal")
+
+        # 43g: Invert texture toggle verified (TX-07)
+        image.set_selected_layers([base])
+        cfg_norm = proc.create_config()
+        cfg_norm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_norm.set_property("image", image)
+        cfg_norm.set_property("preset", "custom")
+        cfg_norm.set_property("texture", "canvas")
+        cfg_norm.set_property("invert", False)
+        proc.run(cfg_norm)
+        layer_norm = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+
+        image.set_selected_layers([base])
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", image)
+        cfg_inv.set_property("preset", "custom")
+        cfg_inv.set_property("texture", "canvas")
+        cfg_inv.set_property("invert", True)
+        proc.run(cfg_inv)
+        layer_inv = [l for l in image.get_layers() if l.get_name().startswith("Texturizer") and l != layer_norm][0]
+
+        found_inv_sign = False
+        for x in range(40, 55):
+            v_n = layer_norm.get_pixel(x, 50).get_rgba()[0] - 0.50
+            v_i = layer_inv.get_pixel(x, 50).get_rgba()[0] - 0.50
+            if abs(v_n) > 0.03 and (v_n * v_i) < 0:
+                found_inv_sign = True
+                break
+
+        image.remove_layer(layer_norm)
+        image.remove_layer(layer_inv)
+
+        if not found_inv_sign:
+            record_fail("TX-07", "Invert texture", "Inverting texture did not invert highlight/shadow relief")
+            return
+        record_pass("TX-07", "Invert texture toggle", "Invert toggle reverses highlights and shadows")
+
+        # 43h: Weathered Brickwork preset verified (TX-08)
+        image.set_selected_layers([base])
+        cfg_brick = proc.create_config()
+        cfg_brick.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_brick.set_property("image", image)
+        cfg_brick.set_property("preset", "weathered-brick")
+        proc.run(cfg_brick)
+        brick_layer = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        s_brick = [brick_layer.get_pixel(x, y).get_rgba()[0] for x in range(30, 60, 5) for y in range(30, 60, 5)]
+        var_brick = sum((s - (sum(s_brick)/len(s_brick))) ** 2 for s in s_brick) / len(s_brick)
+        if "Weathered Brickwork" not in brick_layer.get_name() or var_brick < 0.0003:
+            record_fail("TX-08", "Brick preset", f"Brick layer not valid or variance too low ({var_brick:.6f})")
+            return
+        record_pass("TX-08", "Weathered Brickwork preset", f"Masonry courses and mortar joints rendered (var {var_brick:.5f})")
+        image.remove_layer(brick_layer)
+
+        # 43i: Rustic Burlap Weave preset verified (TX-09)
+        image.set_selected_layers([base])
+        cfg_burlap = proc.create_config()
+        cfg_burlap.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_burlap.set_property("image", image)
+        cfg_burlap.set_property("preset", "rustic-burlap")
+        proc.run(cfg_burlap)
+        burlap_layer = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        s_burlap = [burlap_layer.get_pixel(x, y).get_rgba()[0] for x in range(30, 60, 5) for y in range(30, 60, 5)]
+        var_burlap = sum((s - (sum(s_burlap)/len(s_burlap))) ** 2 for s in s_burlap) / len(s_burlap)
+        if "Rustic Burlap Weave" not in burlap_layer.get_name() or burlap_layer.get_mode() != Gimp.LayerMode.OVERLAY or var_burlap < 0.001:
+            record_fail("TX-09", "Burlap preset", f"Burlap layer not valid, mode={burlap_layer.get_mode()}, var={var_burlap:.6f}")
+            return
+        record_pass("TX-09", "Rustic Burlap Weave preset", f"Coarse jute weave rendered in OVERLAY mode (var {var_burlap:.5f})")
+        image.remove_layer(burlap_layer)
+
+        # 43j: Conceal-All black layer mask verified (TX-10)
+        image.set_selected_layers([base])
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "fine-art-canvas")
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+        proc.run(cfg_conceal)
+        conceal_layer = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        c_conceal = get_composite_pixel(image, 50, 50)
+        diff_conceal = max(abs(c_conceal[i] - p_base[i]) for i in range(3))
+        if diff_conceal > 0.000001:
+            record_fail("TX-10", "Conceal-all mask", f"Composite differs from base by {diff_conceal:.6f}")
+            return
+        record_pass("TX-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {diff_conceal:.6f})")
+        image.remove_layer(conceal_layer)
+
+        # 43k: Selection confinement & non-destructive preservation (TX-11)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        image.set_selected_layers([base])
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "fine-art-canvas")
+        cfg_sel.set_property("mask-mode", "selection")
+        proc.run(cfg_sel)
+        sel_layer = [l for l in image.get_layers() if l.get_name().startswith("Texturizer")][0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base[i]) for i in range(3))
+        if base_diff > 0.000001 or mask_in < 0.90 or mask_out > 0.10:
+            record_fail("TX-11", "Selection confinement", f"Base diff={base_diff:.6f}, mask_in={mask_in:.2f}, mask_out={mask_out:.2f}")
+            return
+        record_pass("TX-11", "Selection confinement & base preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("TX-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -7249,6 +7512,7 @@ def run_all_tests():
     test_apply_image()
     test_replace_color()
     test_lens_blur()
+    test_texturizer()
 
 
 

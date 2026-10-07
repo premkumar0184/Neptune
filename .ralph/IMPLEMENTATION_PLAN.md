@@ -345,12 +345,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate focal plane preservation, aperture bokeh circle formation, specular highlight boost, depth map mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 48 — Non-Destructive Texturizer & Surface Canvas Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `texturizer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`.
-- [ ] Create dedicated non-destructive Texturizer adjustment layer duplicating active drawable and simulating Photoshop Filter > Texture > Texturizer / Filter Gallery surface texturing.
-- [ ] Support classic surface textures: Canvas, Burlap, Brick, Sandstone, Fine Paper Grain, with scaling (50% to 200%), relief depth (1 to 50), and directional lighting (Top, Top-Left, Left, Bottom-Left, Bottom, Bottom-Right, Right, Top-Right).
-- [ ] Support curated artistic presets (Gallery Fine Art Canvas, Rustic Burlap Weave, Weathered Brickwork, Architectural Sandstone, Subtle Paper Grain, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Artistic/Texturizer...`, `<Image>/Filters/Distort/Texturizer...`, and `<Image>/Layer`.
-- [ ] Validate surface relief bump mapping, lighting angle response, relief scaling, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `texturizer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`.
+- [x] Create dedicated non-destructive Texturizer adjustment layer duplicating active drawable and simulating Photoshop Filter > Texture > Texturizer / Filter Gallery surface texturing.
+- [x] Support classic surface textures: Canvas, Burlap, Brick, Sandstone, Fine Paper Grain, with scaling (50% to 200%), relief depth (1 to 50), and directional lighting (Top, Top-Left, Left, Bottom-Left, Bottom, Bottom-Right, Right, Top-Right).
+- [x] Support curated artistic presets (Gallery Fine Art Canvas, Rustic Burlap Weave, Weathered Brickwork, Architectural Sandstone, Subtle Paper Grain, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Artistic/Texturizer...`, `<Image>/Filters/Texture/Texturizer...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate surface relief bump mapping, lighting angle response, relief scaling, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 49 — Guide Layout & Compositional Alignment Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `guide-layout` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`.
+- [ ] Create dedicated Guide Layout helper simulating Photoshop View > New Guide Layout and View > Guides > Clear Guides.
+- [ ] Support classic photographic and graphic design compositional guides: Rule of Thirds (3x3 grid), Golden Ratio / Phi Grid (1:0.618:1), Center Crosshairs (50% H & V), Margin Guides (top/bottom/left/right margins), and Modular Columns & Rows (custom columns/rows with gutters).
+- [ ] Support options: clear existing guides toggle, custom gutter width (px), custom margin percentages, horizontal and vertical orientation toggles.
+- [ ] Register under menu path `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides/New Guide Layout...`, and `<Image>/View/Guides/Clear All Guides`.
+- [ ] Validate guide placement coordinates, rule-of-thirds offsets, golden-ratio geometry, margin spacing, clear guides action, and headless GIMP test suite.
 
 
 

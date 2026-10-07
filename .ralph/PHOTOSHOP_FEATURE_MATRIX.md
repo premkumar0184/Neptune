@@ -440,6 +440,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Woodcut & Linocut Printmaking Helper
+- **Source topic**: Woodcut print filter (`Topics.txt` line 665, and `photoshop_docs.md` Section 422 lines 12129-12132 Filter Gallery: Artistic / Sketch: Woodcut, Cutout, Stamp, relief printmaking effects)
+- **Photoshop behavior**: Groups continuous photographic tones into simplified carved relief blocks, clean gouge contours, and authentic printing inks on textured paper, simulating traditional woodcut, linocut, and relief block printing.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-woodcut-filter` in `<Image>/Filters/Artistic/Woodcut Print...`, `<Image>/Filters/Sketch/Woodcut Print...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies edge-preserving gouge smoothing via GEGL `gegl:snn-mean`, converts continuous tones into monochrome carved relief levels via GEGL `gegl:mono-mixer` and `gegl:levels`, and maps authentic printing inks and handmade papers via GEGL `gegl:gradient-map` across curated relief printmaking traditions (Classic Japanese Woodcut with Sumi ink and Washi paper, Modern Graphic Linocut with deep black ink and crisp white paper, Ukiyo-e Indigo Print with Prussian blue ink, Vermilion Seal Print with cinnabar red seal carving ink, Fine Archival Engraving with Multiply overlay, and Custom Sliders), selectable blend modes (Normal, Multiply for woodblock ink overlay, Soft Light for relief glaze), layer opacity, versatile layer masks (Reveal All, Conceal All for selective hand-printing, Active Selection), and 100% preservation of underlying source layer pixels.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:snn-mean`, `gegl:mono-mixer`, `gegl:levels`, `gegl:gradient-map`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 32).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Classic Japanese Woodcut tone mapping (Sumi ink < 0.12, warm washi paper R > B), Modern Graphic Linocut preset (deep black ink < 0.05, crisp white paper > 0.95), Ukiyo-e Indigo Print preset (Prussian blue dominance B > R by > 0.15), Vermilion Seal Print preset (cinnabar red dominance R > B by > 0.40), Fine Archival Engraving Multiply blend mode, Conceal-All black layer mask, selection-aware masking, custom sliders with Soft Light mode, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 34):
+  1. `verify_config.py`: Section 6 passed with 26 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Classic Japanese Woodcut preset verified (Sumi ink 0.060 < 0.12, warm washi paper R=0.956 > B=0.888, warmth +0.068), Modern Graphic Linocut preset verified (deep black ink 0.020 < 0.05, crisp white paper 0.982 > 0.95), Ukiyo-e Indigo Print preset verified (Prussian blue ink dominance B=0.319 > R=0.050, delta +0.269), Vermilion Seal Print preset verified (cinnabar red ink dominance R=0.784 > B=0.100, delta +0.684), Fine Archival Engraving Multiply blend mode (30) at 90.0% opacity verified, Conceal-All black layer mask verified (0.000000 diff), selection-aware print mask verified (inside printed 0.956 > 0.85, outside untouched diff 0.000000), custom sliders with 85.0% opacity and Soft Light blend mode (45) verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 34).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

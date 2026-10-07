@@ -90,6 +90,7 @@ def test_pdb_registration():
         ("python-fu-photo-colorize", "Vintage Photo Colorization & Restoration"),
         ("python-fu-jpeg-artifact-removal", "JPEG Artifacts Removal & Deblocking"),
         ("python-fu-charcoal-filter", "Charcoal & Fine-Art Sketch Helper"),
+        ("python-fu-woodcut-filter", "Woodcut & Linocut Printmaking"),
     ]
 
     for proc_name, label in required_procs:
@@ -3607,6 +3608,239 @@ def test_charcoal_filter():
 
 
 # ==============================================================================
+# TEST 27: Woodcut & Linocut Printmaking Helper Plugin (Phase 32)
+# ==============================================================================
+def test_woodcut_filter():
+    print("\n--- Test Suite 27: Woodcut & Linocut Printmaking Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-woodcut-filter")
+    if proc is None:
+        record_fail("WF-01", "Procedure lookup", "Procedure python-fu-woodcut-filter not found")
+        return
+
+    # Create a 64x64 test image with:
+    # Bright paper background (0.85, 0.85, 0.85) and a dark subject rectangle (0.15, 0.15, 0.15) in center
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base", 64, 64, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # Fill background
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.85, 0.85, 0.85)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Dark subject rectangle
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 16, 16, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.15, 0.15, 0.15)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_paper = base.get_pixel(4, 4).get_rgba()
+        p_base_edge = base.get_pixel(16, 20).get_rgba()
+        p_base_subj = base.get_pixel(32, 32).get_rgba()
+
+        # 27a: Execute with Classic Japanese Woodcut preset (default)
+        config = proc.create_config()
+        config.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        config.set_property("image", image)
+        config.set_property("preset", "classic-japanese")
+        config.set_property("mask-type", "reveal-all")
+        config.set_property("opacity", 100.0)
+
+        res = proc.run(config)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("WF-01", "Execution status", f"Expected SUCCESS, got status={status}")
+            return
+        record_pass("WF-01", "Execution status", "SUCCESS")
+
+        # 27b: Verify layer properties
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("WF-02", "Layer creation", f"Expected at least 2 layers, found {len(layers)}")
+            return
+        wc_layer = layers[0]
+        if "Woodcut Print" not in wc_layer.get_name() or wc_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("WF-02", "Layer properties", f"Unexpected name={wc_layer.get_name()}, mode={wc_layer.get_mode()}")
+            return
+        record_pass("WF-02", "Layer mode & name", f"Layer '{wc_layer.get_name()}' mode={wc_layer.get_mode()}")
+
+        # 27c: Verify attached reveal-all layer mask
+        mask = wc_layer.get_mask()
+        if mask is None:
+            record_fail("WF-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("WF-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 27d: Classic Japanese Woodcut tone mapping:
+        # Sumi ink in dark zone (luminance < 0.12), warm washi paper in highlight zone (R > B by > 0.04)
+        p_ink = get_composite_pixel(image, 32, 32)
+        p_paper = get_composite_pixel(image, 4, 4)
+        warmth_diff = p_paper[0] - p_paper[2]
+        if p_ink[0] > 0.12 or warmth_diff < 0.04:
+            record_fail("WF-04", "Classic Japanese tones", f"Ink={p_ink[0]:.3f} (expected <0.12), Paper R={p_paper[0]:.3f} B={p_paper[2]:.3f} (warmth={warmth_diff:.3f} expected >0.04)")
+            return
+        record_pass("WF-04", "Classic Japanese Woodcut preset", f"Sumi ink ({p_ink[0]:.3f} < 0.12), warm washi paper R={p_paper[0]:.3f} > B={p_paper[2]:.3f} (warmth +{warmth_diff:.3f})")
+
+        image.remove_layer(wc_layer)
+
+        # 27e: Modern Graphic Linocut preset (deep black ink < 0.05, crisp white paper > 0.95)
+        cfg_lino = proc.create_config()
+        cfg_lino.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_lino.set_property("image", image)
+        cfg_lino.set_property("preset", "modern-linocut")
+        cfg_lino.set_property("mask-type", "reveal-all")
+        cfg_lino.set_property("opacity", 100.0)
+
+        proc.run(cfg_lino)
+        lino_layer = image.get_layers()[0]
+        p_lino_ink = get_composite_pixel(image, 32, 32)
+        p_lino_paper = get_composite_pixel(image, 4, 4)
+        if p_lino_ink[0] > 0.05 or p_lino_paper[0] < 0.95:
+            record_fail("WF-05", "Modern Linocut tones", f"Ink={p_lino_ink[0]:.3f} (expected <0.05), Paper={p_lino_paper[0]:.3f} (expected >0.95)")
+            return
+        record_pass("WF-05", "Modern Graphic Linocut preset", f"Deep black ink ({p_lino_ink[0]:.3f} < 0.05) and crisp white paper ({p_lino_paper[0]:.3f} > 0.95)")
+
+        image.remove_layer(lino_layer)
+
+        # 27f: Ukiyo-e Indigo Print preset (Prussian blue dominance: B > R by > 0.15)
+        cfg_indigo = proc.create_config()
+        cfg_indigo.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_indigo.set_property("image", image)
+        cfg_indigo.set_property("preset", "ukiyo-e-indigo")
+        cfg_indigo.set_property("mask-type", "reveal-all")
+        cfg_indigo.set_property("opacity", 100.0)
+
+        proc.run(cfg_indigo)
+        indigo_layer = image.get_layers()[0]
+        p_indigo_ink = get_composite_pixel(image, 32, 32)
+        blue_dominance = p_indigo_ink[2] - p_indigo_ink[0]
+        if blue_dominance < 0.15:
+            record_fail("WF-06", "Ukiyo-e Indigo tones", f"B={p_indigo_ink[2]:.3f}, R={p_indigo_ink[0]:.3f}, diff={blue_dominance:.3f} < 0.15")
+            return
+        record_pass("WF-06", "Ukiyo-e Indigo Print preset", f"Prussian blue ink dominance B={p_indigo_ink[2]:.3f} > R={p_indigo_ink[0]:.3f} (delta +{blue_dominance:.3f})")
+
+        image.remove_layer(indigo_layer)
+
+        # 27g: Vermilion Seal Print preset (Cinnabar red dominance: R > B by > 0.40)
+        cfg_verm = proc.create_config()
+        cfg_verm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_verm.set_property("image", image)
+        cfg_verm.set_property("preset", "vermilion-seal")
+        cfg_verm.set_property("mask-type", "reveal-all")
+        cfg_verm.set_property("opacity", 100.0)
+
+        proc.run(cfg_verm)
+        verm_layer = image.get_layers()[0]
+        p_verm_ink = get_composite_pixel(image, 32, 32)
+        red_dominance = p_verm_ink[0] - p_verm_ink[2]
+        if red_dominance < 0.40:
+            record_fail("WF-07", "Vermilion Seal tones", f"R={p_verm_ink[0]:.3f}, B={p_verm_ink[2]:.3f}, diff={red_dominance:.3f} < 0.40")
+            return
+        record_pass("WF-07", "Vermilion Seal Print preset", f"Cinnabar red ink dominance R={p_verm_ink[0]:.3f} > B={p_verm_ink[2]:.3f} (delta +{red_dominance:.3f})")
+
+        image.remove_layer(verm_layer)
+
+        # 27h: Fine Archival Engraving preset with Multiply blend mode
+        cfg_eng = proc.create_config()
+        cfg_eng.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_eng.set_property("image", image)
+        cfg_eng.set_property("preset", "fine-engraving")
+        cfg_eng.set_property("mask-type", "reveal-all")
+        cfg_eng.set_property("opacity", 90.0)
+
+        proc.run(cfg_eng)
+        eng_layer = image.get_layers()[0]
+        if eng_layer.get_mode() != Gimp.LayerMode.MULTIPLY or abs(eng_layer.get_opacity() - 90.0) > 0.01:
+            record_fail("WF-08", "Fine Engraving preset", f"Expected Multiply and 90.0%, got mode={eng_layer.get_mode()}, opacity={eng_layer.get_opacity()}%")
+            return
+        record_pass("WF-08", "Fine Archival Engraving preset", f"Multiply blend mode ({eng_layer.get_mode()}), opacity 90.0% verified")
+
+        image.remove_layer(eng_layer)
+
+        # 27i: Conceal-All Black Layer Mask
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "classic-japanese")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk = get_composite_pixel(image, 32, 32)
+        p_base = base.get_pixel(32, 32).get_rgba()
+        diff_blk = max(abs(p_blk[i] - p_base[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("WF-09", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("WF-09", "Conceal-all black layer mask", f"Black mask attached for selective block printing (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 27j: Selection-Aware Masking
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 20, 20)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "classic-japanese")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 4, 4)
+        p_sel_out = get_composite_pixel(image, 32, 32)
+        out_diff = max(abs(p_sel_out[i] - p_base_subj[i]) for i in range(3))
+
+        if out_diff > 0.000001 or p_sel_inside[0] < 0.85:
+            record_fail("WF-10", "Selection-aware mask", f"Inside paper {p_sel_inside[0]:.3f}, Outside diff {out_diff:.6f}")
+            return
+        record_pass("WF-10", "Selection-aware print mask", f"Inside printed ({p_sel_inside[0]:.3f} > 0.85), outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 27k: Custom Sliders, Soft Light blend mode, Opacity & Base layer preservation
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("gouge-smoothing", 4.0)
+        cfg_cust.set_property("carve-depth", 0.7)
+        cfg_cust.set_property("ink-shade", 0.04)
+        cfg_cust.set_property("paper-tone", 0.94)
+        cfg_cust.set_property("blend-mode", "soft-light")
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("WF-11", "Custom sliders", f"Expected opacity 85.0% and Soft Light, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+
+        # Check non-destructive base layer invariance across all pixels
+        p_base_after_paper = base.get_pixel(4, 4).get_rgba()
+        p_base_after_edge = base.get_pixel(16, 20).get_rgba()
+        p_base_after_subj = base.get_pixel(32, 32).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_paper[i] - p_base_paper[i]) for i in range(3)),
+            max(abs(p_base_after_edge[i] - p_base_edge[i]) for i in range(3)),
+            max(abs(p_base_after_subj[i] - p_base_subj[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("WF-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("WF-11", "Custom sliders & non-destructive preservation", f"Opacity 85.0%, Soft Light mode ({cust_layer.get_mode()}), base pixels untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("WF-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -3642,6 +3876,7 @@ def run_all_tests():
     test_photo_colorize()
     test_jpeg_artifact_removal()
     test_charcoal_filter()
+    test_woodcut_filter()
 
 
     elapsed = time.time() - start_time

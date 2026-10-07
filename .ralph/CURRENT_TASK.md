@@ -1,53 +1,53 @@
-# Current Task — Iteration 33
+# Current Task — Iteration 34
 
 ## Task
-**Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin**
+**Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 662: "Apply Charcoal filter to images", and `photoshop_docs.md` Section 422 line 12132 Sketch: Charcoal, Chalk & Charcoal, Pencil and paper effects), creating artistic charcoal sketches, graphite line drawings, and fine-art paper studies is a classic creative filter workflow. Photoshop's Charcoal filter redraws images with bold charcoal strokes, delicate midtone hatchings, and chalk highlights on textured sketch paper, with controls for stroke thickness, detail, light/dark balance, and foreground/background colors. In stock GIMP, artistic sketch conversion requires destructive pixel modifications or legacy filters that discard original color layers and lack adjustable blend modes (Multiply, Normal, Soft Light) or non-destructive masks. Creating a dedicated native Python 3 helper plugin (`python-fu-charcoal-filter`) provides an isolated non-destructive Charcoal adjustment layer duplicating the active drawable, extracting artistic contour strokes via GEGL `gegl:edge-neon`, mapping charcoal ink and paper tones via GEGL `gegl:gradient-map` across customizable palettes, supporting curated presets (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom Sliders), selectable blend modes (Normal, Multiply for paper overlay, Soft Light), layer opacity, editable layer masks (Reveal All, Conceal All for selective sketching, Active Selection), and 100% preservation of underlying source pixels.
+In Adobe Photoshop (`Topics.txt` line 665: "Woodcut print filter", and `photoshop_docs.md` Section 422 lines 12129-12134 Filter Gallery: Artistic / Sketch: Woodcut, Cutout, Stamp, relief printmaking effects), converting photographs and artwork into traditional relief block prints is a celebrated creative printmaking workflow. Photoshop's woodcut / stamp / cutout effects group continuous photographic tones into simplified carved relief blocks, clean gouge contours, and authentic printing inks on textured paper. In stock GIMP, relief print effects require destructive posterization or multi-step manual thresholding that eliminates original color layers, lacks authentic woodblock color palettes (Japanese Sumi ink, Ukiyo-e Prussian indigo, Vermilion seal ink, Linocut black), and offers no non-destructive adjustment layers or blend modes. Creating a dedicated native Python 3 helper plugin (`python-fu-woodcut-filter`) provides an isolated non-destructive Woodcut Print adjustment layer duplicating the active drawable, applying edge-preserving relief smoothing (`gegl:snn-mean`), monochrome tonal compression (`gegl:mono-mixer` and `gegl:levels`), and authentic ink/paper gradient mapping (`gegl:gradient-map`) with curated printmaking presets (Classic Japanese Woodcut, Modern Graphic Linocut, Ukiyo-e Indigo Print, Vermilion Seal Print, Fine Archival Engraving, Custom Sliders), selectable blend modes (Normal, Multiply for print overlay, Soft Light), layer opacity, editable layer masks (Reveal All, Conceal All, and Active Selection), and 100% preservation of underlying source pixels.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `charcoal-filter` in `REQUIRED_PLUGINS`, updating audit inventory to 25 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `woodcut-filter` in `REQUIRED_PLUGINS`, updating audit inventory to 26 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 26: `test_charcoal_filter`, 11 assertions CF-01 through CF-11)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Charcoal & Fine-Art Sketch entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 31 status)
-- `.ralph/PROGRESS.md` (Log Iteration 33 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 33 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 27: `test_woodcut_filter`, 11 assertions WF-01 through WF-11)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Woodcut Printmaking entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 32 status)
+- `.ralph/PROGRESS.md` (Log Iteration 34 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 34 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/` created with `charcoal-filter.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/` created with `woodcut-filter.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure `python-fu-charcoal-filter` registered in GIMP PDB under:
-   - `<Image>/Filters/Artistic/Charcoal Sketch...`
-   - `<Image>/Filters/Sketch/Charcoal Sketch...`
-   - `<Image>/Layer/New Charcoal Sketch Layer...`
+3. [x] PDB procedure `python-fu-woodcut-filter` registered in GIMP PDB under:
+   - `<Image>/Filters/Artistic/Woodcut Print...`
+   - `<Image>/Filters/Sketch/Woodcut Print...`
+   - `<Image>/Layer/New Woodcut Print Layer...`
 4. [x] Non-destructive adjustment layer created duplicating active drawable.
-5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 26):
+5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 27):
    - Base layer pixels underneath remain 100% untouched (`diff == 0.000000`).
-   - Fine Charcoal Drawing preset verified: Dark charcoal stroke lines (0.061 < 0.15) on archival paper background (0.956 > 0.85).
-   - Dramatic Heavy Vine preset verified: Deep velvety carbon strokes with lightness 0.031 (< 0.10).
-   - Chalk & Charcoal Duo preset verified: Warm chalk / cream paper highlights (R=0.939 > B=0.799, warmth +0.140).
-   - Architectural Line Art preset verified: Delicate contour lines in Multiply mode (30) at 85.0% opacity.
-   - Multiply blend mode verified: Blends charcoal drawing cleanly over underlying artwork.
-   - Conceal-All black layer mask verified: Composite equals base layer (0.000000 diff) ready for selective brush sketching.
-   - Selection-aware mask verified: Active subject selection sketched (0.061 < 0.20), outside untouched (diff 0.000000).
-   - Custom sliders with 80.0% opacity and Soft Light blend mode (45) verified.
-6. [x] `verify_config.py` Section 6 passes with all 25 required plugins audited.
-7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (221/221 tests passing in 23.12s).
+   - Classic Japanese Woodcut preset verified: Sumi ink in dark zone (0.060 < 0.12), warm washi paper in highlight zone (R=0.956 > B=0.888, warmth +0.068 > 0.04).
+   - Modern Graphic Linocut preset verified: High-contrast relief print with deep black ink (0.020 < 0.05) and crisp white paper (0.982 > 0.95).
+   - Ukiyo-e Indigo Print preset verified: Prussian blue ink dominance in dark zone (B=0.319 > R=0.050, delta +0.269 > 0.15).
+   - Vermilion Seal Print preset verified: Red cinnabar ink dominance in dark zone (R=0.784 > B=0.100, delta +0.684 > 0.40).
+   - Multiply blend mode verified: Blends woodblock ink cleanly onto underlying layer (mode=30, opacity 90.0%).
+   - Conceal-All black layer mask verified: Composite equals base layer (0.000000 diff) ready for selective block printing.
+   - Selection-aware mask verified: Active subject selection printed (0.956 > 0.85), outside untouched (diff 0.000000).
+   - Custom sliders with 85.0% opacity and Soft Light blend mode (45) verified.
+6. [x] `verify_config.py` Section 6 passes with all 26 required plugins audited.
+7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (233/233 tests passing in 25.43s).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (25/25 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (25 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (26/26 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (26 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
-  [PASS] PDB-REG: 25/25 plugins registered including python-fu-charcoal-filter
+  [PASS] PDB-REG: 26/26 plugins registered including python-fu-woodcut-filter
   [PASS] FS-01 to FS-05: Frequency Separation (5 tests passed)
   [PASS] LM-01 to LM-04: Luminosity Masks (4 tests passed)
   [PASS] DB-01 to DB-05: Dodge & Burn Layer (5 tests passed)
@@ -72,32 +72,26 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] SCP-01 to SCP-11: Selective Color Pop & Background Desaturation (11 tests passed)
   [PASS] PC-01 to PC-11: Vintage Photo Colorization & Restoration (11 tests passed)
   [PASS] JAR-01 to JAR-11: JPEG Artifacts Removal & Deblocking (11 tests passed)
-  [PASS] CF-01: Execution status (SUCCESS)
-  [PASS] CF-02: Layer mode & name (Layer 'Charcoal Sketch (Fine Charcoal Drawing)' mode=28)
-  [PASS] CF-03: Layer mask attachment (Reveal-all mask attached)
-  [PASS] CF-04: Fine Charcoal tone mapping (Paper highlight (0.956 > 0.85), Charcoal contour stroke (0.061 < 0.15))
-  [PASS] CF-05: Dramatic Heavy Vine preset (Deep carbon stroke lightness=0.031 (< 0.10))
-  [PASS] CF-06: Chalk & Charcoal Duo preset (Warm tinted paper R=0.939 > B=0.799 (warmth +0.140))
-  [PASS] CF-07: Architectural Line Art preset (Multiply blend mode (30), opacity 85.0% verified)
-  [PASS] CF-08: Conceal-all black layer mask (Black mask attached for selective brush sketching (diff 0.000000))
-  [PASS] CF-09: Selection-aware sketch mask (Inside sketched (0.061 < 0.20), outside untouched (diff 0.000000))
-  [PASS] CF-10: Custom sliders & blend mode (Opacity 80.0%, Soft Light blend mode (45), thickness 3.0px verified)
-  [PASS] CF-11: Non-destructive layer preservation (Base pixels 100% untouched across all tonal zones (diff 0.000000))
-Total Tests Executed: 221
-Tests Passed        : 221
+  [PASS] CF-01 to CF-11: Charcoal & Fine-Art Sketch (11 tests passed)
+  [PASS] WF-01: Execution status (SUCCESS)
+  [PASS] WF-02: Layer mode & name (Layer 'Woodcut Print (Classic Japanese Woodcut)' mode=28)
+  [PASS] WF-03: Layer mask attachment (Reveal-all mask attached)
+  [PASS] WF-04: Classic Japanese Woodcut preset (Sumi ink (0.060 < 0.12), warm washi paper R=0.956 > B=0.888 (warmth +0.068))
+  [PASS] WF-05: Modern Graphic Linocut preset (Deep black ink (0.020 < 0.05) and crisp white paper (0.982 > 0.95))
+  [PASS] WF-06: Ukiyo-e Indigo Print preset (Prussian blue ink dominance B=0.319 > R=0.050 (delta +0.269))
+  [PASS] WF-07: Vermilion Seal Print preset (Cinnabar red ink dominance R=0.784 > B=0.100 (delta +0.684))
+  [PASS] WF-08: Fine Archival Engraving preset (Multiply blend mode (30), opacity 90.0% verified)
+  [PASS] WF-09: Conceal-all black layer mask (Black mask attached for selective block printing (diff 0.000000))
+  [PASS] WF-10: Selection-aware print mask (Inside printed (0.956 > 0.85), outside untouched (diff 0.000000))
+  [PASS] WF-11: Custom sliders & non-destructive preservation (Opacity 85.0%, Soft Light mode (45), base pixels untouched (diff 0.000000))
+Total Tests Executed: 233
+Tests Passed        : 233
 Tests Failed        : 0
-Elapsed Time        : 11.85s
+Elapsed Time        : 13.39s
 Exit Code           : 0
 ```
 
-## Verification Commands
-- `python3 -m py_compile PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`
-- `python3 PhotoGIMP/scripts/verify_config.py`
-- `bash PhotoGIMP/install.sh --batch`
-- `gimp --no-interface --console-messages --batch-interpreter=python-fu-eval --batch "exec(open('tests/gimp_e2e_suite.py').read())" --quit`
-- `python3 tests/run_all_tests.py`
-
-## Expected Checkpoint
-- Git commit in PhotoGIMP submodule (`4630dc9`).
-- Updated `.ralph/PROGRESS.md`, `.ralph/RUN_STATE.json`, `.ralph/IMPLEMENTATION_PLAN.md`, `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`.
-- Git commit in outer repository.
+## Checkpoint Details
+- Submodule commit in PhotoGIMP: `7228281`.
+- Outer repository commit: Pending.
+- Next Recommended Task: Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin (`python-fu-swirling-sky`).

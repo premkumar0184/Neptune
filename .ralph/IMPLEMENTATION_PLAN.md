@@ -221,11 +221,15 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate stroke rendering, tonal sketch response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `woodcut-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`.
-- [ ] Create dedicated non-destructive Woodcut Print adjustment layer duplicating active drawable.
-- [ ] Support woodblock relief carving, high-contrast woodcut ink reduction, block gouge edge styling, woodcut ink color, handmade paper tone, curated presets (Classic Japanese Woodblock, Modern Graphic Linocut, Detailed Ukiyo-e, Expressive Heavy Gouge, Fine Engraving, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Artistic/Woodcut Print...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
-- [ ] Validate relief gouge contrast, ink tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `woodcut-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`.
+- [x] Create dedicated non-destructive Woodcut Print adjustment layer duplicating active drawable.
+- [x] Support woodblock relief carving, high-contrast woodcut ink reduction, block gouge edge styling, woodcut ink color, handmade paper tone, curated presets (Classic Japanese Woodcut, Modern Graphic Linocut, Ukiyo-e Indigo Print, Vermilion Seal Print, Fine Archival Engraving, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Artistic/Woodcut Print...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
+- [x] Validate relief gouge contrast, ink tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
-
-
+### Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `swirling-sky` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`.
+- [ ] Create dedicated non-destructive Swirling Sky / Twirl adjustment layer duplicating active drawable.
+- [ ] Support celestial vortices, vortex centers, spiral twirl angles, pinch/whirl radii, curated atmospheric distortion presets (Starry Night Vortex, Deep Space Whirlpool, Atmospheric Cyclone, Subtle Sky Drift, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Distort/Swirling Night Sky...`, `<Image>/Filters/Artistic`, and `<Image>/Layer`.
+- [ ] Validate vortex center displacement, rotational swirl angle, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.

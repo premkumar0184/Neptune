@@ -787,3 +787,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin.
 
+## Iteration 34 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Woodcut & Linocut Printmaking Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 665: "Woodcut print filter", and `photoshop_docs.md` Section 422 lines 12129-12134 Filter Gallery: Artistic / Sketch: Woodcut, Cutout, Stamp, relief printmaking effects). Replaces destructive manual thresholding/posterization with an isolated non-destructive Woodcut Print adjustment layer duplicating active drawable, applying edge-preserving gouge smoothing via GEGL `gegl:snn-mean`, converting continuous tones into monochrome carved relief levels via GEGL `gegl:mono-mixer` and `gegl:levels`, and mapping authentic printing inks and handmade papers via GEGL `gegl:gradient-map` across curated relief printmaking traditions (Classic Japanese Woodcut with Sumi ink and Washi paper, Modern Graphic Linocut with deep black ink and crisp white paper, Ukiyo-e Indigo Print with Prussian blue ink, Vermilion Seal Print with cinnabar red seal carving ink, Fine Archival Engraving with Multiply overlay, and Custom Sliders), selectable blend modes (Normal, Multiply for woodblock ink overlay, Soft Light for relief glaze), layer opacity, versatile layer masks (Reveal All, Conceal All for selective hand-printing, Active Selection), and 100% preservation of underlying source layer pixels.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-woodcut-filter` with Symmetric Nearest Neighbor gouge smoothing (`gegl:snn-mean`), monochrome conversion (`gegl:mono-mixer`), carved relief levels (`gegl:levels`), gradient-map ink and paper mapping (`gegl:gradient-map`), presets, blend modes, and layer mask attachment.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `woodcut-filter` (26 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (26 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 27 (asserting PDB registration, layer properties, mask attachment, Classic Japanese Woodcut preset [Sumi ink 0.060 < 0.12, warm washi paper R=0.956 > B=0.888, warmth +0.068], Modern Graphic Linocut preset [deep black ink 0.020 < 0.05, crisp white paper 0.982 > 0.95], Ukiyo-e Indigo Print preset [Prussian blue ink dominance B=0.319 > R=0.050, delta +0.269], Vermilion Seal Print preset [cinnabar red ink dominance R=0.784 > B=0.100, delta +0.684], Fine Archival Engraving Multiply blend mode [30] at 90.0% opacity, Conceal-All black layer mask [diff 0.000000], selection-aware print mask [inside printed 0.956 > 0.85, outside untouched diff 0.000000], custom sliders with 85.0% opacity and Soft Light blend mode [45] verified, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Woodcut & Linocut Printmaking Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 32 complete and scheduled Phase 33 (Swirling Night Sky & Twirl Distortion Helper).
+- **Technical discoveries**:
+  - `gegl:snn-mean` (Symmetric Nearest Neighbor Mean filter) with radius 2.0-5.0 simplifies small photographic noise into distinct, organic gouge blocks while strictly preserving high-contrast silhouette edges, perfectly emulating traditional relief woodcarving gouges.
+  - Combining `gegl:levels` with `gegl:gradient-map` enables clean separation into authentic woodblock inks (Sumi black, Prussian blue indigo, Cinnabar seal red) and paper textures (warm Japanese Washi with higher red than blue, clean modern rag paper, or aged parchment) without flattening image dynamics.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 26 plugins verified).
+    - Stage 2: `install.sh --batch` passed (26 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 233 tests across 27 test suites in 13.39s.
+    - Final quality gate: SUCCESS across all stages in 25.43s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `7228281`.
+- **Result**: Success.
+- **Next**: Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin.
+

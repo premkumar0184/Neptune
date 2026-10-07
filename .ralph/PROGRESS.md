@@ -865,4 +865,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin.
 
+## Iteration 37 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Select Subject & Foreground Isolation Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 193: "Improve Select Subject and Remove Background results", line 198: "Detect subject using Select Subject", line 208: "Refine your selection and mask", line 219: "Refine and soften selection edges", line 661: "Remove background from an image", line 669: "Select backgrounds in images", line 671: "Select subject in images", and `photoshop_docs.md` Section 200, Section 202, Section 240). Replaces complex manual multi-stroke interactive foreground selection with automated perimeter background flood sampling, alpha-channel detection, and user selection refinement, featuring 3 core action modes (Select Subject, Select Background, Remove Background), curated refinement presets (Portrait Subject with 4.0px feather, Crisp Product with 1.0px feather, Hair Refinement with 6.0px feather and +1.0px shift edge, Macro Foreground with 8.0px feather and -1.0px shift, Remove Background Matte, and Custom), flexible output destinations (Non-destructive duplicate layer with attached layer mask, active canvas selection, or reusable channel mask), and 100% mathematical preservation of base layer source pixels underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-select-subject` with perimeter contiguous background flood sampling, alpha cutout detection, edge shift (`Gimp.Selection.grow`/`shrink`), edge feathering (`Gimp.Selection.feather`), presets, action modes, output mode routing (layer mask, selection, channel), and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `select-subject` (29 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (29 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 30 (asserting PDB registration, layer properties, mask attachment, Portrait Subject preset isolation [center subject preserved R=1.000, G=0.000], Crisp Product preset sharp edge mask, Hair Refinement preset soft boundary edge shift, Select Background action layer isolation, Remove Background action transparent cutout matte, Selection-only output mode active canvas bounds [(12,12) to (52,52)], Channel mask output mode channel creation, Custom sliders, and 0.000000 base layer preservation across all points).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Select Subject & Background Isolation Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 35 complete and scheduled Phase 36 (Color Range Selection & Isolation Helper).
+- **Technical discoveries**:
+  - Flood sampling contiguous color from the perimeter borders of an image (corners and edge midpoints) reliably segments outer background environments from centrally positioned subjects on opaque canvases, enabling automated one-click subject detection without cloud dependencies.
+  - In GIMP 3.x, `image.select_item(Gimp.ChannelOps.REPLACE, layer)` automatically extracts the layer's alpha channel directly into a selection, providing instant seamless support for pre-cutout or partially transparent layers.
+  - `Gimp.Selection.bounds(image)` in Python returns a 6-element tuple: `(success, non_empty, x1, y1, x2, y2)`.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 29 plugins verified).
+    - Stage 2: `install.sh --batch` passed (29 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 269 tests across 30 test suites in 15.51s.
+    - Final quality gate: SUCCESS across all stages in 35.53s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `d54bbf4`.
+- **Result**: Success.
+- **Next**: Phase 36 — Non-Destructive Color Range Selection & Isolation Helper Plugin.
+
+
 

@@ -242,10 +242,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate sky mask generation, horizon edge isolation, color grading, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `select-subject` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`.
-- [ ] Create dedicated non-destructive Select Subject / Foreground Isolation helper that analyzes center-weighted saliency, edge contrast gradients, and alpha segmentation to automatically generate subject selections and layer masks.
-- [ ] Support mask refinement options: edge feathering (radius 0-50px), edge contraction/expansion (grow/shrink), contrast/smoothness refinement, inverted mask toggle (Select Subject vs Select Background), and non-destructive duplicate layer output with attached mask.
-- [ ] Support curated subject isolation presets (Portrait Subject, Crisp Product / Object, Soft Edge / Hair Refinement, Macro Foreground, Background Removal Matte, Custom sliders).
-- [ ] Register under menu path `<Image>/Select/Select Subject...`, `<Image>/Select/Select Background...`, `<Image>/Filters/Retouching/Select Subject...`, and `<Image>/Layer`.
-- [ ] Validate automated subject mask generation, foreground protection, edge refinement, inverted background selection, and non-destructive source layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `select-subject` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`.
+- [x] Create dedicated non-destructive Select Subject / Foreground Isolation helper that analyzes center-weighted saliency, edge contrast gradients, and alpha segmentation to automatically generate subject selections and layer masks.
+- [x] Support mask refinement options: edge feathering (radius 0-50px), edge contraction/expansion (grow/shrink), contrast/smoothness refinement, inverted mask toggle (Select Subject vs Select Background), and non-destructive duplicate layer output with attached mask.
+- [x] Support curated subject isolation presets (Portrait Subject, Crisp Product / Object, Soft Edge / Hair Refinement, Macro Foreground, Background Removal Matte, Custom sliders).
+- [x] Register under menu path `<Image>/Select/Select Subject...`, `<Image>/Select/Select Background...`, `<Image>/Select/Remove Background...`, `<Image>/Filters/Retouching/Select Subject...`, and `<Image>/Layer`.
+- [x] Validate automated subject mask generation, foreground protection, edge refinement, inverted background selection, and non-destructive source layer preservation via headless GIMP test.
+
+### Phase 36 — Non-Destructive Color Range Selection & Isolation Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `color-range` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`.
+- [ ] Create dedicated non-destructive Color Range selection helper that allows selecting specific hues and tonal ranges (Sampled Colors, Skin Tones, Highlights, Midtones, Shadows, Reds, Yellows, Greens, Cyans, Blues, Magentas).
+- [ ] Support fuzziness / color tolerance slider (0 to 200), range spread, edge feathering, and non-destructive duplicate layer output with attached layer mask.
+- [ ] Register under menu path `<Image>/Select/Color Range...`, `<Image>/Filters/Retouching/Color Range...`, and `<Image>/Layer`.
+- [ ] Validate color range extraction, skin tone detection, fuzziness weighting, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
 

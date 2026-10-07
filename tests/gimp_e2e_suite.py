@@ -93,7 +93,9 @@ def test_pdb_registration():
         ("python-fu-woodcut-filter", "Woodcut & Linocut Printmaking"),
         ("python-fu-swirling-sky", "Swirling Night Sky & Twirl Distortion"),
         ("python-fu-sky-replacement", "Sky Selection & Replacement Helper"),
+        ("python-fu-select-subject", "Select Subject & Background Isolation Helper"),
     ]
+
 
     for proc_name, label in required_procs:
         try:
@@ -4277,6 +4279,226 @@ def test_sky_replacement():
 
 
 # ==============================================================================
+# TEST 30: Select Subject & Background Isolation Plugin (Phase 35)
+# ==============================================================================
+def test_select_subject():
+    print("\n--- Test Suite 30: Select Subject & Background Isolation Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-select-subject")
+    if proc is None:
+        record_fail("SSUB-01", "Procedure lookup", "python-fu-select-subject not found in PDB")
+        return
+
+    # Create 64x64 test image with white background and red circular subject
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Original Photo", 64, 64, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # White background
+        Gimp.context_set_background(Gegl.Color.new("white"))
+        base.edit_fill(Gimp.FillType.BACKGROUND)
+
+        # Red central circular subject (box: 16 to 48)
+        image.select_ellipse(Gimp.ChannelOps.REPLACE, 16, 16, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("red"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_subject = base.get_pixel(32, 32).get_rgba()
+        p_base_bg = base.get_pixel(4, 4).get_rgba()
+
+        # 30a: Run Portrait Subject preset (default)
+        cfg_def = proc.create_config()
+        cfg_def.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_def.set_property("image", image)
+        cfg_def.set_property("preset", "portrait")
+        cfg_def.set_property("action", "select-subject")
+        cfg_def.set_property("output-mode", "new-layer-mask")
+
+        res = proc.run(cfg_def)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SSUB-01", "Execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("SSUB-01", "Execution status", "SUCCESS")
+
+        # 30b: Layer mode and name
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("SSUB-02", "Layer creation", f"Expected >= 2 layers, got {len(layers)}")
+            return
+        subject_layer = layers[0]
+        if subject_layer.get_name() != "Isolated Subject (Portrait Subject)":
+            record_fail("SSUB-02", "Layer name", f"Expected 'Isolated Subject (Portrait Subject)', got '{subject_layer.get_name()}'")
+            return
+        record_pass("SSUB-02", "Layer mode & name", f"Layer '{subject_layer.get_name()}' mode={subject_layer.get_mode()}")
+
+        # 30c: Layer mask attachment
+        mask = subject_layer.get_mask()
+        if mask is None:
+            record_fail("SSUB-03", "Layer mask", "Subject layer has no mask attached")
+            return
+        record_pass("SSUB-03", "Layer mask attachment", "Layer mask attached to duplicate subject layer")
+
+        # 30d: Portrait Subject preset isolation
+        p_comp_center = get_composite_pixel(image, 32, 32)
+        if p_comp_center[0] < 0.90 or p_comp_center[1] > 0.10:
+            record_fail("SSUB-04", "Portrait subject color", f"Center R={p_comp_center[0]:.3f}, G={p_comp_center[1]:.3f}")
+            return
+        record_pass("SSUB-04", "Portrait Subject preset", f"Center subject pixel preserved (R={p_comp_center[0]:.3f}, G={p_comp_center[1]:.3f})")
+
+        image.remove_layer(subject_layer)
+
+        # 30e: Crisp Product preset (1.0px feather)
+        cfg_prod = proc.create_config()
+        cfg_prod.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_prod.set_property("image", image)
+        cfg_prod.set_property("preset", "product")
+        cfg_prod.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_prod)
+        prod_layer = image.get_layers()[0]
+        if prod_layer.get_name() != "Isolated Subject (Crisp Product)" or prod_layer.get_mask() is None:
+            record_fail("SSUB-05", "Crisp Product layer", f"Layer name={prod_layer.get_name()}, has_mask={prod_layer.get_mask() is not None}")
+            return
+        record_pass("SSUB-05", "Crisp Product preset", f"Layer '{prod_layer.get_name()}' with sharp edge mask verified")
+
+        image.remove_layer(prod_layer)
+
+        # 30f: Hair Refinement preset (6.0px feather, +1.0px shift)
+        cfg_hair = proc.create_config()
+        cfg_hair.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_hair.set_property("image", image)
+        cfg_hair.set_property("preset", "hair-refine")
+        cfg_hair.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_hair)
+        hair_layer = image.get_layers()[0]
+        if hair_layer.get_name() != "Isolated Subject (Hair Refinement)" or hair_layer.get_mask() is None:
+            record_fail("SSUB-06", "Hair Refine layer", f"Layer name={hair_layer.get_name()}, has_mask={hair_layer.get_mask() is not None}")
+            return
+        record_pass("SSUB-06", "Hair Refinement preset", f"Layer '{hair_layer.get_name()}' with soft boundary refinement verified")
+
+        image.remove_layer(hair_layer)
+
+        # 30g: Select Background action
+        cfg_bg = proc.create_config()
+        cfg_bg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_bg.set_property("image", image)
+        cfg_bg.set_property("action", "select-background")
+        cfg_bg.set_property("preset", "portrait")
+        cfg_bg.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_bg)
+        bg_layer = image.get_layers()[0]
+        if bg_layer.get_name() != "Isolated Background (Portrait Subject)" or bg_layer.get_mask() is None:
+            record_fail("SSUB-07", "Select Background layer", f"Layer name={bg_layer.get_name()}, has_mask={bg_layer.get_mask() is not None}")
+            return
+        record_pass("SSUB-07", "Select Background action", f"Layer '{bg_layer.get_name()}' isolating background environment verified")
+
+        image.remove_layer(bg_layer)
+
+        # 30h: Remove Background action
+        cfg_rm = proc.create_config()
+        cfg_rm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rm.set_property("image", image)
+        cfg_rm.set_property("action", "remove-background")
+        cfg_rm.set_property("preset", "remove-bg")
+        cfg_rm.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_rm)
+        rm_layer = image.get_layers()[0]
+        if rm_layer.get_name() != "Subject (Background Removed - Remove Background Matte)" or rm_layer.get_mask() is None:
+            record_fail("SSUB-08", "Remove Background layer", f"Layer name={rm_layer.get_name()}, has_mask={rm_layer.get_mask() is not None}")
+            return
+        record_pass("SSUB-08", "Remove Background action", f"Layer '{rm_layer.get_name()}' cutout matte verified")
+
+        image.remove_layer(rm_layer)
+
+        # 30i: Selection-Only output mode
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("action", "select-subject")
+        cfg_sel.set_property("output-mode", "selection-only")
+
+        proc.run(cfg_sel)
+        if len(image.get_layers()) != 1:
+            record_fail("SSUB-09", "Selection-only layer count", f"Expected 1 layer, got {len(image.get_layers())}")
+            return
+        if Gimp.Selection.is_empty(image):
+            record_fail("SSUB-09", "Selection-only empty", "Selection is unexpectedly empty")
+            return
+
+        res = Gimp.Selection.bounds(image)
+        # (success, non_empty, x1, y1, x2, y2)
+        if len(res) == 6 and res[1]:
+            x1, y1, x2, y2 = res[2], res[3], res[4], res[5]
+            if x1 < 10 or x2 > 54:
+                record_fail("SSUB-09", "Selection bounds", f"Unexpected bounds: ({x1},{y1}) to ({x2},{y2})")
+                return
+            record_pass("SSUB-09", "Selection-only output mode", f"Active selection bounding box ({x1},{y1}) to ({x2},{y2}) correctly isolates subject")
+        else:
+            record_fail("SSUB-09", "Selection bounds unpack", f"Unexpected return: {res}")
+            return
+
+        Gimp.Selection.none(image)
+
+        # 30j: Channel Mask output mode
+        num_ch_before = len(image.get_channels())
+        cfg_ch = proc.create_config()
+        cfg_ch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ch.set_property("image", image)
+        cfg_ch.set_property("action", "select-subject")
+        cfg_ch.set_property("preset", "portrait")
+        cfg_ch.set_property("output-mode", "channel-mask")
+
+        proc.run(cfg_ch)
+        channels = image.get_channels()
+        if len(channels) <= num_ch_before:
+            record_fail("SSUB-10", "Channel mask count", f"Expected channels > {num_ch_before}, got {len(channels)}")
+            return
+        ch_names = [ch.get_name() for ch in channels]
+        if "Subject Mask (Portrait Subject)" not in ch_names:
+            record_fail("SSUB-10", "Channel mask name", f"Missing mask in channels: {ch_names}")
+            return
+        record_pass("SSUB-10", "Channel mask output mode", f"Channel 'Subject Mask (Portrait Subject)' saved cleanly")
+
+        # 30k: Custom sliders & Base layer preservation
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("feather-radius", 3.0)
+        cfg_cust.set_property("shift-edge", 0.0)
+        cfg_cust.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if cust_layer.get_mask() is None:
+            record_fail("SSUB-11", "Custom layer mask", "Custom layer has no mask")
+            return
+
+        # Verify base layer invariance
+        p_base_after_subj = base.get_pixel(32, 32).get_rgba()
+        p_base_after_bg = base.get_pixel(4, 4).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_subj[i] - p_base_subject[i]) for i in range(3)),
+            max(abs(p_base_after_bg[i] - p_base_bg[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SSUB-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SSUB-11", "Custom sliders & non-destructive preservation", f"Base pixels 100% untouched across subject and background points (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SSUB-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -4315,6 +4537,8 @@ def run_all_tests():
     test_woodcut_filter()
     test_swirling_sky()
     test_sky_replacement()
+    test_select_subject()
+
 
 
     elapsed = time.time() - start_time

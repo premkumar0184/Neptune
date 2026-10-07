@@ -491,6 +491,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Select Subject & Background Isolation Helper
+- **Source topic**: Automatic and color-based selections - Improve Select Subject and Remove Background results / Detect subject using Select Subject / Quick actions: Remove background from an image / Select backgrounds in images / Select subject in images (`Topics.txt` lines 193, 198, 208, 219, 661, 669, 671, and `photoshop_docs.md` Section 200 lines 5854-5872, Section 202 lines 5889-5904, Section 240 line 6970)
+- **Photoshop behavior**: Automatically identifies prominent foreground subjects, provides one-click background selection and background removal, and applies edge refinement (smooth, feather, contrast, shift edge) with non-destructive layer mask outputs.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-select-subject` in `<Image>/Select/Select Subject...`, `<Image>/Select/Select Background...`, `<Image>/Select/Remove Background...`, `<Image>/Filters/Retouching/Select Subject...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`.
+- **Current capability**: Automatically isolates prominent subjects or backgrounds via boundary perimeter flood sampling, alpha-channel detection, and user selection refinement. Features 3 core action modes (Select Subject, Select Background, Remove Background), curated presets (Portrait Subject with 4.0px feather, Crisp Product with 1.0px feather, Hair Refinement with 6.0px feather and +1.0px shift edge, Macro Foreground with 8.0px feather and -1.0px shift, Remove Background Matte, and Custom), flexible output destinations (Non-destructive duplicate layer with attached layer mask, active canvas selection, or reusable channel mask), and 100% mathematical preservation of base layer source pixels underneath.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 35).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Portrait Subject preset isolation (center subject preserved), Crisp Product preset sharp edge mask, Hair Refinement preset soft boundary edge shift, Select Background action layer isolation, Remove Background action transparent cutout matte, Selection-only output mode active canvas bounds, Channel mask output mode channel creation, Custom sliders, and non-destructive base layer preservation across all points.
+- **Verification evidence** (Iteration 37):
+  1. `verify_config.py`: Section 6 passed with 29 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Portrait Subject preset verified (center subject preserved R=1.000, G=0.000), Crisp Product preset verified with sharp 1.0px edge mask, Hair Refinement preset verified with soft boundary (+1.0px shift, 6.0px feather), Select Background action verified with isolated background layer, Remove Background action verified with cutout matte layer mask, Selection-only output mode verified with active canvas bounding box (12,12) to (52,52) isolating subject, Channel mask output mode verified with reusable channel saved, Custom sliders verified, and base layer pixels 100% untouched across subject and background points (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 37).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

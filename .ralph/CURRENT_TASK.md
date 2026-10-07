@@ -1,43 +1,44 @@
-# Current Task — Iteration 30
+# Current Task — Iteration 31
 
 ## Task
-**Phase 28 — Non-Destructive Selective Color & Background Desaturation Helper Plugin**
+**Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 667: "Desaturate image backgrounds to black and white", line 333: "Selective color adjustments", line 339: "Make selective color adjustments", and `photoshop_docs.md` Section 331 lines 9698-9712 and Section 107 lines 3233-3240), isolating a focal subject in vibrant full color while desaturating or converting surrounding background elements into classic monochrome or stylized toning is a standard high-end photographic workflow. Photoshop provides Quick Actions ("Desaturate image backgrounds to black and white") and Hue/Saturation adjustment layers with selection masks to achieve this non-destructively. In stock GIMP, achieving this effect requires laborious manual steps: duplicating the layer, running destructive desaturation, adding a layer mask, inverting selections, manually painting gradients, or risking harsh edge clipping. Creating a dedicated native Python 3 helper plugin (`python-fu-selective-color-pop`) provides an isolated adjustment layer duplicating the active drawable, applying high-performance GEGL monochrome mixing (`gegl:mono-mixer`), saturation scaling (`gegl:saturation`), or photographic sepia toning (`gegl:sepia`), intelligent focal depth masking (radial gradient falloff with configurable radius and edge softness, active selection subject masking, or manual brush masking), creative inverted mask option (monochrome subject on colored background), curated presets (Classic B&W Background, Dramatic High-Contrast B&W, Muted Pastel Desaturated, Vintage Sepia Toned, Cool Monochrome Noir, Custom Sliders), layer opacity control, and 100% protection of underlying source pixels.
+In Adobe Photoshop (`Topics.txt` line 666: "Colorize old photographs", line 342: "Colorize a grayscale image or create a monotone effect", and `photoshop_docs.md` Section 317 lines 9056-9067 and Section 445/446 Neural Filters Colorize), colorizing vintage, historical, or monochrome photographs is a foundational restoration and artistic darkroom workflow. Photoshop enables non-destructive monotone colorization via Hue/Saturation adjustment layers set to Colorize mode with attached masks, and Neural Filters for vintage photo colorization. In stock GIMP, colorizing black-and-white or faded vintage images requires cumbersome manual layer duplications, destructive color tools, or flat solid-color fills that obliterate authentic photograph micro-contrast and highlight gradation. Creating a dedicated native Python 3 helper plugin (`python-fu-photo-colorize`) provides an isolated adjustment layer duplicating the active drawable, applying high-fidelity GEGL tonal gradient mapping (`gegl:gradient-map`) across darks, midtones, and highlights, curated historic darkroom palettes (Sepia Antique, Cyanotype Blue, Vintage Amber Daguerreotype, Platinum Print, Rose Tintype, Hand-Tinted Portrait, Monotone Tint Wash, Custom Inks), selectable compositing blend modes (HSL Color, Normal, Soft Light), ink curve midpoint balance (10% to 90%), layer opacity control, versatile mask options (Reveal All, Conceal All for selective brush hand-coloring, and Active Selection), and 100% protection of underlying source pixels.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `selective-color-pop` in `REQUIRED_PLUGINS`, updating count to 22)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `photo-colorize` in `REQUIRED_PLUGINS`, updating count to 23)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 23: `test_selective_color_pop`)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 24: `test_photo_colorize`)
 
 ## Acceptance Criteria
 1. [x] Plugin file exists, has shebang, is executable (`chmod +x`), and passes bytecode compilation.
-2. [x] PDB procedure `python-fu-selective-color-pop` registered in GIMP PDB under `<Image>/Colors/Selective Color Pop...`, `<Image>/Filters/Retouching/Selective Color Pop...`, and `<Image>/Layer`.
-3. [x] Dedicated non-destructive Selective Color adjustment layer created duplicating active drawable.
+2. [x] PDB procedure `python-fu-photo-colorize` registered in GIMP PDB under `<Image>/Colors/Colorize Photograph...`, `<Image>/Filters/Retouching/Colorize Photograph...`, and `<Image>/Layer/New Colorize Layer...`.
+3. [x] Dedicated non-destructive Vintage Photo Colorization adjustment layer created duplicating active drawable.
 4. [x] In headless GIMP tests:
    - Base layer pixels underneath remain 100% untouched (`diff == 0.000000`).
-   - Radial focal mask verified: Center subject remains 100% in original color (`diff == 0.000000`), while peripheral background is converted to pure monochrome (R=G=B, difference == 0.000000).
-   - Selection-aware mask verified: Active subject selection protects subject color and desaturates background.
-   - Invert mask option verified: Subject converted to monochrome while background remains in full color.
-   - Muted pastel preset verified: Background saturation is reduced (chroma reduced by 75.4%) while subject color is preserved.
-   - Vintage sepia preset verified: Background is sepia-toned (R > G > B) while subject remains in full color.
-   - Custom sliders with custom channel weighting and layer opacity (80.0%) verified.
-5. [x] `verify_config.py` Section 6 passes with all 22 required plugins verified.
-6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (185/185 tests passing).
+   - Sepia Antique preset in HSL Color mode verified: Grayscale image colorized with authentic warm tones across shadows and highlights (R > G > B, delta > 0.05) while preserving photographic tonal contrast.
+   - Cyanotype Blue preset verified: Grayscale image colorized with Prussian blue shadows (B > R, delta +0.190) and crisp highlight tones.
+   - Vintage Amber preset verified: Golden amber tone verified (R > G > B, delta +0.176).
+   - Hand-tinted portrait preset verified: Flattering skin highlights verified (R=0.863 > G=0.799 > B=0.738).
+   - Conceal-All black layer mask verified: Composite equals base (0.000000 diff) ready for selective hand-coloring brush painting.
+   - Selection-aware mask verified: Active subject selection colorizes selected area while leaving unselected areas untouched.
+   - Custom ink sliders with midpoint 60% and 85.0% opacity verified.
+5. [x] `verify_config.py` Section 6 passes with all 23 required plugins verified.
+6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (197/197 tests passing).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (22/22 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (22 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (23/23 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (23 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
-  [PASS] PDB-REG: 22/22 plugins registered including python-fu-selective-color-pop
+  [PASS] PDB-REG: 23/23 plugins registered including python-fu-photo-colorize
   [PASS] FS-01 to FS-05: Frequency Separation (5 tests passed)
   [PASS] LM-01 to LM-04: Luminosity Masks (4 tests passed)
   [PASS] DB-01 to DB-05: Dodge & Burn Layer (5 tests passed)
@@ -59,26 +60,27 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] DT-01 to DT-09: Duotone & Tritone Print Effect (9 tests passed)
   [PASS] DG-01 to DG-10: Diffuse Glow & Glamour Filter (10 tests passed)
   [PASS] SS-01 to SS-10: Skin Smoothing & Portrait Retouching (10 tests passed)
-  [PASS] SCP-01: Execution status (SUCCESS)
-  [PASS] SCP-02: Layer mode & name (Selective Color Pop (Classic B&W Background) (28))
-  [PASS] SCP-03: Layer mask attachment (Attached radial focal mask)
-  [PASS] SCP-04: Subject full color preservation (Center subject 100% full color (diff 0.000000))
-  [PASS] SCP-05: Peripheral background monochrome conversion (Edge exact monochrome: R=G=B=0.3968 (spread 0.000000))
-  [PASS] SCP-06: Selection-aware subject mask (Inside full color (diff 0.000000), Outside pure monochrome (spread 0.000000))
-  [PASS] SCP-07: Invert effect option (Center monochrome (spread 0.000000), Edge full color (diff 0.000000))
-  [PASS] SCP-08: Muted pastel preset (Center full color, Background chroma muted 0.695 -> 0.171 (-75.4%))
-  [PASS] SCP-09: Vintage sepia toning preset (Background warm archival sepia (R=0.665 > G=0.546 > B=0.356))
-  [PASS] SCP-10: Custom sliders & opacity (Opacity 80.0%, Normal blend mode (28) verified)
-  [PASS] SCP-11: Non-destructive layer preservation (Base pixels 100% untouched across all tonal zones (diff 0.000000))
-Total Tests Executed: 185
-Tests Passed        : 185
+  [PASS] SCP-01 to SCP-11: Selective Color Pop & Background Desaturation (11 tests passed)
+  [PASS] PC-01: Execution status (SUCCESS)
+  [PASS] PC-02: Layer mode & name (Colorize (Sepia Antique) (39))
+  [PASS] PC-03: Layer mask attachment (Reveal-all mask attached)
+  [PASS] PC-04: Sepia Antique warm toning (Shadow warm R=0.266>G=0.205>B=0.147, Highlight warm R=0.855>G=0.815>B=0.745)
+  [PASS] PC-05: Cyanotype Prussian blue shadows (Shadow blue dominance B=0.309 > R=0.120 (delta +0.190))
+  [PASS] PC-06: Vintage amber daguerreotype toning (Golden amber tones R=0.301 > G=0.212 > B=0.125 (delta +0.176))
+  [PASS] PC-07: Hand-tinted portrait tone (Flattering skin highlights (R=0.863 > G=0.799 > B=0.738))
+  [PASS] PC-08: Conceal-all black layer mask (Black mask attached for selective brush hand-coloring (diff 0.000000))
+  [PASS] PC-09: Selection-aware subject mask (Inside colorized warm R=0.266>G=0.205>B=0.147, Outside untouched diff 0.000000)
+  [PASS] PC-10: Custom sliders & opacity (Opacity 85.0%, HSL_COLOR blend mode (39), midpoint 60.0% verified)
+  [PASS] PC-11: Non-destructive layer preservation (Base pixels 100% untouched across all tonal zones (diff 0.000000))
+Total Tests Executed: 197
+Tests Passed        : 197
 Tests Failed        : 0
-Elapsed Time        : 9.47s
+Elapsed Time        : 10.11s
 Exit Code           : 0
 ```
 
 ## Verification Commands
-- `python3 -m py_compile PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`
+- `python3 -m py_compile PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`
 - `python3 PhotoGIMP/scripts/verify_config.py`
 - `bash PhotoGIMP/install.sh --batch`
 - `gimp --no-interface --console-messages --batch-interpreter=python-fu-eval --batch "exec(open('tests/gimp_e2e_suite.py').read())" --quit`

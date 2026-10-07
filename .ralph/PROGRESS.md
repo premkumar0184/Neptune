@@ -708,3 +708,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `3b82baa`.
 - **Result**: Success.
 - **Next**: Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin.
+
+## Iteration 31 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Vintage Photo Restoration & Colorization Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 666: "Colorize old photographs", line 342: "Colorize a grayscale image or create a monotone effect", and `photoshop_docs.md` Section 317 lines 9056-9067 and Section 445/446 Neural Filters Colorize). Replaces destructive manual color tools, flat fills, and tedious multi-step workflows with an isolated non-destructive adjustment layer duplicating active drawable and applying high-fidelity GEGL tonal gradient mapping (`gegl:gradient-map`) across shadows, midtones, and highlights with authentic darkroom restoration palettes (Sepia Antique, Cyanotype Blue, Vintage Amber Daguerreotype, Platinum Print, Rose Tintype, Hand-Tinted Portrait, Monotone Tint Wash, Custom Inks), selectable blend modes (HSL Color to preserve 100% photographic luminance and micro-contrast, Normal for split-tone print appearance, Soft Light for subtle glaze), ink curve midpoint balance (10% to 90%), layer opacity control, versatile mask options (Reveal All, Conceal All for selective hand-coloring, Active Selection), and 100% source pixel preservation underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-photo-colorize` with gradient-map tonal colorization, HSL Color blend mode, presets, layer mask attachment, midpoint balance, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `photo-colorize` (23 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (23 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 24 (asserting PDB registration, layer modes, mask attachment, Sepia Antique warm toning [shadow R=0.266>G=0.205>B=0.147, highlight R=0.855>G=0.815>B=0.745], Cyanotype Prussian blue shadow dominance [B=0.309 > R=0.120, delta +0.190], Vintage Amber golden tones [R=0.301 > G=0.212 > B=0.125, delta +0.176], Hand-Tinted portrait flattering skin highlights [R=0.863 > G=0.799 > B=0.738], Conceal-All black layer mask [diff 0.000000], selection-aware subject masking [inside warm R=0.266>G=0.205>B=0.147, outside diff 0.000000], custom sliders with 85.0% opacity and midpoint 60.0% verified, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Vintage Photo Restoration & Colorization Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 29 complete and scheduled Phase 30 (JPEG Artifacts Removal & Deblocking).
+- **Technical discoveries**:
+  - Setting the duplicated colorization layer to `HSL_COLOR` (mode 39) while applying `gegl:gradient-map` preserves 100% of the underlying photograph's original exposure, contrast, and micro-texture while transferring authentic hand-colored hues and saturations.
+  - Attaching a Conceal-All black layer mask replicates the historical darkroom hand-coloring method, allowing portrait restorers to paint in colors selectively onto skin, lips, eyes, clothing, and background.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 23 plugins verified).
+    - Stage 2: `install.sh --batch` passed (23 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 197 tests across 24 test suites in 10.11s.
+    - Final quality gate: SUCCESS across all stages in 21.20s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `4e47d78`.
+- **Result**: Success.
+- **Next**: Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin.
+

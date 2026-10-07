@@ -389,6 +389,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Vintage Photo Restoration & Colorization Helper
+- **Source topic**: Colorize old photographs (`Topics.txt` line 666, line 342: "Colorize a grayscale image or create a monotone effect", and `photoshop_docs.md` Section 317 lines 9056-9067 and Section 445/446)
+- **Photoshop behavior**: Applies non-destructive monotone colorization and vintage photo restoration tinting via Hue/Saturation Colorize adjustment layers, split-toning darkroom palettes, and editable masks for hand-coloring.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-photo-colorize` in `<Image>/Colors/Colorize Photograph...`, `<Image>/Filters/Retouching/Colorize Photograph...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies GEGL `gegl:gradient-map` across darks, midtones, and highlights with curated historic palettes (Sepia Antique, Cyanotype Blue, Vintage Amber Daguerreotype, Platinum Print, Rose Tintype, Hand-Tinted Portrait, Monotone Tint Wash, Custom Inks). Features selectable blend modes (HSL Color to preserve 100% photographic luminosity and micro-contrast, Normal for split-tone print look, Soft Light for subtle glaze), ink curve midpoint balance (10% to 90%), layer opacity slider (10% to 100%), editable layer masks (Reveal All, Conceal All for selective hand-coloring, Active Selection), and 100% source pixel preservation underneath.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:gradient-map`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 29).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Sepia Antique warm toning response (R > G > B across shadows and highlights), Cyanotype Blue shadow dominance (B > R), Vintage Amber golden tones (R > G > B), Hand-Tinted portrait skin highlights, Conceal-All black layer mask, selection-aware masking, custom sliders with opacity, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 31):
+  1. `verify_config.py`: Section 6 passed with 23 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Sepia Antique verified in HSL_COLOR mode (39) with warm shadows (R=0.266>G=0.205>B=0.147) and warm highlights (R=0.855>G=0.815>B=0.745), Cyanotype Blue verified with Prussian blue shadow dominance (B=0.309 > R=0.120, delta +0.190), Vintage Amber verified with golden tones (R=0.301 > G=0.212 > B=0.125, delta +0.176), Hand-Tinted portrait verified with flattering skin highlights (R=0.863 > G=0.799 > B=0.738), Conceal-All black mask attached for selective brush hand-coloring (diff 0.000000), selection-aware mask verified (inside warm R=0.266>G=0.205>B=0.147, outside diff 0.000000), custom sliders with 85.0% opacity and midpoint 60.0% verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 31).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

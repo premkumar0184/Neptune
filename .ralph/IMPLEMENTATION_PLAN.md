@@ -197,10 +197,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate background desaturation, subject color preservation, mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `photo-colorize` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`.
-- [ ] Create dedicated non-destructive Vintage Photo Colorization adjustment layer duplicating active drawable.
-- [ ] Support colorizing grayscale and vintage images with single-hue monotone washes or multi-tonal hand-colored photograph palettes (Sepia Antique, Cyanotype Blue, Vintage Amber, Rose Tint, Platinum Archival, Custom Hue/Saturation).
-- [ ] Support Color blend mode, layer opacity control, and attached editable layer mask for selective multi-color brush hand-painting.
-- [ ] Register under menu path `<Image>/Colors/Colorize Photograph...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate monotone colorization, Hue/Saturation tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `photo-colorize` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`.
+- [x] Create dedicated non-destructive Vintage Photo Colorization adjustment layer duplicating active drawable.
+- [x] Support colorizing grayscale and vintage images with single-hue monotone washes or multi-tonal hand-colored photograph palettes (Sepia Antique, Cyanotype Blue, Vintage Amber, Rose Tint, Platinum Archival, Custom Hue/Saturation).
+- [x] Support Color blend mode, layer opacity control, and attached editable layer mask for selective multi-color brush hand-painting.
+- [x] Register under menu path `<Image>/Colors/Colorize Photograph...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate monotone colorization, Hue/Saturation tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `jpeg-artifact-removal` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`.
+- [ ] Create dedicated non-destructive JPEG Cleanup / Deblocking adjustment layer duplicating active drawable.
+- [ ] Support reducing 8x8 DCT compression block boundaries and mosquito noise ringing while preserving sharp high-frequency edges and contours.
+- [ ] Support curated artifact strength presets (Subtle Web Cleanup, Medium Compression Smoothing, Aggressive Block Removal, Mosquito Ringing Suppression, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Enhance/JPEG Artifacts Removal...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate compression block variance reduction, edge contrast preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 

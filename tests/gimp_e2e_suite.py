@@ -87,6 +87,7 @@ def test_pdb_registration():
         ("python-fu-diffuse-glow", "Diffuse Glow & Glamour Filter Helper"),
         ("python-fu-skin-smoothing", "Skin Smoothing & Beauty Retouching"),
         ("python-fu-selective-color-pop", "Selective Color Pop & Background Desaturation"),
+        ("python-fu-photo-colorize", "Vintage Photo Colorization & Restoration"),
     ]
 
     for proc_name, label in required_procs:
@@ -2950,6 +2951,218 @@ def test_selective_color_pop():
 
 
 # ==============================================================================
+# TEST 24: Vintage Photo Colorization & Restoration Helper (Phase 29)
+# ==============================================================================
+def test_photo_colorize():
+    print("\n--- Test Suite 24: Vintage Photo Colorization & Restoration Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-photo-colorize")
+    if proc is None:
+        record_fail("PC-01", "Procedure lookup", "Procedure not found")
+        return
+
+    # Base image: 100x100 grayscale image with dark left (0.2) and bright right (0.8)
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Grayscale Base", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 50, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.8, 0.8, 0.8)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_dark = base.get_pixel(25, 50).get_rgba()
+        p_base_light = base.get_pixel(75, 50).get_rgba()
+
+        # 24a: Sepia Antique in HSL Color mode with Reveal-All Mask
+        cfg_sepia = proc.create_config()
+        cfg_sepia.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sepia.set_property("image", image)
+        cfg_sepia.set_property("preset", "sepia-antique")
+        cfg_sepia.set_property("blend-mode", "hsl-color")
+        cfg_sepia.set_property("mask-type", "reveal-all")
+        cfg_sepia.set_property("opacity", 100.0)
+
+        res = proc.run(cfg_sepia)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PC-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("PC-01", "Execution status", "SUCCESS")
+
+        sep_layer = image.get_layers()[0]
+        if sep_layer.get_mode() != Gimp.LayerMode.HSL_COLOR:
+            record_fail("PC-02", "Layer mode", f"Expected HSL_COLOR (39), got {sep_layer.get_mode()}")
+            return
+        record_pass("PC-02", "Layer mode & name", f"{sep_layer.get_name()} ({sep_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = sep_layer.get_mask()
+        if mask is None:
+            record_fail("PC-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("PC-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 24b: Sepia Antique warm toning response (R > G > B across tones)
+        p_comp_dark = get_composite_pixel(image, 25, 50)
+        p_comp_light = get_composite_pixel(image, 75, 50)
+        is_dark_warm = (p_comp_dark[0] > p_comp_dark[1] > p_comp_dark[2])
+        is_light_warm = (p_comp_light[0] > p_comp_light[1] > p_comp_light[2])
+        if not (is_dark_warm and is_light_warm):
+            record_fail("PC-04", "Sepia Antique warm tone", f"Dark R={p_comp_dark[0]:.3f}, G={p_comp_dark[1]:.3f}, B={p_comp_dark[2]:.3f}; Light R={p_comp_light[0]:.3f}, G={p_comp_light[1]:.3f}, B={p_comp_light[2]:.3f}")
+            return
+        record_pass("PC-04", "Sepia Antique warm toning", f"Shadow warm (R={p_comp_dark[0]:.3f}>G={p_comp_dark[1]:.3f}>B={p_comp_dark[2]:.3f}), Highlight warm (R={p_comp_light[0]:.3f}>G={p_comp_light[1]:.3f}>B={p_comp_light[2]:.3f})")
+
+        image.remove_layer(sep_layer)
+
+        # 24c: Cyanotype Blue Prussian blue shadow response (B > R)
+        cfg_cyan = proc.create_config()
+        cfg_cyan.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cyan.set_property("image", image)
+        cfg_cyan.set_property("preset", "cyanotype-blue")
+        cfg_cyan.set_property("blend-mode", "hsl-color")
+        cfg_cyan.set_property("mask-type", "reveal-all")
+        cfg_cyan.set_property("opacity", 100.0)
+
+        proc.run(cfg_cyan)
+        cyan_layer = image.get_layers()[0]
+        p_cyan_dark = get_composite_pixel(image, 25, 50)
+        blue_delta = p_cyan_dark[2] - p_cyan_dark[0]
+        if blue_delta < 0.10:
+            record_fail("PC-05", "Cyanotype blue shadows", f"Blue delta {blue_delta:.4f} < 0.10 (B={p_cyan_dark[2]:.3f}, R={p_cyan_dark[0]:.3f})")
+            return
+        record_pass("PC-05", "Cyanotype Prussian blue shadows", f"Shadow blue dominance B={p_cyan_dark[2]:.3f} > R={p_cyan_dark[0]:.3f} (delta +{blue_delta:.3f})")
+
+        image.remove_layer(cyan_layer)
+
+        # 24d: Vintage Amber Daguerreotype golden toning (R > G > B)
+        cfg_amber = proc.create_config()
+        cfg_amber.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_amber.set_property("image", image)
+        cfg_amber.set_property("preset", "vintage-amber")
+        cfg_amber.set_property("blend-mode", "hsl-color")
+        cfg_amber.set_property("mask-type", "reveal-all")
+        cfg_amber.set_property("opacity", 100.0)
+
+        proc.run(cfg_amber)
+        amber_layer = image.get_layers()[0]
+        p_amb_dark = get_composite_pixel(image, 25, 50)
+        amb_delta = p_amb_dark[0] - p_amb_dark[2]
+        if amb_delta < 0.10 or not (p_amb_dark[0] > p_amb_dark[1] > p_amb_dark[2]):
+            record_fail("PC-06", "Vintage amber daguerreotype", f"Amber delta {amb_delta:.4f} < 0.10")
+            return
+        record_pass("PC-06", "Vintage amber daguerreotype toning", f"Golden amber tones R={p_amb_dark[0]:.3f} > G={p_amb_dark[1]:.3f} > B={p_amb_dark[2]:.3f} (delta +{amb_delta:.3f})")
+
+        image.remove_layer(amber_layer)
+
+        # 24e: Hand-Tinted Portrait flattering skin highlights
+        cfg_port = proc.create_config()
+        cfg_port.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_port.set_property("image", image)
+        cfg_port.set_property("preset", "hand-tint-portrait")
+        cfg_port.set_property("blend-mode", "hsl-color")
+        cfg_port.set_property("mask-type", "reveal-all")
+        cfg_port.set_property("opacity", 100.0)
+
+        proc.run(cfg_port)
+        port_layer = image.get_layers()[0]
+        p_port_light = get_composite_pixel(image, 75, 50)
+        if not (p_port_light[0] > p_port_light[1] > p_port_light[2]):
+            record_fail("PC-07", "Hand-tinted portrait", f"Highlight R={p_port_light[0]:.3f}, G={p_port_light[1]:.3f}, B={p_port_light[2]:.3f}")
+            return
+        record_pass("PC-07", "Hand-tinted portrait tone", f"Flattering skin highlights (R={p_port_light[0]:.3f} > G={p_port_light[1]:.3f} > B={p_port_light[2]:.3f})")
+
+        image.remove_layer(port_layer)
+
+        # 24f: Conceal-All Black Layer Mask for Selective Hand-Coloring
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "sepia-antique")
+        cfg_blk.set_property("blend-mode", "hsl-color")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk_dark = get_composite_pixel(image, 25, 50)
+        diff_blk = max(abs(p_blk_dark[i] - p_base_dark[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("PC-08", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("PC-08", "Conceal-all black layer mask", f"Black mask attached for selective brush hand-coloring (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 24g: Selection-Aware Subject Masking Test
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 30, 60)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "sepia-antique")
+        cfg_sel.set_property("blend-mode", "hsl-color")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 25, 50)
+        p_sel_outside = get_composite_pixel(image, 75, 50)
+
+        is_sel_warm = (p_sel_inside[0] > p_sel_inside[1] > p_sel_inside[2])
+        out_diff = max(abs(p_sel_outside[i] - p_base_light[i]) for i in range(3))
+        if not is_sel_warm or out_diff > 0.000001:
+            record_fail("PC-09", "Selection-aware mask", f"Inside warm={is_sel_warm}, Outside diff={out_diff:.6f}")
+            return
+        record_pass("PC-09", "Selection-aware subject mask", f"Inside colorized warm (R={p_sel_inside[0]:.3f}>G={p_sel_inside[1]:.3f}>B={p_sel_inside[2]:.3f}), Outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 24h: Custom Sliders, Midpoint, and Layer Opacity Test
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("blend-mode", "hsl-color")
+        cfg_cust.set_property("mask-type", "reveal-all")
+        cfg_cust.set_property("midpoint", 60.0)
+        cfg_cust.set_property("custom-shadow-r", 0.20)
+        cfg_cust.set_property("custom-shadow-g", 0.10)
+        cfg_cust.set_property("custom-shadow-b", 0.05)
+        cfg_cust.set_property("custom-highlight-r", 0.95)
+        cfg_cust.set_property("custom-highlight-g", 0.85)
+        cfg_cust.set_property("custom-highlight-b", 0.75)
+        cfg_cust.set_property("opacity", 85.0)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.HSL_COLOR:
+            record_fail("PC-10", "Custom sliders", f"Expected 85.0% and HSL_COLOR, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+        record_pass("PC-10", "Custom sliders & opacity", f"Opacity 85.0%, HSL_COLOR blend mode ({cust_layer.get_mode()}), midpoint 60.0% verified")
+
+        # 24i: Non-destructive base layer invariance across all pixels
+        p_base_after_dark = base.get_pixel(25, 50).get_rgba()
+        p_base_after_light = base.get_pixel(75, 50).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_dark[i] - p_base_dark[i]) for i in range(3)),
+            max(abs(p_base_after_light[i] - p_base_light[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("PC-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("PC-11", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("PC-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2982,6 +3195,7 @@ def run_all_tests():
     test_diffuse_glow()
     test_skin_smoothing()
     test_selective_color_pop()
+    test_photo_colorize()
 
 
     elapsed = time.time() - start_time

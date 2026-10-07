@@ -265,12 +265,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate edge acutance enhancement, noise threshold protection, deconvolution mode selection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 38 — Non-Destructive Tilt-Shift & Miniature Blur Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `tilt-shift` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`.
-- [ ] Create dedicated non-destructive Tilt-Shift / Miniature adjustment layer duplicating active drawable and simulating selective tilt-shift lens depth of field.
-- [ ] Support linear focus band positioning (focal center, focus band width, transition feather gradient falloff), optical blur radius (1 to 100px), saturation boost for the miniature model effect, and orientation (Horizontal, Vertical, Diagonal).
-- [ ] Support curated photographic presets (Classic Miniature Model, Toy City Diorama, Subtle Portrait Shallow DOF, Vertical Architecture Tilt, Macro Miniature, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Blur/Tilt-Shift Blur...`, `<Image>/Filters/Retouching/Tilt-Shift Blur...`, and `<Image>/Layer`.
-- [ ] Validate focal strip preservation, progressive gradient blur transition, miniature saturation boost, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `tilt-shift` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`.
+- [x] Create dedicated non-destructive Tilt-Shift / Miniature adjustment layer duplicating active drawable and simulating selective tilt-shift lens depth of field.
+- [x] Support linear focus band positioning (focal center, focus band width, transition feather gradient falloff), optical blur radius (1 to 100px), saturation boost for the miniature model effect, and orientation (Horizontal, Vertical, Diagonal).
+- [x] Support curated photographic presets (Classic Miniature Model, Toy City Diorama, Subtle Portrait Shallow DOF, Vertical Architecture Tilt, Macro Miniature, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Blur/Tilt-Shift Blur...`, `<Image>/Filters/Retouching/Tilt-Shift Blur...`, and `<Image>/Layer`.
+- [x] Validate focal strip preservation, progressive gradient blur transition, miniature saturation boost, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 39 — Non-Destructive Lens Distortion & Perspective Correction Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `lens-distortion` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`.
+- [ ] Create dedicated non-destructive Lens Distortion & Optical Perspective correction adjustment layer duplicating active drawable and correcting optical aberrations.
+- [ ] Support geometric distortion correction modes: Barrel distortion correction (negative displacement to straighten curved wide-angle lines), Pincushion distortion correction (positive displacement to restore telephoto pinching), Curvature, and Angle of view.
+- [ ] Support integrated peripheral vignette illumination compensation (lightening darkened optical corners), curated presets (Wide-Angle Barrel Correction, Telephoto Pincushion Correction, Fisheye Defish, Architectural Grid Flatten, Creative Fisheye Warp, Custom sliders), and non-destructive duplicate layer output with editable layer mask.
+- [ ] Register under menu path `<Image>/Filters/Distort/Lens Distortion...`, `<Image>/Filters/Retouching/Lens Distortion...`, and `<Image>/Layer`.
+- [ ] Validate barrel curvature flattening, pincushion expansion, corner luminance compensation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

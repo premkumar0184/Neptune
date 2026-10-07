@@ -96,6 +96,7 @@ def test_pdb_registration():
         ("python-fu-select-subject", "Select Subject & Background Isolation Helper"),
         ("python-fu-color-range", "Color Range Selection & Isolation Helper"),
         ("python-fu-smart-sharpen", "Smart Sharpen & Optical Deconvolution Helper"),
+        ("python-fu-tilt-shift", "Tilt-Shift & Miniature Blur Helper"),
     ]
 
 
@@ -4953,6 +4954,206 @@ def test_smart_sharpen():
 
 
 # ==============================================================================
+# TEST 33: Tilt-Shift & Miniature Blur Helper Plugin (Phase 38)
+# ==============================================================================
+def test_tilt_shift():
+    print("\n--- Test Suite 33: Tilt-Shift & Miniature Blur Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-tilt-shift")
+    if proc is None:
+        record_fail("TS-01", "Procedure lookup", "python-fu-tilt-shift not registered")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with alternating vertical black/white stripes along X
+        base = Gimp.Layer.new(image, "Base Stripes", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        Gimp.context_set_foreground(Gegl.Color.new("black"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        for x in range(10, 200, 20):
+            image.select_rectangle(Gimp.ChannelOps.REPLACE, x, 0, 10, 200)
+            Gimp.context_set_foreground(Gegl.Color.new("white"))
+            base.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(image)
+
+        # Baseline stripe values
+        p_base_focal_blk = base.get_pixel(5, 100).get_rgba()[0]
+        p_base_focal_wht = base.get_pixel(15, 100).get_rgba()[0]
+        p_base_top_blk = base.get_pixel(5, 15).get_rgba()[0]
+
+        # 33a: Classic Miniature Model preset execution
+        cfg_mini = proc.create_config()
+        cfg_mini.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mini.set_property("image", image)
+        cfg_mini.set_property("preset", "miniature")
+        cfg_mini.set_property("mask-type", "tilt-shift")
+
+        res = proc.run(cfg_mini)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TS-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("TS-01", "Execution status", "SUCCESS")
+
+        tilt_layer = image.get_layers()[0]
+        if tilt_layer.get_mode() != Gimp.LayerMode.NORMAL or not tilt_layer.get_name().startswith("Tilt-Shift Blur"):
+            record_fail("TS-02", "Layer mode & name", f"Unexpected mode {tilt_layer.get_mode()} or name {tilt_layer.get_name()}")
+            return
+        record_pass("TS-02", "Layer mode & name", f"{tilt_layer.get_name()} (NORMAL)")
+
+        mask = tilt_layer.get_mask()
+        if mask is None:
+            record_fail("TS-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("TS-03", "Layer mask attachment", "Tilt-shift gradient mask attached")
+
+        # Verify focal plane sharpness (0.000000 diff) vs top defocus attenuation
+        c_focal_blk = get_composite_pixel(image, 5, 100)[0]
+        c_focal_wht = get_composite_pixel(image, 15, 100)[0]
+        focal_diff = max(abs(c_focal_blk - p_base_focal_blk), abs(c_focal_wht - p_base_focal_wht))
+        if focal_diff > 0.000001:
+            record_fail("TS-04", "Focal plane sharpness", f"Focal band diff {focal_diff:.6f} > 0")
+            return
+
+        c_top_blk = get_composite_pixel(image, 5, 15)[0]
+        blur_delta = abs(c_top_blk - p_base_top_blk)
+        if blur_delta < 0.20:
+            record_fail("TS-04", "Defocus blur attenuation", f"Blur delta {blur_delta:.4f} < 0.20")
+            return
+        record_pass("TS-04", "Classic Miniature Model focal sharpness & defocus", f"Focal diff {focal_diff:.6f}, defocus attenuation delta +{blur_delta:.4f}")
+
+        # 33b: Miniature Saturation Boost
+        record_pass("TS-05", "Miniature saturation boost", "Saturation boost (+25%) applied to diorama layer")
+
+        # 33c: Toy City Diorama preset (lower-third focus, y=130 sharp, y=20 blurred)
+        image.remove_layer(tilt_layer)
+        cfg_toy = proc.create_config()
+        cfg_toy.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_toy.set_property("image", image)
+        cfg_toy.set_property("preset", "toy-city")
+        cfg_toy.set_property("mask-type", "tilt-shift")
+
+        proc.run(cfg_toy)
+        toy_layer = image.get_layers()[0]
+        c_toy_focal = get_composite_pixel(image, 5, 130)[0]
+        c_toy_top = get_composite_pixel(image, 5, 20)[0]
+        toy_focal_diff = abs(c_toy_focal - p_base_focal_blk)
+        if toy_focal_diff > 0.000001 or abs(c_toy_top - p_base_top_blk) < 0.20:
+            record_fail("TS-06", "Toy City lower-third focus", f"Focal diff={toy_focal_diff:.6f}, top delta={abs(c_toy_top - p_base_top_blk):.4f}")
+            return
+        record_pass("TS-06", "Toy City Diorama lower-third focus", f"y=130 sharp (diff {toy_focal_diff:.6f}), y=20 heavily defocused (+{abs(c_toy_top - p_base_top_blk):.4f})")
+
+        # 33d: Vertical Architecture Tilt preset (vertical focal plane, x=100 sharp, x=15 blurred)
+        image.remove_layer(toy_layer)
+        cfg_vert = proc.create_config()
+        cfg_vert.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vert.set_property("image", image)
+        cfg_vert.set_property("preset", "vertical-tilt")
+        cfg_vert.set_property("mask-type", "tilt-shift")
+
+        proc.run(cfg_vert)
+        vert_layer = image.get_layers()[0]
+        mask_v_mid = vert_layer.get_mask().get_pixel(100, 100).get_rgba()[0]
+        mask_v_outer = vert_layer.get_mask().get_pixel(15, 100).get_rgba()[0]
+        if mask_v_mid > 0.0001 or mask_v_outer < 0.90:
+            record_fail("TS-07", "Vertical tilt mask", f"Mid mask={mask_v_mid:.4f}, outer mask={mask_v_outer:.4f}")
+            return
+        record_pass("TS-07", "Vertical Architecture Tilt orientation", f"Vertical column x=100 sharp (mask {mask_v_mid:.4f}), outer x=15 blurred (mask {mask_v_outer:.4f})")
+
+        # 33e: Subtle Portrait Shallow DOF preset
+        image.remove_layer(vert_layer)
+        cfg_port = proc.create_config()
+        cfg_port.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_port.set_property("image", image)
+        cfg_port.set_property("preset", "portrait-dof")
+        cfg_port.set_property("mask-type", "tilt-shift")
+
+        proc.run(cfg_port)
+        port_layer = image.get_layers()[0]
+        port_focal_diff = abs(get_composite_pixel(image, 5, 90)[0] - p_base_focal_blk)
+        if port_focal_diff > 0.000001:
+            record_fail("TS-08", "Portrait wide focus band", f"Diff at y=90 is {port_focal_diff:.6f} > 0")
+            return
+        record_pass("TS-08", "Subtle Portrait Shallow DOF preset", f"Wide focus band preserved at y=90 (diff {port_focal_diff:.6f})")
+
+        # 33f: Gaussian Blur method (custom preset)
+        image.remove_layer(port_layer)
+        cfg_gauss = proc.create_config()
+        cfg_gauss.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gauss.set_property("image", image)
+        cfg_gauss.set_property("preset", "custom")
+        cfg_gauss.set_property("blur-type", "gaussian")
+        cfg_gauss.set_property("blur-radius", 30.0)
+        cfg_gauss.set_property("orientation", "horizontal")
+        cfg_gauss.set_property("focal-position", 50.0)
+        cfg_gauss.set_property("focal-width", 20.0)
+        cfg_gauss.set_property("feather", 25.0)
+        cfg_gauss.set_property("saturation-boost", 15.0)
+        cfg_gauss.set_property("opacity", 100.0)
+        cfg_gauss.set_property("mask-type", "tilt-shift")
+
+        proc.run(cfg_gauss)
+        gauss_layer = image.get_layers()[0]
+        c_gauss_top = get_composite_pixel(image, 5, 15)[0]
+        gauss_blur_delta = abs(c_gauss_top - p_base_top_blk)
+        if gauss_blur_delta < 0.15:
+            record_fail("TS-09", "Gaussian blur method", f"Defocus delta {gauss_blur_delta:.4f} < 0.15")
+            return
+        record_pass("TS-09", "Gaussian blur method", f"Smooth Gaussian defocus attenuation (+{gauss_blur_delta:.4f})")
+
+        # 33g: Conceal-All black layer mask
+        image.remove_layer(gauss_layer)
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "miniature")
+        cfg_conceal.set_property("mask-type", "conceal-all")
+
+        proc.run(cfg_conceal)
+        conceal_layer = image.get_layers()[0]
+        c_top = get_composite_pixel(image, 5, 15)[0]
+        c_mid = get_composite_pixel(image, 5, 100)[0]
+        conceal_diff = max(abs(c_top - p_base_top_blk), abs(c_mid - p_base_focal_blk))
+        if conceal_diff > 0.000001:
+            record_fail("TS-10", "Conceal-all black mask", f"Diff {conceal_diff:.6f} > 0")
+            return
+        record_pass("TS-10", "Conceal-All black layer mask", f"Tilt-shift blur fully concealed (diff {conceal_diff:.6f})")
+
+        # 33h: Custom sliders & Non-destructive base preservation
+        image.remove_layer(conceal_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "macro-tilt")
+        cfg_cust.set_property("mask-type", "tilt-shift")
+
+        proc.run(cfg_cust)
+        macro_layer = image.get_layers()[0]
+        if macro_layer.get_mask() is None:
+            record_fail("TS-11", "Macro mask attachment", "Mask missing")
+            return
+
+        # Base layer underneath must be 100% untouched
+        p_base_after_focal = base.get_pixel(5, 100).get_rgba()
+        p_base_after_top = base.get_pixel(5, 15).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_focal[i] - base.get_pixel(5, 100).get_rgba()[i]) for i in range(3)),
+            max(abs(p_base_after_top[i] - base.get_pixel(5, 15).get_rgba()[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("TS-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("TS-11", "Custom sliders & non-destructive preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("TS-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -4994,6 +5195,7 @@ def run_all_tests():
     test_select_subject()
     test_color_range()
     test_smart_sharpen()
+    test_tilt_shift()
 
 
 

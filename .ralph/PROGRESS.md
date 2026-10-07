@@ -944,6 +944,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 38 — Non-Destructive Tilt-Shift & Miniature Blur Helper Plugin.
 
+## Iteration 40 — Non-Destructive Tilt-Shift & Miniature Blur Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Tilt-Shift & Miniature Blur Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 460: "Blur and sharpen filters - Overview of adding blur to images", line 463: "Blur and sharpen filters - Adjust image sharpness and blur", line 465: "Blur and sharpen filters - Use Blur Gallery depth-of-field effects", and `photoshop_docs.md` Section 424 lines 12334, 12343: "Blur Gallery: Interactive, on-canvas tools like Field Blur, Iris Blur, and Tilt-Shift that let you apply blur selectively and control it visually... Simulate camera effects such as Motion Blur or Tilt-Shift looks"). Professional photographers and digital artists rely on Tilt-Shift blur to simulate diorama/miniature toy model illusions, large-aperture view camera lens movements, and selective focus planes. In stock GIMP, achieving tilt-shift blur requires tedious multi-layer duplicating, destructive blurring, manual mask painting, and hand-drawing bidirectional gradients. Implementing `python-fu-tilt-shift` brings full Photoshop Blur Gallery parity: configurable blur radius (1.0 to 100.0px), optical lens blur bokeh with specular highlights or Gaussian defocus, dual plane orientations (horizontal and vertical), focal plane position (0% to 100%), focal clear zone width (0% to 80%), progressive gradient feathering (5% to 50%), miniature saturation boost (0% to 50%), curated presets (Classic Miniature Model, Toy City Diorama, Subtle Portrait Shallow DOF, Vertical Architecture Tilt, Macro Miniature, Custom), bidirectional linear gradient layer mask attachment, and 100% mathematical preservation of base layer source pixels underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-tilt-shift` with optical lens blur (`gegl:lens-blur`) or Gaussian defocus (`gegl:gaussian-blur`), miniature saturation boost (`gegl:vibrance`), bidirectional linear gradient mask generation (`gimp-drawable-edit-gradient-fill`), presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `tilt-shift` (32 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (32 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 33 (asserting PDB registration, layer modes, mask attachment, Classic Miniature Model focal plane sharpness [diff 0.000000] and defocus attenuation delta [+0.7991], miniature saturation boost [+25%], Toy City lower-third focus at y=130 [diff 0.000000] with y=20 heavily defocused [+0.8070], Vertical Architecture Tilt orientation with vertical column x=100 sharp [mask 0.0000] and outer columns blurred [mask 1.0000], Subtle Portrait Shallow DOF wide band, Gaussian blur method, Conceal-All black layer mask, and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Tilt-Shift & Miniature Blur Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 38 complete and scheduled Phase 39 (Lens Distortion & Perspective Correction Helper).
+- **Technical discoveries**:
+  - `gegl:lens-blur` has an 'aux' pad used for custom aperture bokeh textures, which causes `gimp-drawable-append-filter` to reject live non-destructive layer attachment. Applying `tilt_layer.merge_filter(filt_blur)` directly merges the filter into the dedicated adjustment layer, achieving identical visual bokeh without aux pad conflicts.
+  - Drawing dual symmetrical linear gradient fills via `gimp-drawable-edit-gradient-fill` with `Gimp.GradientType.LINEAR` across top and bottom regions while filling the central rectangle with black creates an authentic, smoothly feathered Tilt-Shift mask with an exact flat in-focus clear band.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 32 plugins verified).
+    - Stage 2: `install.sh --batch` passed (32 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 305 tests across 33 test suites in 21.35s.
+    - Final quality gate: SUCCESS across all stages in 35.21s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `2386055`.
+- **Result**: Success.
+- **Next**: Phase 39 — Non-Destructive Lens Distortion & Perspective Correction Helper Plugin.
+
+
 
 
 

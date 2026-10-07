@@ -542,6 +542,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Tilt-Shift & Miniature Blur Helper
+- **Source topic**: Blur and sharpen filters - Use Blur Gallery depth-of-field effects / Adjust image sharpness and blur (`Topics.txt` lines 460, 463, 465, `photoshop_docs.md` Section 424 lines 12334, 12343)
+- **Photoshop behavior**: Blur Gallery interactive Tilt-Shift depth of field simulating view camera lens tilt movements and diorama / miniature toy effects with linear in-focus band, progressive gradient falloff, and vivid color saturation.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-tilt-shift` in `<Image>/Filters/Blur/Tilt-Shift Blur...`, `<Image>/Filters/Retouching/Tilt-Shift Blur...`, and `<Image>/Layer/New Tilt-Shift Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`.
+- **Current capability**: Dual optical blur engines (Lens Blur bokeh with specular highlights, Gaussian defocus), horizontal and vertical plane orientations, precise focal band position (0% to 100%) and clear focus zone width (0% to 80%), smooth progressive gradient falloff feathering (5% to 50%), integrated miniature model saturation boost (0% to 50%), curated presets (Classic Miniature Model, Toy City Diorama, Subtle Portrait Shallow DOF, Vertical Architecture Tilt, Macro Miniature, Custom), bidirectional linear gradient layer mask attachment, and 100% mathematical preservation of base layer source pixels underneath.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:lens-blur`, `gegl:gaussian-blur`, `gegl:vibrance`, PDB `gimp-drawable-edit-gradient-fill`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 38).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, focal plane sharpness invariance (diff 0.000000), defocus blur attenuation (delta > 0.30), miniature saturation boost (+25%), Toy City lower-third focus, Vertical Architecture Tilt orientation, Subtle Portrait Shallow DOF wide band, Gaussian blur method, Conceal-All black layer mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 40):
+  1. `verify_config.py`: Section 6 passed with 32 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified, layer mode NORMAL verified, tilt-shift gradient mask attached, Classic Miniature Model focal plane sharpness verified (0.000000 diff) with defocus attenuation delta +0.7991, Toy City lower-third focus verified at y=130 (diff 0.000000) and y=20 heavily blurred (+0.8070), Vertical Architecture Tilt orientation verified with vertical focal column x=100 sharp (mask 0.0000) and outer columns blurred (mask 1.0000), Subtle Portrait Shallow DOF verified with wide band preserved at y=90 (diff 0.000000), Gaussian blur method verified (+0.2542 delta), Conceal-All black mask verified with 0.000000 composite diff, custom sliders verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 40).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

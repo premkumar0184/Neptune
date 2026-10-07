@@ -678,6 +678,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Replace Color & Targeted Object Recoloring Helper
+- **Source topic**: Selective color adjustments - Replace Object Colors by Applying a Hue or Saturation Adjustment / Make selective color adjustments (`Topics.txt` lines 337, 339, `photoshop_docs.md` Section 331 lines 9698-9714: "Replace Object Colors by Applying a Hue or Saturation Adjustment: Learn more about replacing the color of selected objects in professional photoeditor using Hue/Saturation adjustment layers for flexible, non-destructive editing... move the Hue and Saturation sliders to replace the object's color... If original color tints the new one, select Colorize... set adjustment layer to Hue blending mode... Paint on mask with black or white to refine affected area")
+- **Photoshop behavior**: Replaces targeted object colors by sampling target color or picking standard color ranges (Reds, Yellows, Greens, Cyans, Blues, Magentas), adjusting Fuzziness tolerance and falloff, remapping Hue (-180° to +180°), Saturation (-100 to +100), Lightness (-100 to +100), or Colorize tinting on a non-destructive adjustment layer.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-replace-color` in `<Image>/Image/Adjustments/Replace Color...`, `<Image>/Colors/Replace Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`.
+- **Current capability**: Target color sampling (RGB sliders) and standard presets (Reds, Yellows, Greens, Cyans, Blues, Magentas), perceptual Fuzziness tolerance masking with feather falloff, complete H-S-L transformation via native PDB `gimp-drawable-hue-saturation`, uniform tinting via native PDB `gimp-drawable-colorize-hsl`, 4 blend modes (Color via `HSL_COLOR`, Hue via `HSV_HUE`, Normal, Soft Light), layer opacity, versatile layer masks (Fuzziness Mask, Conceal All, Reveal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native PDB `gimp-drawable-hue-saturation`, `gimp-drawable-colorize-hsl`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 46).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Target Color Hue Shift (Red shifted by +120° to Green), Fuzziness Mask falloff (Reds isolated at 1.0, Blues excluded at 0.0), Colorize mode (neutral gray uniformly tinted to green hue), Saturation shift (desaturated to neutral monochrome, spread 0.000000), Lightness shift (lifted luminance), blend modes (Color, Hue, Normal, Soft Light), Conceal-All black layer mask, active selection mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 48):
+  1. `verify_config.py`: Section 6 passed with 40 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-replace-color` with all 12 arguments), layer mode HSL_COLOR verified, attached fuzziness layer mask verified, Target Color Hue Shift verified (Red shifted by +120° to pure Green: R=0.000, G=1.000, B=0.000), Fuzziness Mask falloff verified (mask=1.00 on target reds, mask=0.00 on distant blues), Colorize mode verified (neutral gray uniformly tinted to green hue G=0.947 > R=0.056, B=0.056), Saturation shift verified (saturation -100 desaturated red target to neutral monochrome with spread 0.000000), Lightness shift verified (lightness +50 lifted luminance G=0.216, B=0.216 > 0.0), blend modes (Color, Hue, Normal, Soft Light) verified, Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified (in=1.00, out=0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 48).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

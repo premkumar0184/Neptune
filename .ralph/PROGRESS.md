@@ -1152,5 +1152,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin.
 
+## Iteration 48 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Replace Color & Targeted Object Recoloring Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 337: "Replace Object Colors by Applying a Hue or Saturation Adjustment", line 339: "Make selective color adjustments", and `photoshop_docs.md` Section 331 lines 9698-9714: "Replace Object Colors by Applying a Hue or Saturation Adjustment: Learn more about replacing the color of selected objects in professional photoeditor using Hue/Saturation adjustment layers for flexible, non-destructive editing... move the Hue and Saturation sliders to replace the object's color... If original color tints the new one, select Colorize... set adjustment layer to Hue blending mode... Paint on mask with black or white to refine affected area"). Photoshop's classic `Image > Adjustments > Replace Color...` allows retouchers to sample an object's color (or select standard hue ranges), adjust Fuzziness tolerance, remap Hue, Saturation, and Lightness, and generate a non-destructive adjustment layer with a fuzziness-weighted layer mask. Stock GIMP provides no built-in Replace Color dialog. Implementing `python-fu-replace-color` brings this complete workflow into a single non-destructive helper: target color sampling (RGB sliders) and standard presets (Reds, Yellows, Greens, Cyans, Blues, Magentas), perceptual Fuzziness tolerance masking with feather falloff, complete H-S-L transformation via native PDB `gimp-drawable-hue-saturation`, uniform tinting via native PDB `gimp-drawable-colorize-hsl`, 4 blend modes (Color via `HSL_COLOR`, Hue via `HSV_HUE`, Normal, Soft Light), layer opacity, versatile layer masks (Fuzziness Mask, Conceal All, Reveal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-replace-color` with target preset / RGB sampling, fuzziness masking with feather falloff, `gimp-drawable-hue-saturation`, `gimp-drawable-colorize-hsl`, 4 blend modes, presets, layer masks, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `replace-color` (40 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (40 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 41: `test_replace_color` (asserting PDB registration, procedure arguments, layer modes, mask attachment, Target Color Hue Shift [Red shifted by +120° to Green: R=0.000, G=1.000, B=0.000], Fuzziness Mask falloff [mask=1.00 on target reds, mask=0.00 on distant blues], Colorize mode [neutral gray uniformly tinted to green hue G=0.947 > R=0.056, B=0.056], Saturation shift [saturation -100 desaturated red target to neutral monochrome, spread 0.000000], Lightness shift [lightness +50 lifted luminance G=0.216, B=0.216 > 0.0], blend modes [Color, Hue, Normal, Soft Light], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation). Total tests increased to 401 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Replace Color & Targeted Object Recoloring Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 46 complete and scheduled Phase 47 (Lens Blur & Optical Depth of Field Helper).
+- **Technical discoveries**:
+  - In GIMP 3.x, `gimp-drawable-colorize-hsl` takes `hue` in degrees from 0.0 to 360.0 (where 0.0 is red, 120.0 is green, and 240.0 is blue). `gimp-drawable-hue-saturation` takes relative `hue-offset` from -180.0 to +180.0. Combining both procedures provides complete coverage for relative hue rotation as well as uniform colorization.
+  - `image.select_color` paired with `Gimp.context_set_sample_threshold(thresh)` and `Gimp.Selection.feather` computes smooth perceptual fuzziness masks with zero edge aliasing.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 40 plugins verified).
+    - Stage 2: `install.sh --batch` passed (40 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 401 tests across 41 test suites in 36.02s.
+    - Final quality gate: SUCCESS across all stages in 49.59s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `ea002c5`.
+- **Result**: Success.
+- **Next**: Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin.
+
+
 
 

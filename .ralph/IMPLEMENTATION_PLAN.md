@@ -329,12 +329,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate channel extraction, blend mode math, invert flag, offset/scale scaling, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `replace-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`.
-- [ ] Create dedicated non-destructive Replace Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Replace Color.
-- [ ] Support color replacement pipeline: target sample color (R, G, B), Fuzziness tolerance (0 to 100) generating smooth alpha/layer mask falloff, Hue shift (-180° to +180°), Saturation shift (-100 to +100), Lightness shift (-100 to +100), and Colorize mode option.
-- [ ] Support blend modes (Color, Hue, Normal, Soft Light), layer opacity, and editable layer mask options (Fuzziness Mask, Selection, Reveal All).
-- [ ] Register under menu path `<Image>/Image/Adjustments/Replace Color...`, `<Image>/Colors/Replace Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate targeted color isolation, fuzziness mask falloff, hue/saturation/lightness remapping, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `replace-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`.
+- [x] Create dedicated non-destructive Replace Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Replace Color.
+- [x] Support color replacement pipeline: target sample color (R, G, B), Fuzziness tolerance (0 to 100) generating smooth alpha/layer mask falloff, Hue shift (-180° to +180°), Saturation shift (-100 to +100), Lightness shift (-100 to +100), and Colorize mode option.
+- [x] Support blend modes (Color, Hue, Normal, Soft Light), layer opacity, and editable layer mask options (Fuzziness Mask, Selection, Reveal All).
+- [x] Register under menu path `<Image>/Image/Adjustments/Replace Color...`, `<Image>/Colors/Replace Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate targeted color isolation, fuzziness mask falloff, hue/saturation/lightness remapping, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `lens-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`.
+- [ ] Create dedicated non-destructive Lens Blur adjustment layer duplicating active drawable and simulating Photoshop Filter > Blur > Lens Blur.
+- [ ] Support optical depth-of-field controls: Iris radius (0 to 100px), Iris shape curvature, Specular Highlights boost (brightness 0 to 100%, threshold 0 to 255), Depth Map source (Depth Map channel, Alpha, Luminance gradient, Uniform), and distribution noise.
+- [ ] Support curated photographic presets (Portrait Fast Aperture f/1.4, Street Photography Shallow DOF, Macro Focal Falloff, Dreamy Specular Bokeh, Tilt Background Defocus, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Blur/Lens Blur...`, `<Image>/Filters/Blur Gallery/Lens Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate focal plane preservation, aperture bokeh circle formation, specular highlight boost, depth map mask generation, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

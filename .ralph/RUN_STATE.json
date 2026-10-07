@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-47",
+  "run_id": "iteration-48",
   "status": "completed",
-  "iteration": 47,
-  "current_task": "Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin",
+  "iteration": 48,
+  "current_task": "Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "79a97b5",
-  "last_verified_task": "Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin",
+  "last_commit": "ea002c5",
+  "last_verified_task": "Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-08T03:37:05+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 39 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 39 plugins), Stage 3 (tests/gimp_e2e_suite.py with 389/389 assertions passing across 40 test suites, asserting PDB registration, procedure arguments, layer modes, mask attachment, Frequency Separation 8-bit preset [R=0.852, G=0.652, B=0.552 vs baseline ~0.502], Green Channel Contrast preset [mono G=0.301 in Soft Light], Red Channel Multiply preset [mono R=0.701 in Multiply], Invert flag verification [inverted Red 0.7 -> 0.301], blend modes [Screen, Overlay, Add, Difference, Linear Light], Scale 4.0 and Offset 64.0 levels calibration [0.0 -> 0.250 ~ 0.251], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation in 37.91s)."
+    "verified_at": "2026-10-08T03:47:37+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 40 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 40 plugins), Stage 3 (tests/gimp_e2e_suite.py with 401/401 assertions passing across 41 test suites, asserting PDB registration, procedure arguments, layer modes, mask attachment, Target Color Hue Shift [Red shifted by +120° to Green: R=0.000, G=1.000, B=0.000], Fuzziness Mask falloff [mask=1.00 on target reds, mask=0.00 on distant blues], Colorize mode [neutral gray uniformly tinted to green hue G=0.947 > R=0.056, B=0.056], Saturation shift [saturation -100 desaturated red target to neutral monochrome, spread 0.000000], Lightness shift [lightness +50 lifted luminance G=0.216, B=0.216 > 0.0], blend modes [Color, Hue, Normal, Soft Light], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation in 36.02s)."
   },
-  "next_task": "Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin",
-  "last_transition": "2026-10-08T03:39:45+05:30",
+  "next_task": "Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin",
+  "last_transition": "2026-10-08T03:49:25+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

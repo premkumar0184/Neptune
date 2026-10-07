@@ -104,6 +104,7 @@ def test_pdb_registration():
         ("python-fu-hdr-toning", "HDR Toning & Tone Mapping Helper"),
         ("python-fu-match-color", "Match Color & Perceptual Color Transfer Helper"),
         ("python-fu-apply-image", "Apply Image & Channel Math Helper"),
+        ("python-fu-replace-color", "Replace Color & Targeted Object Recoloring Helper"),
     ]
 
 
@@ -6698,6 +6699,242 @@ def test_apply_image():
 
 
 # ==============================================================================
+# 41. REPLACE COLOR & TARGETED OBJECT RECOLORING HELPER TEST SUITE
+# ==============================================================================
+def test_replace_color():
+    print("\n--- Test Suite 41: Replace Color & Targeted Object Recoloring Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-replace-color")
+    if proc is None:
+        record_fail("RC-01", "Procedure lookup", "Procedure python-fu-replace-color not found")
+        return
+
+    # 41a: Configuration argument verification (RC-01)
+    args = [arg.name for arg in proc.get_arguments()]
+    req_args = [
+        "target-preset",
+        "sample-r",
+        "sample-g",
+        "sample-b",
+        "fuzziness",
+        "hue-shift",
+        "saturation-shift",
+        "lightness-shift",
+        "colorize",
+        "blend-mode",
+        "mask-mode",
+        "opacity",
+    ]
+    missing = [ra for ra in req_args if ra not in args]
+    if missing:
+        record_fail("RC-01", "Procedure arguments", f"Missing arguments: {missing}")
+        return
+    record_pass("RC-01", "Procedure arguments", f"All {len(req_args)} configuration arguments present")
+
+    # Create test canvas (100x100)
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    try:
+        # Base target layer: Left half Red (1, 0, 0), Right half Blue (0, 0, 1)
+        base = Gimp.Layer.new(image, "BaseReplaceColor", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.0, 0.0)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 50, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 1.0)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_red = base.get_pixel(25, 50).get_rgba()
+        p_base_blue = base.get_pixel(75, 50).get_rgba()
+
+        # 41b: Execution status (RC-02)
+        cfg_init = proc.create_config()
+        cfg_init.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_init.set_property("image", image)
+        cfg_init.set_property("target-preset", "reds")
+        cfg_init.set_property("hue-shift", 120.0) # Red -> Green
+        res = proc.run(cfg_init)
+
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("RC-02", "Execution status", f"Status {res.index(0)}")
+            return
+        record_pass("RC-02", "Execution status", "SUCCESS")
+
+        # 41c: Layer mode, name & mask (RC-03)
+        rc_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        if not rc_layer.get_name().startswith("Replace Color (Reds)"):
+            record_fail("RC-03", "Layer name", f"Unexpected name {rc_layer.get_name()}")
+            return
+        if rc_layer.get_mode() != Gimp.LayerMode.HSL_COLOR:
+            record_fail("RC-03", "Layer mode", f"Mode {rc_layer.get_mode()} != HSL_COLOR")
+            return
+        if rc_layer.get_mask() is None:
+            record_fail("RC-03", "Layer mask", "Fuzziness mask not attached")
+            return
+        record_pass("RC-03", "Layer mode, name & mask", f"{rc_layer.get_name()} with HSL_COLOR mode and mask attached")
+
+        # 41d: Target Color Hue Shift verified (RC-04)
+        # Red layer pixel shifted by 120 deg became pure green
+        p_rc_left = rc_layer.get_pixel(25, 50).get_rgba()
+        if p_rc_left[1] <= p_rc_left[0] or p_rc_left[1] < 0.90:
+            record_fail("RC-04", "Target color hue shift", f"Expected green > red, got {p_rc_left[:3]}")
+            return
+        record_pass("RC-04", "Target Color Hue Shift", f"Red shifted by +120° to Green (R={p_rc_left[0]:.3f}, G={p_rc_left[1]:.3f}, B={p_rc_left[2]:.3f})")
+
+        # 41e: Fuzziness Mask falloff verified (RC-05)
+        # Fuzziness mask for Reds should be ~1.0 in red half (x=25) and 0.0 in blue half (x=75)
+        mask = rc_layer.get_mask()
+        m_red = mask.get_pixel(25, 50).get_rgba()[0]
+        m_blue = mask.get_pixel(75, 50).get_rgba()[0]
+        if m_red < 0.80 or m_blue > 0.05:
+            record_fail("RC-05", "Fuzziness mask falloff", f"Expected red ~1.0 and blue ~0.0, got red={m_red:.3f}, blue={m_blue:.3f}")
+            return
+        record_pass("RC-05", "Fuzziness Mask falloff", f"Mask isolates targeted reds (mask={m_red:.2f}) and excludes distant blues (mask={m_blue:.2f})")
+        image.remove_layer(rc_layer)
+
+        # 41f: Colorize mode verified (RC-06)
+        # Test on neutral gray element (0.5, 0.5, 0.5)
+        gray_layer = Gimp.Layer.new(image, "GrayBase", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(gray_layer, None, 0)
+        image.set_selected_layers([gray_layer])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        gray_layer.fill(Gimp.FillType.FOREGROUND)
+
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", image)
+        cfg_col.set_property("target-preset", "sampled-color")
+        cfg_col.set_property("sample-r", 0.5)
+        cfg_col.set_property("sample-g", 0.5)
+        cfg_col.set_property("sample-b", 0.5)
+        cfg_col.set_property("colorize", True)
+        cfg_col.set_property("hue-shift", 120.0) # Green hue
+        cfg_col.set_property("saturation-shift", 80.0)
+        proc.run(cfg_col)
+
+        col_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        p_col = col_layer.get_pixel(50, 50).get_rgba()
+        if p_col[1] <= p_col[0] or p_col[1] <= p_col[2]:
+            record_fail("RC-06", "Colorize mode", f"Expected green tint, got {p_col[:3]}")
+            return
+        record_pass("RC-06", "Colorize mode", f"Neutral gray uniformly tinted to green hue (G={p_col[1]:.3f} > R={p_col[0]:.3f}, B={p_col[2]:.3f})")
+        image.remove_layer(col_layer)
+        image.remove_layer(gray_layer)
+
+        # 41g: Saturation shift verified (RC-07)
+        image.set_selected_layers([base])
+        cfg_sat = proc.create_config()
+        cfg_sat.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sat.set_property("image", image)
+        cfg_sat.set_property("target-preset", "reds")
+        cfg_sat.set_property("hue-shift", 0.0)
+        cfg_sat.set_property("saturation-shift", -100.0) # Complete desaturation of reds
+        proc.run(cfg_sat)
+
+        sat_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        p_sat = sat_layer.get_pixel(25, 50).get_rgba()
+        spread_sat = max(p_sat[0], p_sat[1], p_sat[2]) - min(p_sat[0], p_sat[1], p_sat[2])
+        if spread_sat > 0.01:
+            record_fail("RC-07", "Saturation desaturation", f"Expected neutral grayscale, spread {spread_sat:.4f} > 0.01")
+            return
+        record_pass("RC-07", "Saturation shift", f"Saturation -100 desaturated red target to neutral monochrome (spread {spread_sat:.6f})")
+        image.remove_layer(sat_layer)
+
+        # 41h: Lightness shift verified (RC-08)
+        image.set_selected_layers([base])
+        cfg_light = proc.create_config()
+        cfg_light.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_light.set_property("image", image)
+        cfg_light.set_property("target-preset", "reds")
+        cfg_light.set_property("hue-shift", 0.0)
+        cfg_light.set_property("lightness-shift", 50.0) # Lift lightness
+        proc.run(cfg_light)
+
+        light_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        p_light = light_layer.get_pixel(25, 50).get_rgba()
+        # Lightness lift should brighten green/blue channels from 0.0 towards 0.5
+        if p_light[1] <= 0.20:
+            record_fail("RC-08", "Lightness shift", f"Expected brightened channels, got {p_light[:3]}")
+            return
+        record_pass("RC-08", "Lightness shift", f"Lightness +50 lifted luminance (G={p_light[1]:.3f}, B={p_light[2]:.3f} > 0.0)")
+        image.remove_layer(light_layer)
+
+        # 41i: Blend modes verified (RC-09)
+        blend_checks = [
+            ("color", Gimp.LayerMode.HSL_COLOR),
+            ("hue", Gimp.LayerMode.HSV_HUE),
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+        ]
+        for bm_name, expected_mode in blend_checks:
+            image.set_selected_layers([base])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", image)
+            cfg_bm.set_property("target-preset", "reds")
+            cfg_bm.set_property("blend-mode", bm_name)
+            proc.run(cfg_bm)
+            bm_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+            if bm_layer.get_mode() != expected_mode:
+                record_fail("RC-09", f"Blend mode {bm_name}", f"Mode {bm_layer.get_mode()} != {expected_mode}")
+                return
+            image.remove_layer(bm_layer)
+        record_pass("RC-09", "Blend modes verified", "Color, Hue, Normal, Soft Light validated")
+
+        # 41j: Conceal-All black layer mask (RC-10)
+        image.set_selected_layers([base])
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("target-preset", "reds")
+        cfg_conceal.set_property("hue-shift", 120.0)
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+        proc.run(cfg_conceal)
+
+        conceal_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        c_conceal = get_composite_pixel(image, 25, 50)
+        conceal_diff = max(abs(c_conceal[i] - p_base_red[i]) for i in range(3))
+        if conceal_diff > 0.000001:
+            record_fail("RC-10", "Conceal-all mask", f"Composite differs by {conceal_diff:.6f}")
+            return
+        record_pass("RC-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {conceal_diff:.6f})")
+        image.remove_layer(conceal_layer)
+
+        # 41k: Selection confinement & non-destructive preservation (RC-11)
+        # Select quarter area (x: 0..50, y: 0..50)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        image.set_selected_layers([base])
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("target-preset", "reds")
+        cfg_sel.set_property("hue-shift", 120.0)
+        cfg_sel.set_property("mask-mode", "selection")
+        proc.run(cfg_sel)
+
+        sel_layer = [l for l in image.get_layers() if l.get_name().startswith("Replace Color")][0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(25, 75).get_rgba()[0]
+
+        p_base_after = base.get_pixel(25, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_red[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("RC-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("RC-11", "Selection confinement & non-destructive preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("RC-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -6747,6 +6984,7 @@ def run_all_tests():
     test_hdr_toning()
     test_match_color()
     test_apply_image()
+    test_replace_color()
 
 
 

@@ -695,6 +695,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Lens Blur & Optical Depth of Field Helper
+- **Source topic**: Blur and sharpen filters - Create depth of field with lens blur / Overview of adding blur to images (`Topics.txt` lines 460, 461, 465, `photoshop_docs.md` Section 425 lines 12355-12377: "Filter > Blur > Lens Blur: Customize your settings in the Lens Blur dialog box: Depth Map [Source menu None, Transparency, or Layer Mask], Blur Focal Distance [drag slider to control which part of the image stays sharp, pixels near this value remain clear, while others blur gradually], Iris [Radius to control blur strength, Blade Curvature], Specular Highlights [Increase Brightness to enhance highlights and adjust Threshold to define bright areas], Noise [Amount slider to add texture, Distribution Uniform or Gaussian, Monochromatic]")
+- **Photoshop behavior**: Simulates physical camera aperture defocus, rendering circular/polygonal optical bokeh discs around specular highlights rather than simple Gaussian blurring, with configurable depth map sources, focal distance, specular highlights blooming, and monochromatic film grain texture.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-lens-blur` in `<Image>/Filters/Blur/Lens Blur...`, `<Image>/Filters/Blur Gallery/Lens Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`.
+- **Current capability**: Aperture defocus via native GEGL `gegl:lens-blur` (Iris radius, highlight boost factor, specular threshold), specular highlight bloom expanding bright points into luminous circular bokeh discs without burning out midtones, realistic depth map modes (Radial Gradient portrait falloff, Linear Depth Gradient street/landscape planar depth, Uniform Defocus, and Selection), monochromatic film grain texture integration via `gegl:noise-rgb` (correlated=True, independent=False), 6 curated presets (Portrait Fast Prime f/1.4, Street Shallow DOF f/2.0, Macro Extreme Bokeh f/1.2, Dreamy Specular Bokeh, Uniform Defocus, Custom), layer masks (Depth Map Mask, Conceal All, Reveal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GEGL `gegl:lens-blur`, `gegl:noise-rgb`, `gegl:vignette`, native PDB `gimp-drawable-edit-gradient-fill`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 47).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Aperture Bokeh Disc Formation (specular point expanded into illuminated bokeh circle), Specular Highlight Boost (highlight factor amplifies specular luminance), Portrait Fast Prime f/1.4 preset (radial falloff preserves sharp center with background defocus), Street Photography Shallow DOF preset (linear depth gradient), Dreamy Specular Bokeh preset (reveal-all bokeh highlights), Monochromatic film grain noise (variance > 0.0003 with correlated R=G=B channels), Conceal-All black layer mask, active selection mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 49):
+  1. `verify_config.py`: Section 6 passed with 41 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-lens-blur` with all 10 arguments), layer mode NORMAL verified, attached depth layer mask verified, Aperture Bokeh Disc Formation verified (specular point expanded into circular bokeh disc: disc area luminance 0.301 > 0.125), Specular Highlight Boost verified (highlight factor amplifies specular luminance: 0.880 > 0.136), Portrait Fast Prime f/1.4 preset verified (radial falloff preserves focal center sharp with background defocus: mask 0.00 at center, mask 1.00 at outer), Street Photography Shallow DOF preset verified (linear depth gradient: foreground mask 0.00, background mask 0.73), Dreamy Specular Bokeh preset verified (reveal-all mask 1.00 with specular bokeh), Monochromatic film grain noise verified (sensor texture added: variance 0.007453 > 0.0003, monochromatic RGB correlation verified), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 49).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

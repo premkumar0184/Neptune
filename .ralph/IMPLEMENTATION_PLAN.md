@@ -337,12 +337,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate targeted color isolation, fuzziness mask falloff, hue/saturation/lightness remapping, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `lens-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`.
-- [ ] Create dedicated non-destructive Lens Blur adjustment layer duplicating active drawable and simulating Photoshop Filter > Blur > Lens Blur.
-- [ ] Support optical depth-of-field controls: Iris radius (0 to 100px), Iris shape curvature, Specular Highlights boost (brightness 0 to 100%, threshold 0 to 255), Depth Map source (Depth Map channel, Alpha, Luminance gradient, Uniform), and distribution noise.
-- [ ] Support curated photographic presets (Portrait Fast Aperture f/1.4, Street Photography Shallow DOF, Macro Focal Falloff, Dreamy Specular Bokeh, Tilt Background Defocus, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Blur/Lens Blur...`, `<Image>/Filters/Blur Gallery/Lens Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate focal plane preservation, aperture bokeh circle formation, specular highlight boost, depth map mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `lens-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`.
+- [x] Create dedicated non-destructive Lens Blur adjustment layer duplicating active drawable and simulating Photoshop Filter > Blur > Lens Blur.
+- [x] Support optical depth-of-field controls: Iris radius (0 to 100px), Specular Highlights boost (factor 0.0 to 1.0, threshold 0.0 to 1.0), Depth Map source (Radial Gradient, Linear Depth Gradient, Uniform, Selection), and monochromatic film grain noise.
+- [x] Support curated photographic presets (Portrait Fast Prime f/1.4, Street Photography Shallow DOF f/2.0, Macro Extreme Bokeh f/1.2, Dreamy Specular Bokeh, Uniform Defocus, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Blur/Lens Blur...`, `<Image>/Filters/Blur Gallery/Lens Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate focal plane preservation, aperture bokeh circle formation, specular highlight boost, depth map mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 48 — Non-Destructive Texturizer & Surface Canvas Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `texturizer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/texturizer/texturizer.py`.
+- [ ] Create dedicated non-destructive Texturizer adjustment layer duplicating active drawable and simulating Photoshop Filter > Texture > Texturizer / Filter Gallery surface texturing.
+- [ ] Support classic surface textures: Canvas, Burlap, Brick, Sandstone, Fine Paper Grain, with scaling (50% to 200%), relief depth (1 to 50), and directional lighting (Top, Top-Left, Left, Bottom-Left, Bottom, Bottom-Right, Right, Top-Right).
+- [ ] Support curated artistic presets (Gallery Fine Art Canvas, Rustic Burlap Weave, Weathered Brickwork, Architectural Sandstone, Subtle Paper Grain, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Artistic/Texturizer...`, `<Image>/Filters/Distort/Texturizer...`, and `<Image>/Layer`.
+- [ ] Validate surface relief bump mapping, lighting angle response, relief scaling, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 
 

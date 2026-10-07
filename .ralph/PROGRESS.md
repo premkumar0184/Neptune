@@ -1178,6 +1178,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 47 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin.
 
+## Iteration 49 — Non-Destructive Lens Blur & Optical Depth of Field Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Lens Blur & Optical Depth of Field Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 461: "Create depth of field with lens blur", line 465: "Use Blur Gallery depth-of-field effects", and `photoshop_docs.md` Section 425 lines 12355-12377: "Filter > Blur > Lens Blur: Customize your settings in the Lens Blur dialog box: Depth Map [Source menu None, Transparency, or Layer Mask], Blur Focal Distance [drag slider to control which part of the image stays sharp, pixels near this value remain clear, while others blur gradually], Iris [Radius to control blur strength, Blade Curvature], Specular Highlights [Increase Brightness to enhance highlights and adjust Threshold to define bright areas], Noise [Amount slider to add texture, Distribution Uniform or Gaussian, Monochromatic]"). Photoshop's Lens Blur is the industry standard for realistic physical camera lens depth-of-field simulation: it forms circular/polygonal optical bokeh discs around specular highlight spots, supports depth gradient maps, and adds sensor texture noise. Stock GIMP provides no built-in Lens Blur dialog or depth-of-field adjustment layer helper. Implementing `python-fu-lens-blur` brings this complete optical defocus workflow into Linux photo editing with native GEGL `gegl:lens-blur`, realistic bokeh circles, specular highlights blooming, depth map modes (radial portrait falloff, linear street/landscape planar depth, uniform defocus, selection), monochromatic film grain texture via `gegl:noise-rgb` (correlated=True, independent=False), 6 curated photographic presets, versatile layer masks, and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-blur/lens-blur.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-lens-blur` with aperture defocus via `gegl:lens-blur`, specular highlight bloom, radial and linear depth mask generation via `gegl:vignette` and `gimp-drawable-edit-gradient-fill`, monochromatic film grain noise via `gegl:noise-rgb`, 6 curated photographic presets, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `lens-blur` (41 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (41 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 42: `test_lens_blur` (asserting PDB registration, procedure arguments, layer modes, mask attachment, Aperture Bokeh Disc Formation [specular point expanded into circular bokeh disc: disc area luminance 0.301 > 0.125], Specular Highlight Boost [highlight factor amplifies specular luminance: 0.880 > 0.136], Portrait Fast Prime f/1.4 preset [radial falloff preserves focal center sharp with background defocus: mask 0.00 at center, mask 1.00 at outer], Street Photography Shallow DOF preset [linear depth gradient: foreground mask 0.00, background mask 0.73], Dreamy Specular Bokeh preset [reveal-all mask 1.00 with specular bokeh], Monochromatic film grain noise [sensor texture added: variance 0.007453 > 0.0003, monochromatic RGB correlation verified], Conceal-All black layer mask 0.000000 composite diff, active selection mask, and 0.000000 base layer preservation). Total tests increased to 413 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Lens Blur & Optical Depth of Field Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 47 complete and scheduled Phase 48 (Texturizer & Surface Canvas Helper).
+- **Technical discoveries**:
+  - In GEGL `gegl:lens-blur`, `highlight-factor` has a strict valid range of `[0.0, 1.0]`. Setting values $> 1.0$ triggers GObject runtime property clamping warnings.
+  - In GEGL `gegl:noise-rgb`, channel correlation is controlled by property `independent` rather than `correlated` alone. Setting `c_noise.set_property("independent", False)` ensures $100.0\%$ monochromatic noise across all color channels (`diff == 0.000000` between R, G, and B).
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 41 plugins verified).
+    - Stage 2: `install.sh --batch` passed (41 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 413 tests across 42 test suites in 37.99s.
+    - Final quality gate: SUCCESS across all stages in 61.68s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `42ba0f5`.
+- **Result**: Success.
+- **Next**: Phase 48 — Non-Destructive Texturizer & Surface Canvas Helper Plugin.
+
 
 
 

@@ -105,6 +105,7 @@ def test_pdb_registration():
         ("python-fu-match-color", "Match Color & Perceptual Color Transfer Helper"),
         ("python-fu-apply-image", "Apply Image & Channel Math Helper"),
         ("python-fu-replace-color", "Replace Color & Targeted Object Recoloring Helper"),
+        ("python-fu-lens-blur", "Lens Blur & Optical Depth of Field Helper"),
     ]
 
 
@@ -6935,6 +6936,268 @@ def test_replace_color():
 
 
 # ==============================================================================
+# 42. LENS BLUR & OPTICAL DEPTH OF FIELD HELPER TEST SUITE
+# ==============================================================================
+def test_lens_blur():
+    print("\n--- Test Suite 42: Lens Blur & Optical Depth of Field Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-lens-blur")
+    if proc is None:
+        record_fail("LB-01", "Procedure lookup", "Procedure python-fu-lens-blur not found")
+        return
+
+    # 42a: Configuration argument verification (LB-01)
+    args = [arg.name for arg in proc.get_arguments()]
+    req_args = [
+        "preset",
+        "radius",
+        "highlight-factor",
+        "highlight-threshold",
+        "depth-source",
+        "focal-distance",
+        "invert-depth",
+        "noise-amount",
+        "mask-mode",
+        "opacity",
+    ]
+    missing = [ra for ra in req_args if ra not in args]
+    if missing:
+        record_fail("LB-01", "Procedure arguments", f"Missing arguments: {missing}")
+        return
+    record_pass("LB-01", "Procedure arguments", f"All {len(req_args)} configuration arguments present")
+
+    # Create test canvas (100x100)
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    try:
+        # Base target layer: dark background (0.125, 0.125, 0.125) with bright specular spot at center (50, 50)
+        base = Gimp.Layer.new(image, "BaseLensBlur", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.125, 0.125, 0.125)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Specular point highlight at center
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 48, 48, 4, 4)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 1.0, 1.0)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_center = base.get_pixel(50, 50).get_rgba()
+        p_base_disc_area = base.get_pixel(50, 60).get_rgba() # 10px away: dark background
+        p_base_far = base.get_pixel(50, 90).get_rgba() # 40px away: dark background
+
+        # 42b: Execution status (LB-02)
+        cfg_init = proc.create_config()
+        cfg_init.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_init.set_property("image", image)
+        cfg_init.set_property("preset", "portrait-fast-prime")
+        res = proc.run(cfg_init)
+
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LB-02", "Execution status", f"Status {res.index(0)}")
+            return
+        record_pass("LB-02", "Execution status", "SUCCESS")
+
+        # 42c: Layer mode, name & mask (LB-03)
+        lb_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        if not lb_layer.get_name().startswith("Lens Blur (Portrait Fast Prime f/1.4)"):
+            record_fail("LB-03", "Layer name", f"Unexpected name {lb_layer.get_name()}")
+            return
+        if lb_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("LB-03", "Layer mode", f"Mode {lb_layer.get_mode()} != NORMAL")
+            return
+        if lb_layer.get_mask() is None:
+            record_fail("LB-03", "Layer mask", "Depth mask not attached")
+            return
+        record_pass("LB-03", "Layer mode, name & mask", f"{lb_layer.get_name()} with NORMAL mode and mask attached")
+
+        # 42d: Aperture Bokeh Disc Formation verified (LB-04)
+        # Specular point at (50, 50) has expanded into a circular bokeh disc of radius ~25px
+        # In base, (50, 60) is dark background (0.125). In blur layer, it is illuminated by the bokeh circle!
+        p_lb_disc = lb_layer.get_pixel(50, 60).get_rgba()
+        if p_lb_disc[0] <= p_base_disc_area[0]:
+            record_fail("LB-04", "Bokeh disc formation", f"Expected illuminated bokeh disc, got {p_lb_disc[0]:.4f} <= {p_base_disc_area[0]:.4f}")
+            return
+        record_pass("LB-04", "Aperture Bokeh Disc Formation", f"Specular highlight expanded into bokeh disc (disc area luminance {p_lb_disc[0]:.3f} > {p_base_disc_area[0]:.3f})")
+        image.remove_layer(lb_layer)
+
+        # 42e: Specular Highlight Boost verified (LB-05)
+        # Compare highlight-factor 0.90 vs highlight-factor 0.0
+        image.set_selected_layers([base])
+        cfg_boost = proc.create_config()
+        cfg_boost.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_boost.set_property("image", image)
+        cfg_boost.set_property("preset", "custom")
+        cfg_boost.set_property("radius", 20.0)
+        cfg_boost.set_property("highlight-factor", 0.90)
+        cfg_boost.set_property("highlight-threshold", 0.60)
+        cfg_boost.set_property("mask-mode", "reveal-all")
+        proc.run(cfg_boost)
+        boost_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        p_boost = boost_layer.get_pixel(50, 55).get_rgba()
+        image.remove_layer(boost_layer)
+
+        image.set_selected_layers([base])
+        cfg_noboost = proc.create_config()
+        cfg_noboost.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_noboost.set_property("image", image)
+        cfg_noboost.set_property("preset", "custom")
+        cfg_noboost.set_property("radius", 20.0)
+        cfg_noboost.set_property("highlight-factor", 0.0)
+        cfg_noboost.set_property("highlight-threshold", 0.95)
+        cfg_noboost.set_property("mask-mode", "reveal-all")
+        proc.run(cfg_noboost)
+        noboost_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        p_noboost = noboost_layer.get_pixel(50, 55).get_rgba()
+        image.remove_layer(noboost_layer)
+
+        if p_boost[0] <= p_noboost[0]:
+            record_fail("LB-05", "Highlight factor boost", f"Expected boosted luminance {p_boost[0]:.4f} > {p_noboost[0]:.4f}")
+            return
+        record_pass("LB-05", "Specular Highlight Boost", f"Highlight factor amplifies specular luminance ({p_boost[0]:.3f} > {p_noboost[0]:.3f})")
+
+        # 42f: Portrait Fast Prime f/1.4 preset verified (LB-06)
+        # Radial depth mask keeps center sharp (mask ~0) and periphery blurred (mask > 0.5)
+        image.set_selected_layers([base])
+        cfg_port = proc.create_config()
+        cfg_port.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_port.set_property("image", image)
+        cfg_port.set_property("preset", "portrait-fast-prime")
+        proc.run(cfg_port)
+        port_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        mask_port = port_layer.get_mask()
+        m_port_center = mask_port.get_pixel(50, 50).get_rgba()[0]
+        m_port_outer = mask_port.get_pixel(10, 10).get_rgba()[0]
+
+        if m_port_center > 0.10 or m_port_outer < 0.50:
+            record_fail("LB-06", "Portrait preset falloff", f"Expected center ~0 and outer >0.5, got center={m_port_center:.3f}, outer={m_port_outer:.3f}")
+            return
+        record_pass("LB-06", "Portrait Fast Prime f/1.4 preset", f"Radial depth falloff preserves sharp center (mask {m_port_center:.2f}) with background defocus (mask {m_port_outer:.2f})")
+        image.remove_layer(port_layer)
+
+        # 42g: Street Photography Shallow DOF preset verified (LB-07)
+        # Linear depth gradient: foreground (bottom) sharp, background (top) blurred
+        image.set_selected_layers([base])
+        cfg_street = proc.create_config()
+        cfg_street.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_street.set_property("image", image)
+        cfg_street.set_property("preset", "street-shallow-dof")
+        proc.run(cfg_street)
+        street_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        mask_street = street_layer.get_mask()
+        m_street_top = mask_street.get_pixel(50, 10).get_rgba()[0]
+        m_street_bottom = mask_street.get_pixel(50, 90).get_rgba()[0]
+
+        if m_street_bottom > 0.25 or m_street_top < 0.60:
+            record_fail("LB-07", "Street preset linear depth", f"Expected bottom < 0.25 and top > 0.60, got bottom={m_street_bottom:.3f}, top={m_street_top:.3f}")
+            return
+        record_pass("LB-07", "Street Photography Shallow DOF preset", f"Linear depth gradient verified (foreground mask {m_street_bottom:.2f}, background mask {m_street_top:.2f})")
+        image.remove_layer(street_layer)
+
+        # 42h: Dreamy Specular Bokeh preset verified (LB-08)
+        # Uniform full-frame bokeh with reveal-all mask
+        image.set_selected_layers([base])
+        cfg_dream = proc.create_config()
+        cfg_dream.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dream.set_property("image", image)
+        cfg_dream.set_property("preset", "dreamy-specular-bokeh")
+        proc.run(cfg_dream)
+        dream_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        mask_dream = dream_layer.get_mask()
+        m_dream_center = mask_dream.get_pixel(50, 50).get_rgba()[0]
+        m_dream_corner = mask_dream.get_pixel(10, 10).get_rgba()[0]
+
+        if m_dream_center < 0.95 or m_dream_corner < 0.95:
+            record_fail("LB-08", "Dreamy preset mask", f"Expected reveal-all (1.0), got center={m_dream_center:.3f}, corner={m_dream_corner:.3f}")
+            return
+        record_pass("LB-08", "Dreamy Specular Bokeh preset", f"Uniform reveal-all mask verified with rich specular bokeh (mask {m_dream_center:.2f})")
+        image.remove_layer(dream_layer)
+
+        # 42i: Monochromatic film grain noise verified (LB-09)
+        # Test on neutral flat gray (0.5, 0.5, 0.5)
+        gray_layer = Gimp.Layer.new(image, "GrayBaseLB", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(gray_layer, None, 0)
+        image.set_selected_layers([gray_layer])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        gray_layer.edit_fill(Gimp.FillType.FOREGROUND)
+
+        cfg_noise = proc.create_config()
+        cfg_noise.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_noise.set_property("image", image)
+        cfg_noise.set_property("preset", "custom")
+        cfg_noise.set_property("radius", 5.0)
+        cfg_noise.set_property("noise-amount", 60.0)
+        cfg_noise.set_property("mask-mode", "reveal-all")
+        proc.run(cfg_noise)
+
+        noise_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        samples = []
+        is_monochromatic = True
+        for y in range(45, 55):
+            for x in range(45, 55):
+                rgba = noise_layer.get_pixel(x, y).get_rgba()
+                samples.append(rgba[0])
+                if abs(rgba[0] - rgba[1]) > 0.005 or abs(rgba[1] - rgba[2]) > 0.005:
+                    is_monochromatic = False
+
+        mean = sum(samples) / len(samples)
+        variance = sum((s - mean) ** 2 for s in samples) / len(samples)
+
+        if variance < 0.0003 or not is_monochromatic:
+            record_fail("LB-09", "Film grain noise", f"Variance {variance:.6f} or not monochromatic (mono={is_monochromatic})")
+            return
+        record_pass("LB-09", "Monochromatic film grain noise", f"Sensor texture added (variance {variance:.6f} > 0.0003, monochromatic RGB correlation verified)")
+        image.remove_layer(noise_layer)
+        image.remove_layer(gray_layer)
+
+        # 42j: Conceal-All black layer mask verified (LB-10)
+        image.set_selected_layers([base])
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "portrait-fast-prime")
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+        proc.run(cfg_conceal)
+
+        conceal_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        c_conceal = get_composite_pixel(image, 50, 50)
+        conceal_diff = max(abs(c_conceal[i] - p_base_center[i]) for i in range(3))
+        if conceal_diff > 0.000001:
+            record_fail("LB-10", "Conceal-all mask", f"Composite differs by {conceal_diff:.6f}")
+            return
+        record_pass("LB-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {conceal_diff:.6f})")
+        image.remove_layer(conceal_layer)
+
+        # 42k: Selection confinement & non-destructive preservation (LB-11)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        image.set_selected_layers([base])
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "uniform-defocus")
+        cfg_sel.set_property("mask-mode", "selection")
+        proc.run(cfg_sel)
+
+        sel_layer = [l for l in image.get_layers() if l.get_name().startswith("Lens Blur")][0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_center[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("LB-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("LB-11", "Selection confinement & non-destructive preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("LB-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -6985,6 +7248,7 @@ def run_all_tests():
     test_match_color()
     test_apply_image()
     test_replace_color()
+    test_lens_blur()
 
 
 

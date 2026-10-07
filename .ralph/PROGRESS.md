@@ -996,6 +996,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 40 — Non-Destructive Glowing Edges & Neon Stylize Filter Helper Plugin.
 
+## Iteration 42 — Non-Destructive Glowing Edges & Neon Stylize Filter Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Glowing Edges & Neon Stylize Filter plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 451: "Apply filters from the filter gallery", line 452: "Filter Gallery overview", line 484: "Apply texture and surface effects to filters", and `photoshop_docs.md` Section 416 lines 12128-12135 "Filter Gallery: Category: Stylize, Examples: Glowing Edges... Purpose: Stylization and edge effects"). Glowing Edges is one of the most prominent creative stylize filters in the Photoshop Filter Gallery, extracting high-contrast contours and mapping them into luminous glowing neon lines against a dark backdrop or blending them over compositions using Screen or Addition blend modes. In stock GIMP, achieving glowing neon edges requires manual multi-step edge detection, color inversion, levels thresholding, and layer duplication. Implementing `python-fu-glowing-edges` brings full Photoshop parity: Edge Width (1.0 to 15.0px via `gegl:edge-neon`), Edge Brightness (1.0 to 20.0), Smoothness pre-filtering (1.0 to 15.0 via `gegl:gaussian-blur`), multi-hue energy harmonization (`gegl:mono-mixer`), multiple neon color grading palettes (Spectral, Electric Cyan, Hot Magenta, Laser Green, Golden Amber, Monochrome White via `gegl:gradient-map`), compositing blend modes (Screen, Addition, Soft Light, Normal), curated presets (Classic Neon, Cyberpunk Cyan, Synthwave Magenta, Laser Wireframe, Architectural White, Custom), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-glowing-edges` with `gegl:edge-neon` contour extraction, `gegl:gaussian-blur` smoothness pre-pass, `gegl:mono-mixer` chromatic energy harmonization, `gegl:gradient-map` neon palette tone mapping, `gegl:exposure` intensity scaling, presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `glowing-edges` (34 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (34 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 35 (asserting PDB registration, layer modes, mask attachment, Classic Neon edge extraction [1.0000 > 0.50] and dark flat areas [0.0000 < 0.10], Cyberpunk Cyan electric blue dominance [B=1.0000, G=0.9473 > R=0.1981], Synthwave Magenta retro pink dominance [R=1.0000, B=0.8469 > G=0.2502], Laser Wireframe normal mode green wireframe [G=1.0000 > R=0.2502], Architectural White monochrome neutral contours [spread 0.0000 < 0.02], Screen mode compositing flat base color preservation [R=1.0000] and radiant neon edge addition [B=1.0000], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Glowing Edges & Neon Stylize Filter Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 40 complete and scheduled Phase 41 (Oil Paint & Fine Art Impasto Helper).
+- **Technical discoveries**:
+  - Standard RGB-to-luminance weighting in Rec.709 heavily penalizes blue hues (weight 0.0722), causing purely chromatic blue or dark red edges to have very low perceptual luminance for gradient mapping. Inserting a pre-gradient pass using `gegl:mono-mixer` with `red=1.0, green=1.0, blue=1.0, preserve-luminosity=False` sums up all chromatic edge energy into a normalized 1.0 luminance channel, ensuring full vibrant saturation across every edge regardless of the original boundary color.
+  - In Screen blend mode (`1 - (1 - Base) * (1 - Layer)`), black areas `(0, 0, 0)` in the glowing edges layer are mathematically transparent, naturally preserving 100% of the underlying base image pixels without requiring complex inverted masking.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 34 plugins verified).
+    - Stage 2: `install.sh --batch` passed (34 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 329 tests across 35 test suites in 20.72s.
+    - Final quality gate: SUCCESS across all stages in 42.52s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `66676b8`.
+- **Result**: Success.
+- **Next**: Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin.
+
+
 
 
 

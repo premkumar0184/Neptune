@@ -281,12 +281,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate barrel curvature flattening, pincushion expansion, corner luminance compensation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 40 — Non-Destructive Glowing Edges & Neon Stylize Filter Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `glowing-edges` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`.
-- [ ] Create dedicated non-destructive Glowing Edges / Neon Stylize adjustment layer duplicating active drawable and isolating luminous edge contours.
-- [ ] Support edge detection and glowing light properties: Edge Width / Radius (0.1 to 20.0px), Edge Brightness / Intensity (0.0 to 10.0), Smoothness / Pre-filtering, and Neon color grading modes (Full Neon Spectral, Electric Cyan, Hot Magenta, Laser Green, Golden Amber, Monochrome White).
-- [ ] Support compositing blend modes (Screen, Addition, Soft Light, Normal), layer opacity (10% to 100%), and attached editable layer mask (Reveal All, Conceal All, Selection).
-- [ ] Register under menu path `<Image>/Filters/Artistic/Glowing Edges...`, `<Image>/Filters/Stylize/Glowing Edges...`, and `<Image>/Layer`.
-- [ ] Validate edge luminance extraction, neon glow colorization, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `glowing-edges` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`.
+- [x] Create dedicated non-destructive Glowing Edges / Neon Stylize adjustment layer duplicating active drawable and isolating luminous edge contours.
+- [x] Support edge detection and glowing light properties: Edge Width / Radius (0.1 to 20.0px), Edge Brightness / Intensity (0.0 to 10.0), Smoothness / Pre-filtering, and Neon color grading modes (Full Neon Spectral, Electric Cyan, Hot Magenta, Laser Green, Golden Amber, Monochrome White).
+- [x] Support compositing blend modes (Screen, Addition, Soft Light, Normal), layer opacity (10% to 100%), and attached editable layer mask (Reveal All, Conceal All, Selection).
+- [x] Register under menu path `<Image>/Filters/Artistic/Glowing Edges...`, `<Image>/Filters/Stylize/Glowing Edges...`, and `<Image>/Layer`.
+- [x] Validate edge luminance extraction, neon glow colorization, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `oil-paint` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/oil-paint/oil-paint.py`.
+- [ ] Create dedicated non-destructive Oil Paint & Fine Art Impasto adjustment layer duplicating active drawable and simulating thick oil brush strokes and canvas texture.
+- [ ] Support painterly stroke parameters: Stylization (stroke clustering radius 1 to 30), Cleanliness / Smoothness (0.0 to 10.0), Brush Scale / Impasto relief thickness (0.1 to 10.0), Bristle Detail (micro-grooves in stroke flow), and Directional Surface Lighting (Light Angle 0° to 360°, Shine / Specular luster 0.0 to 5.0).
+- [ ] Support curated artistic presets (Classic Impressionist Oil, Thick Impasto Palette Knife, Smooth Glaze Portrait, Expressionist Dynamic, Fine Canvas Detail, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Artistic/Oil Paint...`, `<Image>/Filters/Stylize/Oil Paint...`, and `<Image>/Layer`.
+- [ ] Validate painterly stroke clustering, high-frequency edge preservation, surface relief shine response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

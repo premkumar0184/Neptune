@@ -576,6 +576,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Glowing Edges & Neon Stylize Filter Helper
+- **Source topic**: Filter Gallery overview / Apply filters from the filter gallery (`Topics.txt` lines 451, 452, 484, and `photoshop_docs.md` Section 416 lines 12128-12135 "Filter Gallery: Stylize: Glowing Edges... Purpose: Stylization and edge effects")
+- **Photoshop behavior**: Isolates high-contrast edge boundaries and turns them into luminous neon lines with Edge Width (1-14), Edge Brightness (1-20), Smoothness pre-filtering (1-15), and compositing blend modes (Screen, Addition) to overlay glowing contours onto compositions.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-glowing-edges` in `<Image>/Filters/Artistic/Glowing Edges...`, `<Image>/Filters/Stylize/Glowing Edges...`, and `<Image>/Layer/New Glowing Edges Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`.
+- **Current capability**: Edge Width (1.0 to 15.0px via `gegl:edge-neon`), Edge Brightness (1.0 to 20.0), Smoothness pre-filtering (1.0 to 15.0 via `gegl:gaussian-blur`), multi-hue energy harmonization (`gegl:mono-mixer`), multiple neon color grading palettes (Spectral, Electric Cyan, Hot Magenta, Laser Green, Golden Amber, Monochrome White via `gegl:gradient-map`), compositing blend modes (Screen, Addition, Soft Light, Normal), curated presets (Classic Neon, Cyberpunk Cyan, Synthwave Magenta, Laser Wireframe, Architectural White, Custom), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:edge-neon`, `gegl:gaussian-blur`, `gegl:mono-mixer`, `gegl:gradient-map`, `gegl:exposure`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 40).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Classic Neon edge extraction and flat darkness, Cyberpunk Cyan electric blue dominance, Synthwave Magenta retro pink dominance, Laser Wireframe normal mode green wireframe, Architectural White monochrome neutral contours, Screen mode compositing base preservation and edge glow, Conceal-All black layer mask, active selection-aware mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 42):
+  1. `verify_config.py`: Section 6 passed with 34 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified, layer mode SCREEN verified, reveal-all mask attached, Classic Neon verified (luminous edge 1.0000 > 0.50 with dark flat areas 0.0000 < 0.10), Cyberpunk Cyan verified with electric cyan dominance (B=1.0000, G=0.9473 > R=0.1981), Synthwave Magenta verified with hot magenta dominance (R=1.0000, B=0.8469 > G=0.2502), Laser Wireframe verified in Normal mode with laser green dominance (G=1.0000 > R=0.2502), Architectural White verified with monochrome neutral contours (spread 0.0000 < 0.02), Screen mode compositing verified with flat base color preserved (R=1.0000) and radiant neon edge added (B=1.0000), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 42).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

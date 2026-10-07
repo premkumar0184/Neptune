@@ -98,6 +98,7 @@ def test_pdb_registration():
         ("python-fu-smart-sharpen", "Smart Sharpen & Optical Deconvolution Helper"),
         ("python-fu-tilt-shift", "Tilt-Shift & Miniature Blur Helper"),
         ("python-fu-lens-distortion", "Lens Distortion & Perspective Correction Helper"),
+        ("python-fu-glowing-edges", "Glowing Edges & Neon Stylize Filter Helper"),
     ]
 
 
@@ -5371,6 +5372,211 @@ def test_lens_distortion():
 
 
 # ==============================================================================
+# TEST 35: Non-Destructive Glowing Edges & Neon Stylize Filter Helper
+# ==============================================================================
+def test_glowing_edges():
+    print("\n--- Test Suite 35: Glowing Edges & Neon Stylize Filter Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-glowing-edges")
+    if proc is None:
+        record_fail("GE-01", "Procedure lookup", "python-fu-glowing-edges not registered in PDB")
+        return
+
+    # Synthesize test pattern image:
+    # 100x100 image with blue base (0.0, 0.0, 1.0) and high-contrast red central square (20,20 to 80,80)
+    W, H = 100, 100
+    image = Gimp.Image.new(W, H, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(image, "Base", W, H, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    image.insert_layer(base, None, 0)
+
+    Gimp.context_set_foreground(Gegl.Color.new("blue"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("red"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(image)
+
+    # Reference base pixels
+    p_base_flat_out = base.get_pixel(5, 5).get_rgba()
+    p_base_flat_in = base.get_pixel(50, 50).get_rgba()
+
+    try:
+        # 35a: Classic Neon preset
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", image)
+        cfg.set_property("preset", "classic-neon")
+        cfg.set_property("mask-type", "reveal-all")
+
+        res = proc.run(cfg)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GE-01", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("GE-01", "Execution status", "SUCCESS")
+
+        neon_layer = image.get_layers()[0]
+        if neon_layer.get_mode() != Gimp.LayerMode.SCREEN or not neon_layer.get_name().startswith("Glowing Edges"):
+            record_fail("GE-02", "Layer mode & name", f"Unexpected mode {neon_layer.get_mode()} or name {neon_layer.get_name()}")
+            return
+        record_pass("GE-02", "Layer mode & name", f"{neon_layer.get_name()} (SCREEN)")
+
+        mask = neon_layer.get_mask()
+        if mask is None:
+            record_fail("GE-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("GE-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 35b: Edge luminous glow vs dark flat areas
+        p_edge = neon_layer.get_pixel(20, 20).get_rgba()
+        p_flat = neon_layer.get_pixel(50, 50).get_rgba()
+        edge_lum = max(p_edge[0], p_edge[1], p_edge[2])
+        flat_lum = max(p_flat[0], p_flat[1], p_flat[2])
+        if edge_lum < 0.50 or flat_lum > 0.10:
+            record_fail("GE-04", "Classic Neon edge extraction", f"Edge lum {edge_lum:.4f} < 0.50 or flat lum {flat_lum:.4f} > 0.10")
+            return
+        record_pass("GE-04", "Classic Neon preset", f"Luminous edge extracted ({edge_lum:.4f} > 0.50) with dark flat areas ({flat_lum:.4f} < 0.10)")
+
+        # 35c: Cyberpunk Cyan preset (Electric Cyan color tone)
+        image.remove_layer(neon_layer)
+        cfg_cyan = proc.create_config()
+        cfg_cyan.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cyan.set_property("image", image)
+        cfg_cyan.set_property("preset", "cyberpunk-cyan")
+        cfg_cyan.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_cyan)
+        cyan_layer = image.get_layers()[0]
+        p_cyan_edge = cyan_layer.get_pixel(20, 20).get_rgba()
+        if p_cyan_edge[2] < 0.50 or p_cyan_edge[1] < 0.40 or p_cyan_edge[0] > p_cyan_edge[2]:
+            record_fail("GE-05", "Cyberpunk Cyan tone", f"RGBA: R={p_cyan_edge[0]:.4f}, G={p_cyan_edge[1]:.4f}, B={p_cyan_edge[2]:.4f}")
+            return
+        record_pass("GE-05", "Cyberpunk Cyan preset", f"Electric cyan dominance (B={p_cyan_edge[2]:.4f}, G={p_cyan_edge[1]:.4f} > R={p_cyan_edge[0]:.4f})")
+
+        # 35d: Synthwave Magenta preset (Hot Magenta tone)
+        image.remove_layer(cyan_layer)
+        cfg_mag = proc.create_config()
+        cfg_mag.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mag.set_property("image", image)
+        cfg_mag.set_property("preset", "synthwave-magenta")
+        cfg_mag.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_mag)
+        mag_layer = image.get_layers()[0]
+        p_mag_edge = mag_layer.get_pixel(20, 20).get_rgba()
+        if p_mag_edge[0] < 0.50 or p_mag_edge[2] < 0.40 or p_mag_edge[1] > p_mag_edge[0]:
+            record_fail("GE-06", "Synthwave Magenta tone", f"RGBA: R={p_mag_edge[0]:.4f}, G={p_mag_edge[1]:.4f}, B={p_mag_edge[2]:.4f}")
+            return
+        record_pass("GE-06", "Synthwave Magenta preset", f"Hot magenta dominance (R={p_mag_edge[0]:.4f}, B={p_mag_edge[2]:.4f} > G={p_mag_edge[1]:.4f})")
+
+        # 35e: Laser Wireframe preset (Normal mode, Laser Green tone)
+        image.remove_layer(mag_layer)
+        cfg_laser = proc.create_config()
+        cfg_laser.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_laser.set_property("image", image)
+        cfg_laser.set_property("preset", "laser-wireframe")
+        cfg_laser.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_laser)
+        laser_layer = image.get_layers()[0]
+        p_laser_edge = laser_layer.get_pixel(20, 20).get_rgba()
+        if laser_layer.get_mode() != Gimp.LayerMode.NORMAL or p_laser_edge[1] < 0.50 or p_laser_edge[1] < p_laser_edge[0]:
+            record_fail("GE-07", "Laser Wireframe preset", f"Mode {laser_layer.get_mode()}, RGBA: G={p_laser_edge[1]:.4f}, R={p_laser_edge[0]:.4f}")
+            return
+        record_pass("GE-07", "Laser Wireframe preset", f"Normal mode with laser green dominance (G={p_laser_edge[1]:.4f} > R={p_laser_edge[0]:.4f})")
+
+        # 35f: Architectural White preset (Monochrome White tone)
+        image.remove_layer(laser_layer)
+        cfg_arch = proc.create_config()
+        cfg_arch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_arch.set_property("image", image)
+        cfg_arch.set_property("preset", "architectural-white")
+        cfg_arch.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_arch)
+        arch_layer = image.get_layers()[0]
+        p_arch_edge = arch_layer.get_pixel(20, 20).get_rgba()
+        chroma_spread = max(abs(p_arch_edge[0] - p_arch_edge[1]), abs(p_arch_edge[1] - p_arch_edge[2]))
+        if chroma_spread > 0.02 or p_arch_edge[0] < 0.50:
+            record_fail("GE-08", "Architectural White preset", f"Spread {chroma_spread:.4f} > 0.02 or R={p_arch_edge[0]:.4f} < 0.50")
+            return
+        record_pass("GE-08", "Architectural White preset", f"Monochrome neutral white edge contours (spread {chroma_spread:.4f} < 0.02)")
+
+        # 35g: Screen mode compositing verification
+        image.remove_layer(arch_layer)
+        cfg_screen = proc.create_config()
+        cfg_screen.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_screen.set_property("image", image)
+        cfg_screen.set_property("preset", "cyberpunk-cyan")
+        cfg_screen.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_screen)
+        comp_layer = image.get_layers()[0]
+        c_comp_flat_in = get_composite_pixel(image, 50, 50)
+        c_comp_edge = get_composite_pixel(image, 20, 20)
+        if c_comp_flat_in[0] < 0.90 or c_comp_edge[2] < 0.50:
+            record_fail("GE-09", "Screen mode compositing", f"Flat R={c_comp_flat_in[0]:.4f}, Edge B={c_comp_edge[2]:.4f}")
+            return
+        record_pass("GE-09", "Screen mode compositing", f"Base color preserved in flat zones (R={c_comp_flat_in[0]:.4f}) & radiant neon edge added (B={c_comp_edge[2]:.4f})")
+
+        # 35h: Conceal-All black layer mask
+        image.remove_layer(comp_layer)
+        cfg_con = proc.create_config()
+        cfg_con.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_con.set_property("image", image)
+        cfg_con.set_property("preset", "cyberpunk-cyan")
+        cfg_con.set_property("mask-type", "conceal-all")
+
+        proc.run(cfg_con)
+        con_layer = image.get_layers()[0]
+        c_comp_con_edge = get_composite_pixel(image, 20, 20)
+        c_comp_con_flat = get_composite_pixel(image, 50, 50)
+        p_base_edge = base.get_pixel(20, 20).get_rgba()
+        con_diff = max(
+            max(abs(c_comp_con_edge[i] - p_base_edge[i]) for i in range(3)),
+            max(abs(c_comp_con_flat[i] - p_base_flat_in[i]) for i in range(3))
+        )
+        if con_diff > 0.000001:
+            record_fail("GE-10", "Conceal-all black mask", f"Diff {con_diff:.6f} > 0")
+            return
+        record_pass("GE-10", "Conceal-All black layer mask", f"Glowing edges fully concealed by black mask (diff {con_diff:.6f})")
+
+        # 35i: Selection-aware mask & base preservation
+        image.remove_layer(con_layer)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "cyberpunk-cyan")
+        cfg_sel.set_property("mask-type", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+        if mask_in < 0.99 or mask_out > 0.01:
+            record_fail("GE-11", "Selection mask confinement", f"In={mask_in:.4f}, Out={mask_out:.4f}")
+            return
+
+        # Base layer underneath must remain 100% untouched
+        p_base_after_out = base.get_pixel(5, 5).get_rgba()
+        p_base_after_in = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_out[i] - p_base_flat_out[i]) for i in range(3)),
+            max(abs(p_base_after_in[i] - p_base_flat_in[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("GE-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("GE-11", "Active selection mask & base preservation", f"Selection confined (in={mask_in:.2f}, out={mask_out:.2f}) & base 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("GE-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -5414,6 +5620,7 @@ def run_all_tests():
     test_smart_sharpen()
     test_tilt_shift()
     test_lens_distortion()
+    test_glowing_edges()
 
 
 

@@ -205,11 +205,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate monotone colorization, Hue/Saturation tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `jpeg-artifact-removal` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`.
-- [ ] Create dedicated non-destructive JPEG Cleanup / Deblocking adjustment layer duplicating active drawable.
-- [ ] Support reducing 8x8 DCT compression block boundaries and mosquito noise ringing while preserving sharp high-frequency edges and contours.
-- [ ] Support curated artifact strength presets (Subtle Web Cleanup, Medium Compression Smoothing, Aggressive Block Removal, Mosquito Ringing Suppression, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Enhance/JPEG Artifacts Removal...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate compression block variance reduction, edge contrast preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `jpeg-artifact-removal` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`.
+- [x] Create dedicated non-destructive JPEG Cleanup / Deblocking adjustment layer duplicating active drawable.
+- [x] Support reducing 8x8 DCT compression block boundaries and mosquito noise ringing while preserving sharp high-frequency edges and contours.
+- [x] Support curated artifact strength presets (Subtle Web Cleanup, Medium Compression Smoothing, Aggressive Block Removal, Mosquito Ringing Suppression, 16x16 Macroblock Cleanup, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Enhance/JPEG Artifacts Removal...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate compression block variance reduction, edge contrast preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `charcoal-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`.
+- [ ] Create dedicated non-destructive Charcoal Sketch adjustment layer duplicating active drawable.
+- [ ] Support expressive charcoal strokes, edge extraction, charcoal thickness, paper contrast, chalk highlights, curated artistic sketch presets (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom sliders).
+- [ ] Support blend modes (Normal, Multiply for paper drawing overlay, Soft Light), layer opacity, and attached editable layer mask.
+- [ ] Register under menu path `<Image>/Filters/Artistic/Charcoal Sketch...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
+- [ ] Validate stroke rendering, tonal sketch response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 

@@ -735,3 +735,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin.
 
+## Iteration 32 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive JPEG Artifacts Removal & Deblocking Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 673: "Remove JPEG artifacts from images", and `photoshop_docs.md` Section 445/446 lines 13009/13048 Neural Filters - JPEG Artifacts Removal, plus Section 149/429 noise reduction). Replaces destructive spatial blurs and loss of image sharpness with an isolated non-destructive adjustment layer duplicating active drawable, applying 2D DCT-domain deblocking (`gegl:denoise-dct`) to eliminate 8x8 block boundary discontinuities, edge-preserving Symmetric Nearest Neighbor mean filtering (`gegl:snn-mean`) to suppress high-frequency mosquito ringing halos around sharp edges and text, unsharp micro-detail recovery (`gegl:unsharp-mask`) with noise thresholding to protect genuine focus, curated compression presets (Subtle Web Cleanup, Medium Compression Smoothing, Aggressive Block Removal, Mosquito Ringing Suppression, 16x16 Macroblock Cleanup, Custom Sliders), adjustable layer opacity, editable layer masks (Reveal All, Conceal All, and Active Selection), and 100% base layer pixel preservation underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-jpeg-artifact-removal` with DCT deblocking (`gegl:denoise-dct`), SNN ringing reduction (`gegl:snn-mean`), detail recovery (`gegl:unsharp-mask`), preset tuning, layer mask options, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `jpeg-artifact-removal` (24 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (24 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 25 (asserting PDB registration, layer properties, mask attachment, 8x8 DCT block boundary step reduction [0.0491 -> 0.0123, >74% smoothing], sharp edge contrast preservation [0.3860, 112.1% contrast retained], isolated mosquito ringing spike suppression [0.847 -> 0.527, delta -0.320], 16x16 Macroblock preset verified, Conceal-All black layer mask [diff 0.000000], selection-aware subject masking [inside selection deblocked 0.0123 < 0.0491, outside untouched diff 0.000000], custom sliders with 85.0% opacity and size16x16 verified, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added JPEG Artifacts Removal & Deblocking Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 30 complete and scheduled Phase 31 (Charcoal & Fine-Art Sketch Helper).
+- **Technical discoveries**:
+  - `gegl:denoise-dct` operates directly on 8x8 DCT patches (`patch-size: size8x8` or `size16x16`), targeting and smoothing the exact discrete cosine transform quantization grid of JPEG files without rounding out sharp edges.
+  - Symmetric Nearest Neighbor mean filtering (`gegl:snn-mean`) selectively averages only pairs of neighboring pixels that match the center pixel's intensity, effectively erasing Gibbs oscillation halos and mosquito noise spikes around high-contrast contours without creating edge halos.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 24 plugins verified).
+    - Stage 2: `install.sh --batch` passed (24 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 209 tests across 25 test suites in 11.06s.
+    - Final quality gate: SUCCESS across all stages in 22.32s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `758f5d0`.
+- **Result**: Success.
+- **Next**: Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin.
+

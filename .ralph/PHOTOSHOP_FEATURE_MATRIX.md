@@ -406,6 +406,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive JPEG Artifacts Removal & Deblocking Helper
+- **Source topic**: Remove JPEG artifacts from images (`Topics.txt` line 673, and `photoshop_docs.md` Section 445/446 lines 13009/13048 Neural Filters - JPEG Artifacts Removal, plus Section 149/429 noise reduction)
+- **Photoshop behavior**: Reconstructs Discrete Cosine Transform (DCT) 8x8 block boundary discontinuities, removes high-frequency mosquito ringing oscillations around contrast contours and text, and restores fine textures non-destructively onto duplicate layers with masks.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-jpeg-artifact-removal` in `<Image>/Filters/Enhance/JPEG Artifacts Removal...`, `<Image>/Filters/Retouching/JPEG Artifacts Removal...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/jpeg-artifact-removal/jpeg-artifact-removal.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies 2D DCT-domain deblocking (`gegl:denoise-dct`) to eliminate 8x8 block boundary discontinuities, edge-preserving Symmetric Nearest Neighbor mean filtering (`gegl:snn-mean`) to suppress mosquito ringing halos around sharp edges, and unsharp micro-detail recovery (`gegl:unsharp-mask`) with noise thresholding to restore genuine focus and edge definition. Offers curated compression presets (Subtle Web Cleanup, Medium Compression Smoothing, Aggressive Block Removal, Mosquito Ringing Suppression, 16x16 Macroblock Cleanup, Custom Sliders), adjustable layer opacity (10% to 100%), editable layer masks (Reveal All, Conceal All for selective brush deblocking, Active Selection), and 100% preservation of underlying source pixels.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:denoise-dct`, `gegl:snn-mean`, `gegl:unsharp-mask`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 30).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, 8x8 DCT block boundary step reduction (>50%), sharp edge contrast preservation (>50%), mosquito ringing spike suppression, 16x16 macroblock preset, Conceal-All black layer mask, selection-aware masking, custom sliders with opacity, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 32):
+  1. `verify_config.py`: Section 6 passed with 24 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: 8x8 DCT block boundary step reduced from 0.0491 to 0.0123 (>74% smoothing), sharp edge contrast preserved at 0.3860 (112.1% contrast retained), isolated mosquito ringing spike attenuated from 0.847 down to 0.527 (delta -0.320), 16x16 Macroblock preset verified, Conceal-All black layer mask verified (0.000000 diff), selection-aware cleanup mask verified (inside selection deblocked 0.0123 < 0.0491, outside untouched diff 0.000000), custom sliders with 85.0% opacity and size16x16 verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 32).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

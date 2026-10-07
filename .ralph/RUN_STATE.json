@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-31",
+  "run_id": "iteration-32",
   "status": "completed",
-  "iteration": 31,
-  "current_task": "Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin",
+  "iteration": 32,
+  "current_task": "Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "4e47d78",
-  "last_verified_task": "Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin",
+  "last_commit": "758f5d0",
+  "last_verified_task": "Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-07T18:25:00+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 23 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 23 plugins), Stage 3 (tests/gimp_e2e_suite.py with 197/197 assertions passing across 24 test suites, asserting PDB registration, layer modes, mask attachment, Sepia Antique warm toning [shadow R=0.266>G=0.205>B=0.147, highlight R=0.855>G=0.815>B=0.745], Cyanotype Prussian blue shadow dominance [B=0.309 > R=0.120, delta +0.190], Vintage Amber golden tones [R=0.301 > G=0.212 > B=0.125, delta +0.176], Hand-Tinted portrait flattering skin highlights [R=0.863 > G=0.799 > B=0.738], Conceal-All black layer mask [diff 0.000000], selection-aware subject masking [inside warm R=0.266>G=0.205>B=0.147, outside diff 0.000000], custom sliders with 85.0% opacity and midpoint 60.0% verified, and 0.000000 base layer preservation across all tonal zones in 10.11s)."
+    "verified_at": "2026-10-07T18:40:30+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 24 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 24 plugins), Stage 3 (tests/gimp_e2e_suite.py with 209/209 assertions passing across 25 test suites, asserting PDB registration, layer properties, mask attachment, 8x8 DCT block boundary step reduction [0.0491 -> 0.0123, >74% smoothing], sharp edge contrast preservation [0.3860, 112.1% contrast retained], isolated mosquito ringing spike suppression [0.847 -> 0.527, delta -0.320], 16x16 Macroblock preset verified, Conceal-All black layer mask [diff 0.000000], selection-aware subject masking [inside selection deblocked 0.0123 < 0.0491, outside untouched diff 0.000000], custom sliders with 85.0% opacity and size16x16 verified, and 0.000000 base layer preservation across all tonal zones in 11.06s)."
   },
-  "next_task": "Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin",
-  "last_transition": "2026-10-07T18:25:30+05:30",
+  "next_task": "Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin",
+  "last_transition": "2026-10-07T18:43:30+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

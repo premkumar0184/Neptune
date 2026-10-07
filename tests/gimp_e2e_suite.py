@@ -88,6 +88,7 @@ def test_pdb_registration():
         ("python-fu-skin-smoothing", "Skin Smoothing & Beauty Retouching"),
         ("python-fu-selective-color-pop", "Selective Color Pop & Background Desaturation"),
         ("python-fu-photo-colorize", "Vintage Photo Colorization & Restoration"),
+        ("python-fu-jpeg-artifact-removal", "JPEG Artifacts Removal & Deblocking"),
     ]
 
     for proc_name, label in required_procs:
@@ -3163,6 +3164,236 @@ def test_photo_colorize():
 
 
 # ==============================================================================
+# TEST 25: Non-Destructive JPEG Artifacts Removal & Deblocking Plugin (Phase 30)
+# ==============================================================================
+def test_jpeg_artifact_removal():
+    print("\n--- Test Suite 25: JPEG Artifacts Removal & Deblocking Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-jpeg-artifact-removal")
+    if proc is None:
+        record_fail("JAR-01", "Procedure lookup", "Procedure python-fu-jpeg-artifact-removal not found")
+        return
+
+    # Create a 64x64 test image with:
+    # 1. 8x8 block checkerboard variation simulating JPEG DCT block boundaries (delta ~0.05 between alternating 8x8 blocks)
+    # 2. A sharp edge on the right quarter (x >= 48) with high contrast (delta ~0.40)
+    # 3. An isolated mosquito ringing spike at (12, 12)
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base", 64, 64, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # Fill base background neutral gray
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.50, 0.50, 0.50)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Alternating 8x8 block checkerboard to simulate JPEG DCT blocking
+        for bx in range(6):  # blocks 0 to 5 (columns x=0..47)
+            for by in range(8):  # rows y=0..63
+                if (bx + by) % 2 == 1:
+                    image.select_rectangle(Gimp.ChannelOps.REPLACE, bx * 8, by * 8, 8, 8)
+                    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.55, 0.55, 0.55)"))
+                    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Sharp high-contrast edge on right side (x >= 48, delta ~0.40)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 48, 0, 16, 64)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.90, 0.90, 0.90)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Isolated mosquito ringing spike at (12, 12)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 12, 12, 1, 1)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.85, 0.85, 0.85)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.Selection.none(image)
+
+        # Pre-filter measurements
+        p_b7_pre = base.get_pixel(7, 4).get_rgba()[0]
+        p_b8_pre = base.get_pixel(8, 4).get_rgba()[0]
+        pre_block_step = abs(p_b7_pre - p_b8_pre)
+
+        p_edge47_pre = base.get_pixel(47, 4).get_rgba()[0]
+        p_edge48_pre = base.get_pixel(48, 4).get_rgba()[0]
+        pre_edge_step = abs(p_edge48_pre - p_edge47_pre)
+
+        p_spike_pre = base.get_pixel(12, 12).get_rgba()[0]
+
+        # 25a: Execute procedure with Medium Compression Smoothing (default)
+        config = proc.create_config()
+        config.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        config.set_property("image", image)
+        config.set_property("preset", "medium")
+        config.set_property("mask-type", "reveal-all")
+        config.set_property("opacity", 100.0)
+
+        res = proc.run(config)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("JAR-01", "Execution status", f"Expected SUCCESS, got status={status}")
+            return
+        record_pass("JAR-01", "Execution status", "SUCCESS")
+
+        # 25b: Verify created adjustment layer and properties
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("JAR-02", "Layer creation", f"Expected at least 2 layers, found {len(layers)}")
+            return
+        clean_layer = layers[0]
+        if "JPEG Cleanup" not in clean_layer.get_name() or clean_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("JAR-02", "Layer properties", f"Unexpected name={clean_layer.get_name()}, mode={clean_layer.get_mode()}")
+            return
+        record_pass("JAR-02", "Adjustment layer verified", f"Layer '{clean_layer.get_name()}' mode={clean_layer.get_mode()} opacity={clean_layer.get_opacity():.1f}%")
+
+        # 25c: Verify attached reveal-all layer mask
+        mask = clean_layer.get_mask()
+        if mask is None:
+            record_fail("JAR-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("JAR-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 25d: Deblocking verification: 8x8 block boundary step reduction
+        p_b7_post = get_composite_pixel(image, 7, 4)[0]
+        p_b8_post = get_composite_pixel(image, 8, 4)[0]
+        post_block_step = abs(p_b7_post - p_b8_post)
+        if post_block_step >= pre_block_step * 0.5:
+            record_fail("JAR-04", "8x8 Block deblocking", f"Block step {post_block_step:.4f} not reduced sufficiently from {pre_block_step:.4f}")
+            return
+        record_pass("JAR-04", "8x8 DCT deblocking reduction", f"Block step reduced from {pre_block_step:.4f} to {post_block_step:.4f} (>50% smoothing)")
+
+        # 25e: Sharp edge contrast preservation (>50% preserved)
+        p_edge47_post = get_composite_pixel(image, 47, 4)[0]
+        p_edge48_post = get_composite_pixel(image, 48, 4)[0]
+        post_edge_step = abs(p_edge48_post - p_edge47_post)
+        if post_edge_step < pre_edge_step * 0.5:
+            record_fail("JAR-05", "Sharp edge preservation", f"Edge step {post_edge_step:.4f} dropped below 50% of {pre_edge_step:.4f}")
+            return
+        record_pass("JAR-05", "Sharp edge contrast preservation", f"High-contrast edge preserved at {post_edge_step:.4f} ({post_edge_step/pre_edge_step*100:.1f}% contrast retained)")
+
+        image.remove_layer(clean_layer)
+
+        # 25f: Mosquito ringing spike suppression (preset "ringing")
+        cfg_ring = proc.create_config()
+        cfg_ring.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ring.set_property("image", image)
+        cfg_ring.set_property("preset", "ringing")
+        cfg_ring.set_property("mask-type", "reveal-all")
+        cfg_ring.set_property("opacity", 100.0)
+
+        proc.run(cfg_ring)
+        ring_layer = image.get_layers()[0]
+        p_spike_post = get_composite_pixel(image, 12, 12)[0]
+        spike_attenuation = p_spike_pre - p_spike_post
+        if p_spike_post >= 0.70:
+            record_fail("JAR-06", "Mosquito ringing suppression", f"Spike value {p_spike_post:.4f} not attenuated sufficiently from {p_spike_pre:.4f}")
+            return
+        record_pass("JAR-06", "Mosquito ringing suppression", f"Isolated ringing spike attenuated from {p_spike_pre:.3f} down to {p_spike_post:.3f} (delta -{spike_attenuation:.3f})")
+
+        image.remove_layer(ring_layer)
+
+        # 25g: Macroblock 16x16 preset
+        cfg_mb = proc.create_config()
+        cfg_mb.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mb.set_property("image", image)
+        cfg_mb.set_property("preset", "macroblock")
+        cfg_mb.set_property("mask-type", "reveal-all")
+        cfg_mb.set_property("opacity", 100.0)
+
+        proc.run(cfg_mb)
+        mb_layer = image.get_layers()[0]
+        if "16x16 Macroblock" not in mb_layer.get_name():
+            record_fail("JAR-07", "Macroblock preset", f"Unexpected layer name {mb_layer.get_name()}")
+            return
+        record_pass("JAR-07", "16x16 Macroblock preset verified", f"Layer '{mb_layer.get_name()}' created")
+
+        image.remove_layer(mb_layer)
+
+        # 25h: Conceal-All Black Layer Mask
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "medium")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk = get_composite_pixel(image, 7, 4)
+        p_base = base.get_pixel(7, 4).get_rgba()
+        diff_blk = max(abs(p_blk[i] - p_base[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("JAR-08", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("JAR-08", "Conceal-all black layer mask", f"Black mask attached for selective brush cleanup (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 25i: Selection-Aware Masking
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 16, 16)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "medium")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside_7 = get_composite_pixel(image, 7, 4)[0]
+        p_sel_inside_8 = get_composite_pixel(image, 8, 4)[0]
+        inside_step = abs(p_sel_inside_7 - p_sel_inside_8)
+
+        p_sel_out = get_composite_pixel(image, 48, 4)
+        p_base_out = base.get_pixel(48, 4).get_rgba()
+        out_diff = max(abs(p_sel_out[i] - p_base_out[i]) for i in range(3))
+
+        if out_diff > 0.000001 or inside_step >= pre_block_step * 0.7:
+            record_fail("JAR-09", "Selection-aware mask", f"Inside step {inside_step:.4f}, Outside diff {out_diff:.6f}")
+            return
+        record_pass("JAR-09", "Selection-aware cleanup mask", f"Inside selection deblocked ({inside_step:.4f} < {pre_block_step:.4f}), outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 25j: Custom Sliders & Opacity
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("sigma", 15.0)
+        cfg_cust.set_property("patch-size", "size16x16")
+        cfg_cust.set_property("ringing-reduction", 3)
+        cfg_cust.set_property("detail-recovery", 50.0)
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("JAR-10", "Custom sliders", f"Expected opacity 85.0%, got {cust_layer.get_opacity()}%")
+            return
+        record_pass("JAR-10", "Custom sliders & opacity", f"Opacity 85.0%, patch size size16x16, sigma 15.0 verified")
+
+        # 25k: Non-destructive base layer invariance across all pixels
+        p_base_after_7 = base.get_pixel(7, 4).get_rgba()[0]
+        p_base_after_8 = base.get_pixel(8, 4).get_rgba()[0]
+        p_base_after_edge = base.get_pixel(48, 4).get_rgba()[0]
+        max_base_diff = max(
+            abs(p_base_after_7 - p_b7_pre),
+            abs(p_base_after_8 - p_b8_pre),
+            abs(p_base_after_edge - p_edge48_pre)
+        )
+        if max_base_diff > 0.000001:
+            record_fail("JAR-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("JAR-11", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("JAR-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -3196,6 +3427,7 @@ def run_all_tests():
     test_skin_smoothing()
     test_selective_color_pop()
     test_photo_colorize()
+    test_jpeg_artifact_removal()
 
 
     elapsed = time.time() - start_time

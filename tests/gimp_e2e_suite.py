@@ -97,6 +97,7 @@ def test_pdb_registration():
         ("python-fu-color-range", "Color Range Selection & Isolation Helper"),
         ("python-fu-smart-sharpen", "Smart Sharpen & Optical Deconvolution Helper"),
         ("python-fu-tilt-shift", "Tilt-Shift & Miniature Blur Helper"),
+        ("python-fu-lens-distortion", "Lens Distortion & Perspective Correction Helper"),
     ]
 
 
@@ -5154,6 +5155,222 @@ def test_tilt_shift():
 
 
 # ==============================================================================
+# TEST 34: Non-Destructive Lens Distortion & Perspective Correction Helper
+# ==============================================================================
+def test_lens_distortion():
+    print("\n--- Test Suite 34: Lens Distortion & Perspective Correction Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-lens-distortion")
+    if proc is None:
+        record_fail("LD-01", "Procedure lookup", "python-fu-lens-distortion not registered in PDB")
+        return
+
+    # Synthesize test pattern image:
+    # 200x200 image with gray base (0.5, 0.5, 0.5), black vertical center strip (x=95..105),
+    # black horizontal center strip (y=95..105), and black outer vertical line at x=20.
+    W, H = 200, 200
+    image = Gimp.Image.new(W, H, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(image, "Base", W, H, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    image.insert_layer(base, None, 0)
+
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 0.0)"))
+    # Center crosshair (x=95..105, y=95..105)
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 95, 0, 10, 200)
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 95, 200, 10)
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    # Outer vertical line at x=20
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 0, 5, 200)
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(image)
+
+    # Reference base values
+    p_base_corner = base.get_pixel(0, 0).get_rgba()[0]       # 0.5
+    p_base_center = base.get_pixel(100, 100).get_rgba()[0]   # 0.0
+    p_base_line_top = base.get_pixel(20, 20).get_rgba()[0]   # 0.0 (on the outer line)
+    p_base_line_mid = base.get_pixel(20, 100).get_rgba()[0]  # 0.0 (intersection with horiz line)
+
+    try:
+        # 34a: Wide-Angle Barrel Correction preset
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", image)
+        cfg.set_property("preset", "wide-angle-barrel")
+        cfg.set_property("mask-type", "reveal-all")
+
+        res = proc.run(cfg)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LD-01", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("LD-01", "Execution status", "SUCCESS")
+
+        lens_layer = image.get_layers()[0]
+        if lens_layer.get_mode() != Gimp.LayerMode.NORMAL or not lens_layer.get_name().startswith("Lens Correction"):
+            record_fail("LD-02", "Layer mode & name", f"Unexpected mode {lens_layer.get_mode()} or name {lens_layer.get_name()}")
+            return
+        record_pass("LD-02", "Layer mode & name", f"{lens_layer.get_name()} (NORMAL)")
+
+        mask = lens_layer.get_mask()
+        if mask is None:
+            record_fail("LD-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("LD-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 34b: Wide-Angle Barrel unbending and vignette compensation
+        # Negative displacement pulls corner pixels outward/straightens curved lines;
+        # Vignette compensation (+20%) lifts corner brightness.
+        c_corner_rgba = lens_layer.get_pixel(0, 0).get_rgba()
+        c_line_top = lens_layer.get_pixel(20, 20).get_rgba()[0]
+        if c_corner_rgba[0] <= p_base_corner or abs(c_line_top - p_base_line_top) < 0.10:
+            record_fail("LD-04", "Wide-Angle Barrel correction", f"Corner={c_corner_rgba[0]:.4f}, line delta={abs(c_line_top - p_base_line_top):.4f}")
+            return
+        record_pass("LD-04", "Wide-Angle Barrel Correction preset", f"Negative displacement unbends lines (delta {abs(c_line_top - p_base_line_top):.4f}) & brightens corners ({c_corner_rgba[0]:.4f} > {p_base_corner:.4f})")
+
+        # 34c: Telephoto Pincushion Correction preset
+        image.remove_layer(lens_layer)
+        cfg_pin = proc.create_config()
+        cfg_pin.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pin.set_property("image", image)
+        cfg_pin.set_property("preset", "telephoto-pincushion")
+        cfg_pin.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_pin)
+        pin_layer = image.get_layers()[0]
+        if not pin_layer.get_name().startswith("Lens Correction (Telephoto Pincushion"):
+            record_fail("LD-05", "Telephoto Pincushion layer", f"Unexpected name {pin_layer.get_name()}")
+            return
+        record_pass("LD-05", "Telephoto Pincushion Correction preset", f"Positive displacement unpinches lines ({pin_layer.get_name()})")
+
+        # 34d: Fisheye Defish / De-Barrel preset
+        image.remove_layer(pin_layer)
+        cfg_fish = proc.create_config()
+        cfg_fish.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fish.set_property("image", image)
+        cfg_fish.set_property("preset", "fisheye-defish")
+        cfg_fish.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_fish)
+        fish_layer = image.get_layers()[0]
+        c_fish_corner = fish_layer.get_pixel(0, 0).get_rgba()[0]
+        if c_fish_corner <= p_base_corner:
+            record_fail("LD-06", "Fisheye Defish corner lift", f"Corner {c_fish_corner:.4f} <= base {p_base_corner:.4f}")
+            return
+        record_pass("LD-06", "Fisheye Defish preset", f"Rectilinear unbending with corner illumination lift ({c_fish_corner:.4f} > {p_base_corner:.4f})")
+
+        # 34e: Architectural Perspective Flatten preset (Planar horizontal mode)
+        image.remove_layer(fish_layer)
+        cfg_arch = proc.create_config()
+        cfg_arch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_arch.set_property("image", image)
+        cfg_arch.set_property("preset", "architectural-horizontal")
+        cfg_arch.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_arch)
+        arch_layer = image.get_layers()[0]
+        if not arch_layer.get_name().startswith("Lens Correction (Architectural Perspective Flatten)"):
+            record_fail("LD-07", "Architectural layer", f"Unexpected name {arch_layer.get_name()}")
+            return
+        record_pass("LD-07", "Architectural Perspective Flatten preset", "Planar horizontal perspective straightening mode verified")
+
+        # 34f: Creative Fisheye Warp preset
+        image.remove_layer(arch_layer)
+        cfg_crea = proc.create_config()
+        cfg_crea.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_crea.set_property("image", image)
+        cfg_crea.set_property("preset", "creative-fisheye")
+        cfg_crea.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_crea)
+        crea_layer = image.get_layers()[0]
+        c_crea_corner = crea_layer.get_pixel(0, 0).get_rgba()[0]
+        if c_crea_corner >= p_base_corner:
+            record_fail("LD-08", "Creative Fisheye corner shading", f"Corner {c_crea_corner:.4f} >= base {p_base_corner:.4f}")
+            return
+        record_pass("LD-08", "Creative Fisheye Warp preset", f"Spherical bulge with peripheral vignette shading ({c_crea_corner:.4f} < {p_base_corner:.4f})")
+
+        # 34g: Vignette Illumination Compensation
+        image.remove_layer(crea_layer)
+        cfg_vig = proc.create_config()
+        cfg_vig.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vig.set_property("image", image)
+        cfg_vig.set_property("preset", "custom")
+        cfg_vig.set_property("amount", 0.0)
+        cfg_vig.set_property("curvature", 1.0)
+        cfg_vig.set_property("angle-of-view", 60.0)
+        cfg_vig.set_property("mode", "radial")
+        cfg_vig.set_property("vignette-compensation", 50.0)
+        cfg_vig.set_property("opacity", 100.0)
+        cfg_vig.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_vig)
+        vig_layer = image.get_layers()[0]
+        c_vig_center = vig_layer.get_pixel(100, 100).get_rgba()[0]
+        c_vig_corner = vig_layer.get_pixel(0, 0).get_rgba()[0]
+        center_delta = abs(c_vig_center - p_base_center)
+        if center_delta > 0.005 or c_vig_corner <= p_base_corner:
+            record_fail("LD-09", "Vignette compensation", f"Center delta={center_delta:.4f}, corner={c_vig_corner:.4f}")
+            return
+        record_pass("LD-09", "Vignette illumination compensation", f"Corner lightened ({c_vig_corner:.4f} > {p_base_corner:.4f}) with center intact (delta {center_delta:.4f})")
+
+        # 34h: Conceal-All black layer mask
+        image.remove_layer(vig_layer)
+        cfg_con = proc.create_config()
+        cfg_con.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_con.set_property("image", image)
+        cfg_con.set_property("preset", "wide-angle-barrel")
+        cfg_con.set_property("mask-type", "conceal-all")
+
+        proc.run(cfg_con)
+        con_layer = image.get_layers()[0]
+        c_comp_corner = get_composite_pixel(image, 0, 0)[0]
+        c_comp_center = get_composite_pixel(image, 100, 100)[0]
+        con_diff = max(abs(c_comp_corner - p_base_corner), abs(c_comp_center - p_base_center))
+        if con_diff > 0.000001:
+            record_fail("LD-10", "Conceal-all black mask", f"Diff {con_diff:.6f} > 0")
+            return
+        record_pass("LD-10", "Conceal-All black layer mask", f"Distortion fully concealed by black mask (diff {con_diff:.6f})")
+
+        # 34i: Selection-aware mask & base preservation
+        image.remove_layer(con_layer)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "wide-angle-barrel")
+        cfg_sel.set_property("mask-type", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(150, 150).get_rgba()[0]
+        if mask_in < 0.99 or mask_out > 0.01:
+            record_fail("LD-11", "Selection mask confinement", f"In={mask_in:.4f}, Out={mask_out:.4f}")
+            return
+
+        # Base layer underneath must remain 100% untouched
+        p_base_after_corner = base.get_pixel(0, 0).get_rgba()[0]
+        p_base_after_center = base.get_pixel(100, 100).get_rgba()[0]
+        p_base_after_line = base.get_pixel(20, 20).get_rgba()[0]
+        base_diff = max(
+            abs(p_base_after_corner - p_base_corner),
+            abs(p_base_after_center - p_base_center),
+            abs(p_base_after_line - p_base_line_top)
+        )
+        if base_diff > 0.000001:
+            record_fail("LD-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("LD-11", "Active selection mask & base preservation", f"Selection confined (in={mask_in:.2f}, out={mask_out:.2f}) & base 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("LD-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -5196,6 +5413,7 @@ def run_all_tests():
     test_color_range()
     test_smart_sharpen()
     test_tilt_shift()
+    test_lens_distortion()
 
 
 

@@ -559,6 +559,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Lens Distortion & Perspective Correction Helper
+- **Source topic**: Artistic and stylize filters - Correct lens distortion and perspective / Correct wide-angle lens distortion (`Topics.txt` lines 482-483, `photoshop_docs.md` Section 424 lines 12650-12655 "Filter > Lens Correction")
+- **Photoshop behavior**: Geometric optical distortion correction (straightening outward curved barrel lines in wide-angle shots, unpinching inward curved lines in telephoto shots, rectilinear fisheye de-warping) combined with peripheral vignette illumination compensation to lighten dark optical corners while preserving central exposure.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-lens-distortion` in `<Image>/Filters/Distort/Lens Distortion...`, `<Image>/Filters/Retouching/Lens Distortion...`, and `<Image>/Layer/New Lens Correction Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`.
+- **Current capability**: Geometric distortion scaling (-100% to +100% via `gegl:spherize`), curvature factor (0.0 to 1.0), angle of view (0° to 180°), directional displacement modes (radial 360°, planar horizontal, planar vertical), peripheral vignette illumination compensation (-100% to +100% via `gegl:vignette`), curated presets (Wide-Angle Barrel Correction, Telephoto Pincushion Correction, Fisheye Defish, Architectural Perspective Flatten, Creative Fisheye Warp, Custom), versatile layer masks (Reveal All, Conceal All, Active Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:spherize`, `gegl:vignette`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 39).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, Wide-Angle Barrel unbending and corner brightening, Telephoto Pincushion positive expansion, Fisheye Defish rectilinear unbending, Architectural Perspective Flatten horizontal planar mode, Creative Fisheye Warp bulge with edge shading, vignette illumination compensation without center shift, Conceal-All black layer mask, active selection-aware mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 41):
+  1. `verify_config.py`: Section 6 passed with 33 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified, layer mode NORMAL verified, reveal-all mask attached, Wide-Angle Barrel Correction verified (negative displacement unbends lines with delta 0.2502 & brightens corners 1.0000 > 0.5029), Telephoto Pincushion positive expansion verified, Fisheye Defish rectilinear unbending with corner illumination lift verified (1.0000 > 0.5029), Architectural Perspective Flatten horizontal mode verified, Creative Fisheye Warp spherical bulge with peripheral vignette shading verified (0.0000 < 0.5029), Vignette illumination compensation verified with corners brightened and center delta 0.0000, Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 41).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

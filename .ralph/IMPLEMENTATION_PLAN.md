@@ -273,12 +273,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate focal strip preservation, progressive gradient blur transition, miniature saturation boost, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 39 — Non-Destructive Lens Distortion & Perspective Correction Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `lens-distortion` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`.
-- [ ] Create dedicated non-destructive Lens Distortion & Optical Perspective correction adjustment layer duplicating active drawable and correcting optical aberrations.
-- [ ] Support geometric distortion correction modes: Barrel distortion correction (negative displacement to straighten curved wide-angle lines), Pincushion distortion correction (positive displacement to restore telephoto pinching), Curvature, and Angle of view.
-- [ ] Support integrated peripheral vignette illumination compensation (lightening darkened optical corners), curated presets (Wide-Angle Barrel Correction, Telephoto Pincushion Correction, Fisheye Defish, Architectural Grid Flatten, Creative Fisheye Warp, Custom sliders), and non-destructive duplicate layer output with editable layer mask.
-- [ ] Register under menu path `<Image>/Filters/Distort/Lens Distortion...`, `<Image>/Filters/Retouching/Lens Distortion...`, and `<Image>/Layer`.
-- [ ] Validate barrel curvature flattening, pincushion expansion, corner luminance compensation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `lens-distortion` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`.
+- [x] Create dedicated non-destructive Lens Distortion & Optical Perspective correction adjustment layer duplicating active drawable and correcting optical aberrations.
+- [x] Support geometric distortion correction modes: Barrel distortion correction (negative displacement to straighten curved wide-angle lines), Pincushion distortion correction (positive displacement to restore telephoto pinching), Curvature, and Angle of view.
+- [x] Support integrated peripheral vignette illumination compensation (lightening darkened optical corners), curated presets (Wide-Angle Barrel Correction, Telephoto Pincushion Correction, Fisheye Defish, Architectural Perspective Flatten, Creative Fisheye Warp, Custom sliders), and non-destructive duplicate layer output with editable layer mask.
+- [x] Register under menu path `<Image>/Filters/Distort/Lens Distortion...`, `<Image>/Filters/Retouching/Lens Distortion...`, and `<Image>/Layer`.
+- [x] Validate barrel curvature flattening, pincushion expansion, corner luminance compensation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 40 — Non-Destructive Glowing Edges & Neon Stylize Filter Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `glowing-edges` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/glowing-edges/glowing-edges.py`.
+- [ ] Create dedicated non-destructive Glowing Edges / Neon Stylize adjustment layer duplicating active drawable and isolating luminous edge contours.
+- [ ] Support edge detection and glowing light properties: Edge Width / Radius (0.1 to 20.0px), Edge Brightness / Intensity (0.0 to 10.0), Smoothness / Pre-filtering, and Neon color grading modes (Full Neon Spectral, Electric Cyan, Hot Magenta, Laser Green, Golden Amber, Monochrome White).
+- [ ] Support compositing blend modes (Screen, Addition, Soft Light, Normal), layer opacity (10% to 100%), and attached editable layer mask (Reveal All, Conceal All, Selection).
+- [ ] Register under menu path `<Image>/Filters/Artistic/Glowing Edges...`, `<Image>/Filters/Stylize/Glowing Edges...`, and `<Image>/Layer`.
+- [ ] Validate edge luminance extraction, neon glow colorization, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

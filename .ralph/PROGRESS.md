@@ -970,6 +970,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 39 — Non-Destructive Lens Distortion & Perspective Correction Helper Plugin.
 
+## Iteration 41 — Non-Destructive Lens Distortion & Perspective Correction Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Lens Distortion & Perspective Correction Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 482: "Artistic and stylize filters - Correct lens distortion and perspective", line 483: "Artistic and stylize filters - Correct wide-angle lens distortion", and `photoshop_docs.md` Section 424 lines 12650-12655 "Filter > Lens Correction: Barrel Distortion: Straighten lines that curve outward from the center; Pincushion Distortion: Adjust lines that bend inward toward the image center; Vignetting: Balance brightness across your entire image"). Optical camera lenses inherently suffer from geometric distortions and peripheral illumination falloff. Wide-angle and zoom lenses produce convex outward "barrel" distortion that bends horizontal horizons and vertical architectural columns, telephoto lenses cause concave inward "pincushion" distortion that pinches compositions, and optical vignetting darkens image corners. In stock GIMP, users have no unified, non-destructive optical lens correction workflow; they must rely on manual transform grids or destructive filters with no presets, no lens-specific compensation parameters, and no non-destructive adjustment layering. Creating `python-fu-lens-distortion` brings full Photoshop Lens Correction parity: geometric distortion amount (-100% to +100% covering inverse barrel straightening and pincushion expansion), spherical curvature (0.0 to 1.0), camera angle of view (0° to 180°), displacement mode (radial 360°, horizontal planar, vertical planar), peripheral vignette illumination compensation (-100% to +100%), curated presets (Wide-Angle Barrel Correction, Telephoto Pincushion Correction, Fisheye Defish, Architectural Perspective Flatten, Creative Fisheye Warp, Custom), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/lens-distortion/lens-distortion.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-lens-distortion` with `gegl:spherize` displacement, `gegl:vignette` corner illumination compensation, curated presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `lens-distortion` (33 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (33 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 34 (asserting PDB registration, layer modes, mask attachment, Wide-Angle Barrel unbending [delta 0.2502] and corner brightening [1.0000 > 0.5029], Telephoto Pincushion positive expansion, Fisheye Defish rectilinear unbending with corner illumination lift [1.0000 > 0.5029], Architectural Perspective Flatten horizontal planar mode, Creative Fisheye Warp spherical bulge with peripheral vignette shading [0.0000 < 0.5029], Vignette illumination compensation with corner brightening and central exposure preservation [delta 0.0000], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Lens Distortion & Perspective Correction Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 39 complete and scheduled Phase 40 (Glowing Edges & Neon Stylize Filter Helper).
+- **Technical discoveries**:
+  - In `gegl:spherize`, the `curvature` property is bounded to [0.0, 1.0] (where 1.0 represents a full spherical hemisphere cap). Passing values > 1.0 triggers GLib property range warnings. Properly clamping `curvature` to [0.0, 1.0] and `angle-of-view` to [0.0, 180.0] ensures clean, warning-free execution across all presets.
+  - When applying vignette illumination compensation, setting `gegl:vignette` with white color and radius 1.25 lifts dark corner luminance without shifting central exposure (delta == 0.0000), replicating Photoshop's Lens Correction Vignette Amount slider behavior.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 33 plugins verified).
+    - Stage 2: `install.sh --batch` passed (33 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 317 tests across 34 test suites in 19.29s.
+    - Final quality gate: SUCCESS across all stages in 31.41s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `b5792f8`.
+- **Result**: Success.
+- **Next**: Phase 40 — Non-Destructive Glowing Edges & Neon Stylize Filter Helper Plugin.
+
+
 
 
 

@@ -813,3 +813,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin.
 
+## Iteration 35 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Swirling Night Sky & Twirl Distortion Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 664: "Swirling night sky filter", and `photoshop_docs.md` Section 422 line 12131 & Section 434 line 12677 Filter Gallery: Distort / Liquify: Twirl, Whirl, Pinch, Ripple geometric distortion effects). Replaces destructive layer warping with an isolated non-destructive Swirling Sky adjustment layer duplicating active drawable, applying rotational celestial twirl and inward/outward pinch dynamics (`gegl:whirl-pinch`), atmospheric ripple wave motion (`gegl:ripple`), curated celestial presets (Starry Night Vortex with 240° whirl and star ripple, Deep Space Whirlpool with 360° galactic spiral and screen glow, Atmospheric Cyclone with sweeping storm current and outward bloat, Subtle Sky Drift, Counter-Clockwise Spiral with inverted -180° rotation, and Custom Vortex), versatile compositing blend modes (Normal, Screen for glowing stars, Soft Light, Lighten Only), layer opacity, editable layer masks (Reveal All, Conceal All for selective horizon painting, Active Selection), and 100% preservation of underlying source layer pixels.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-swirling-sky` with whirl-pinch rotational distortion (`gegl:whirl-pinch`), star ripple turbulence (`gegl:ripple`), presets, blend modes, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `swirling-sky` (27 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (27 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 28 (asserting PDB registration, layer properties, mask attachment, Starry Night Vortex preset [rotational vortex twirl: star rotated into dark sky 0.947 > 0.30, lift +0.898], Deep Space Whirlpool preset [Screen mode 31 and 90.0% opacity], Atmospheric Cyclone preset [Soft Light mode 45 and 85.0% opacity], Counter-Clockwise Spiral preset [inverted rotation angle -180°, dark sky rotated into gold 0.202 < 0.25], Subtle Sky Drift preset, Conceal-All black layer mask [diff 0.000000], selection-aware sky mask [inside swirled 0.947 > 0.30, outside untouched diff 0.000000], custom sliders with 85.0% opacity and Lighten Only blend mode [36] verified, and 0.000000 base layer preservation across all points).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Swirling Night Sky & Twirl Distortion Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 33 complete and scheduled Phase 34 (Sky Selection & Replacement Helper).
+- **Technical discoveries**:
+  - `gegl:whirl-pinch` produces smooth, continuous coordinate displacement around the image center, perfectly rotating bright stars and celestial bodies through dark sky backgrounds without pixel tearing.
+  - Chaining `gegl:ripple` after `gegl:whirl-pinch` introduces micro-scale wave dynamics along the spiral arm trajectories, authentically simulating the wavy, impressionistic brushstrokes of Van Gogh's *The Starry Night*.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 27 plugins verified).
+    - Stage 2: `install.sh --batch` passed (27 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 245 tests across 28 test suites in 13.79s.
+    - Final quality gate: SUCCESS across all stages in 25.50s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `940035f`.
+- **Result**: Success.
+- **Next**: Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin.
+

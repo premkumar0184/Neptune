@@ -457,6 +457,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Swirling Night Sky & Twirl Distortion Helper
+- **Source topic**: Swirling night sky filter (`Topics.txt` line 664, and `photoshop_docs.md` Section 422 line 12131 & Section 434 line 12677 Filter Gallery: Distort / Liquify: Twirl, Whirl, Pinch, Ripple geometric distortion effects)
+- **Photoshop behavior**: Renders rotational celestial spiral vortices, rotating star trails, and atmospheric sky currents, simulating starry night artwork and dramatic galaxy spirals.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-swirling-sky` in `<Image>/Filters/Distort/Swirling Night Sky...`, `<Image>/Filters/Artistic/Swirling Night Sky...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies rotational celestial twirl and inward/outward pinch dynamics via GEGL `gegl:whirl-pinch`, atmospheric wave ripples via GEGL `gegl:ripple`, curated celestial presets (Starry Night Vortex with 240° whirl and star ripple, Deep Space Whirlpool with 360° galactic spiral and screen glow, Atmospheric Cyclone with sweeping storm current and outward bloat, Subtle Sky Drift, Counter-Clockwise Spiral with inverted -180° rotation, and Custom Vortex), versatile compositing blend modes (Normal, Screen for glowing stars, Soft Light, Lighten Only), layer opacity, editable layer masks (Reveal All, Conceal All for selective horizon painting, Active Selection), and 100% preservation of underlying source layer pixels.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:whirl-pinch`, `gegl:ripple`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 33).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Starry Night Vortex rotational twirl distortion (star rotated into dark sky), Deep Space Whirlpool Screen blend mode (31) and opacity, Atmospheric Cyclone Soft Light mode (45), Counter-Clockwise Spiral inverted rotation angle (-180°), Conceal-All black layer mask, selection-aware sky mask, custom sliders with Lighten Only mode, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 35):
+  1. `verify_config.py`: Section 6 passed with 27 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Starry Night Vortex verified with rotational vortex twirl (star rotated into dark sky: 0.947 > 0.30, lift +0.898), Deep Space Whirlpool preset verified with Screen blend mode (31) and 90.0% opacity, Atmospheric Cyclone preset verified with Soft Light mode (45) and 85.0% opacity, Counter-Clockwise Spiral preset verified with inverse rotation angle (-180°, dark sky rotated into gold 0.202 < 0.25), Subtle Sky Drift preset verified, Conceal-All black layer mask verified (0.000000 diff), selection-aware sky mask verified (inside swirled 0.947 > 0.30, outside untouched diff 0.000000), custom sliders with 85.0% opacity and Lighten Only blend mode (36) verified, and base layer pixels 100% untouched across all points (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 35).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

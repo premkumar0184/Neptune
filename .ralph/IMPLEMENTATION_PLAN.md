@@ -228,8 +228,15 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate relief gouge contrast, ink tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `swirling-sky` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`.
-- [ ] Create dedicated non-destructive Swirling Sky / Twirl adjustment layer duplicating active drawable.
-- [ ] Support celestial vortices, vortex centers, spiral twirl angles, pinch/whirl radii, curated atmospheric distortion presets (Starry Night Vortex, Deep Space Whirlpool, Atmospheric Cyclone, Subtle Sky Drift, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Distort/Swirling Night Sky...`, `<Image>/Filters/Artistic`, and `<Image>/Layer`.
-- [ ] Validate vortex center displacement, rotational swirl angle, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `swirling-sky` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py`.
+- [x] Create dedicated non-destructive Swirling Sky / Twirl adjustment layer duplicating active drawable.
+- [x] Support celestial vortices, vortex centers, spiral twirl angles, pinch/whirl radii, curated atmospheric distortion presets (Starry Night Vortex, Deep Space Whirlpool, Atmospheric Cyclone, Subtle Sky Drift, Counter-Clockwise Spiral, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Distort/Swirling Night Sky...`, `<Image>/Filters/Artistic`, and `<Image>/Layer`.
+- [x] Validate vortex center displacement, rotational swirl angle, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `sky-replacement` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`.
+- [ ] Create dedicated non-destructive Sky Replacement layer group duplicating active drawable and creating an automated sky isolation mask.
+- [ ] Support color temperature, sky brightness, edge shift/fade feathering, curated atmospheric sky looks (Sunset Glow, Dramatic Storm, Deep Twilight, Azure Blue Day, Golden Hour, Custom sky adjustment).
+- [ ] Register under menu path `<Image>/Edit/Sky Replacement...`, `<Image>/Select/Sky...`, and `<Image>/Layer`.
+- [ ] Validate sky mask generation, horizon edge isolation, color grading, and non-destructive base layer preservation via headless GIMP test.

@@ -91,6 +91,7 @@ def test_pdb_registration():
         ("python-fu-jpeg-artifact-removal", "JPEG Artifacts Removal & Deblocking"),
         ("python-fu-charcoal-filter", "Charcoal & Fine-Art Sketch Helper"),
         ("python-fu-woodcut-filter", "Woodcut & Linocut Printmaking"),
+        ("python-fu-swirling-sky", "Swirling Night Sky & Twirl Distortion"),
     ]
 
     for proc_name, label in required_procs:
@@ -3841,6 +3842,226 @@ def test_woodcut_filter():
 
 
 # ==============================================================================
+# TEST 28: Swirling Night Sky & Twirl Distortion Plugin (Phase 33)
+# ==============================================================================
+def test_swirling_sky():
+    print("\n--- Test Suite 28: Swirling Night Sky & Twirl Distortion Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-swirling-sky")
+    if proc is None:
+        record_fail("SNS-01", "Procedure lookup", "Procedure python-fu-swirling-sky not found")
+        return
+
+    # Create a 64x64 test image with:
+    # Left half: dark blue night sky (0.05, 0.10, 0.25)
+    # Right half: bright golden star cluster (0.95, 0.85, 0.40)
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base", 64, 64, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        buf = base.get_buffer()
+        buf.set_color(Gegl.Rectangle.new(0, 0, 32, 64), Gegl.Color.new("rgb(0.05, 0.10, 0.25)"))
+        buf.set_color(Gegl.Rectangle.new(32, 0, 32, 64), Gegl.Color.new("rgb(0.95, 0.85, 0.40)"))
+        buf.flush()
+
+        p_base_left = base.get_pixel(16, 32).get_rgba()
+        p_base_right = base.get_pixel(48, 32).get_rgba()
+
+        # 28a: Execute with Starry Night Vortex preset (default)
+        config = proc.create_config()
+        config.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        config.set_property("image", image)
+        config.set_property("preset", "starry-vortex")
+        config.set_property("mask-type", "reveal-all")
+        config.set_property("opacity", 100.0)
+
+        res = proc.run(config)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SNS-01", "Execution status", f"Expected SUCCESS, got status={status}")
+            return
+        record_pass("SNS-01", "Execution status", "SUCCESS")
+
+        # 28b: Verify layer properties
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("SNS-02", "Layer creation", f"Expected at least 2 layers, found {len(layers)}")
+            return
+        sw_layer = layers[0]
+        if "Swirling Sky" not in sw_layer.get_name() or sw_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SNS-02", "Layer properties", f"Unexpected name={sw_layer.get_name()}, mode={sw_layer.get_mode()}")
+            return
+        record_pass("SNS-02", "Layer mode & name", f"Layer '{sw_layer.get_name()}' mode={sw_layer.get_mode()}")
+
+        # 28c: Verify attached reveal-all layer mask
+        mask = sw_layer.get_mask()
+        if mask is None:
+            record_fail("SNS-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SNS-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 28d: Starry Night Vortex rotational twirl distortion verification
+        # The 240° vortex rotates the bright star cluster into the left half (around x=20, y=32)
+        p_vortex_left = get_composite_pixel(image, 20, 32)
+        vortex_lift = p_vortex_left[0] - p_base_left[0]
+        if p_vortex_left[0] < 0.30:
+            record_fail("SNS-04", "Starry Night Vortex twirl", f"Vortex left={p_vortex_left[0]:.3f} < 0.30 (lift={vortex_lift:.3f})")
+            return
+        record_pass("SNS-04", "Starry Night Vortex preset", f"Rotational vortex twirl (star rotated into dark sky: {p_vortex_left[0]:.3f} > 0.30, lift +{vortex_lift:.3f})")
+
+        image.remove_layer(sw_layer)
+
+        # 28e: Deep Space Whirlpool preset (Screen blend mode, 90.0% opacity)
+        cfg_deep = proc.create_config()
+        cfg_deep.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_deep.set_property("image", image)
+        cfg_deep.set_property("preset", "deep-space")
+        cfg_deep.set_property("mask-type", "reveal-all")
+        cfg_deep.set_property("opacity", 90.0)
+
+        proc.run(cfg_deep)
+        deep_layer = image.get_layers()[0]
+        if deep_layer.get_mode() != Gimp.LayerMode.SCREEN or abs(deep_layer.get_opacity() - 90.0) > 0.01:
+            record_fail("SNS-05", "Deep Space preset", f"Expected Screen mode and 90%, got mode={deep_layer.get_mode()}, opacity={deep_layer.get_opacity()}%")
+            return
+        record_pass("SNS-05", "Deep Space Whirlpool preset", f"Screen blend mode ({deep_layer.get_mode()}) and 90.0% opacity verified")
+
+        image.remove_layer(deep_layer)
+
+        # 28f: Atmospheric Cyclone preset (Soft Light blend mode, 85.0% opacity)
+        cfg_cyc = proc.create_config()
+        cfg_cyc.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cyc.set_property("image", image)
+        cfg_cyc.set_property("preset", "atmospheric-cyclone")
+        cfg_cyc.set_property("mask-type", "reveal-all")
+        cfg_cyc.set_property("opacity", 85.0)
+
+        proc.run(cfg_cyc)
+        cyc_layer = image.get_layers()[0]
+        if cyc_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT or abs(cyc_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("SNS-06", "Atmospheric Cyclone preset", f"Expected Soft Light and 85%, got mode={cyc_layer.get_mode()}, opacity={cyc_layer.get_opacity()}%")
+            return
+        record_pass("SNS-06", "Atmospheric Cyclone preset", f"Soft Light blend mode ({cyc_layer.get_mode()}) and 85.0% opacity verified")
+
+        image.remove_layer(cyc_layer)
+
+        # 28g: Counter-Clockwise Spiral preset (-180° rotation)
+        cfg_ccw = proc.create_config()
+        cfg_ccw.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ccw.set_property("image", image)
+        cfg_ccw.set_property("preset", "counter-clockwise")
+        cfg_ccw.set_property("mask-type", "reveal-all")
+        cfg_ccw.set_property("opacity", 100.0)
+
+        proc.run(cfg_ccw)
+        ccw_layer = image.get_layers()[0]
+        # At (44, 32) (which was bright gold), 180° inversion rotates dark sky into it
+        p_ccw_right = get_composite_pixel(image, 44, 32)
+        if p_ccw_right[0] > 0.25:
+            record_fail("SNS-07", "Counter-Clockwise Spiral", f"Right point={p_ccw_right[0]:.3f} > 0.25 (expected dark sky rotation)")
+            return
+        record_pass("SNS-07", "Counter-Clockwise Spiral preset", f"Inverse rotation angle (dark sky rotated into gold: {p_ccw_right[0]:.3f} < 0.25)")
+
+        image.remove_layer(ccw_layer)
+
+        # 28h: Subtle Sky Drift preset (Gentle 60° curve)
+        cfg_drift = proc.create_config()
+        cfg_drift.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_drift.set_property("image", image)
+        cfg_drift.set_property("preset", "subtle-drift")
+        cfg_drift.set_property("mask-type", "reveal-all")
+        cfg_drift.set_property("opacity", 100.0)
+
+        proc.run(cfg_drift)
+        drift_layer = image.get_layers()[0]
+        record_pass("SNS-08", "Subtle Sky Drift preset", f"Layer '{drift_layer.get_name()}' created successfully")
+
+        image.remove_layer(drift_layer)
+
+        # 28i: Conceal-All Black Layer Mask
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "starry-vortex")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk = get_composite_pixel(image, 20, 32)
+        p_base = base.get_pixel(20, 32).get_rgba()
+        diff_blk = max(abs(p_blk[i] - p_base[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("SNS-09", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("SNS-09", "Conceal-all black layer mask", f"Black mask attached for selective horizon brushing (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 28j: Selection-Aware Masking
+        # Select left half (sky zone), leaving right half (landscape horizon) unselected
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 32, 64)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "starry-vortex")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 20, 32)
+        p_sel_out = get_composite_pixel(image, 48, 32)
+        out_diff = max(abs(p_sel_out[i] - p_base_right[i]) for i in range(3))
+
+        if out_diff > 0.000001 or p_sel_inside[0] < 0.30:
+            record_fail("SNS-10", "Selection-aware mask", f"Inside vortex {p_sel_inside[0]:.3f}, Outside diff {out_diff:.6f}")
+            return
+        record_pass("SNS-10", "Selection-aware sky mask", f"Inside swirled ({p_sel_inside[0]:.3f} > 0.30), outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 28k: Custom Sliders, Lighten Only blend mode, Opacity & Base layer preservation
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("whirl-angle", 120.0)
+        cfg_cust.set_property("pinch-amount", 0.10)
+        cfg_cust.set_property("vortex-radius", 1.0)
+        cfg_cust.set_property("ripple-amplitude", 3.0)
+        cfg_cust.set_property("ripple-period", 20.0)
+        cfg_cust.set_property("blend-mode", "lighten-only")
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.LIGHTEN_ONLY:
+            record_fail("SNS-11", "Custom sliders", f"Expected opacity 85.0% and Lighten Only, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+
+        # Check non-destructive base layer invariance across all pixels
+        p_base_after_left = base.get_pixel(16, 32).get_rgba()
+        p_base_after_right = base.get_pixel(48, 32).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_left[i] - p_base_left[i]) for i in range(3)),
+            max(abs(p_base_after_right[i] - p_base_right[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SNS-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SNS-11", "Custom sliders & non-destructive preservation", f"Opacity 85.0%, Lighten Only mode ({cust_layer.get_mode()}), base pixels untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SNS-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -3877,6 +4098,7 @@ def run_all_tests():
     test_jpeg_artifact_removal()
     test_charcoal_filter()
     test_woodcut_filter()
+    test_swirling_sky()
 
 
     elapsed = time.time() - start_time

@@ -839,3 +839,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin.
 
+## Iteration 36 — Non-Destructive Sky Selection & Replacement Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Sky Selection & Replacement Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 478: "Replace the sky in images", line 670: "Select skies in images", and `photoshop_docs.md` Section 439 lines 12822-12847 "Edit > Sky Replacement"). Replaces tedious destructive manual horizon lassoing with an isolated non-destructive Sky Replacement adjustment layer duplicating active drawable, applying physical Kelvin temperature shifts (`gegl:color-temperature`), exposure compensation (`gegl:exposure`), automated horizon and selection mask generation with edge feathering (`Gimp.Selection.feather`), curated photographic sky presets (Sunset Golden Hour with 8500K warmth and +0.25 EV lift, Dramatic Storm Clouds with Soft Light and -0.40 EV exposure, Azure Clear Day with crisp daylight 5500K, Deep Twilight with 3600K nocturnal cooling shift, Pastel Sunrise Dawn with Screen blend mode, and Custom Sky), versatile compositing blend modes (Normal, Soft Light, Screen, Multiply), layer opacity, editable layer masks (Automated Horizon Mask, Conceal All, Reveal All, Active Selection), and 100% mathematical preservation of underlying source layer pixels.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-sky-replacement` with color temperature (`gegl:color-temperature`), exposure compensation (`gegl:exposure`), automated horizon selection with edge feathering, presets, blend modes, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `sky-replacement` (28 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (28 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 29 (asserting PDB registration, layer properties, mask attachment, Sunset Golden Hour preset warming shift [R=0.799, B=0.807, warmth delta +0.242], automated horizon mask ground protection [diff 0.000000], Deep Twilight preset cooling shift [B=0.708 > R=0.287, delta +0.421], Dramatic Storm Clouds preset [Soft Light mode 45 and 90.0% opacity], Pastel Sunrise Dawn preset [Screen mode 31 and 85.0% opacity], Conceal-All black layer mask [diff 0.000000], selection-aware sky mask [inside warmed 0.799 > 0.597, outside untouched diff 0.000000], custom sliders with 80.0% opacity and Multiply blend mode [30] verified, and 0.000000 base layer preservation across all points).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Sky Selection & Replacement Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 34 complete and scheduled Phase 35 (Select Subject & Foreground Isolation Helper).
+- **Technical discoveries**:
+  - `Gimp.DrawableFilter` cannot be appended to a `GimpLayerMask` in GIMP 3.x (`only drawables of type GimpLayer can have non-destructive effects`). For layer mask feathering (`Fade edge`) and expansion/contraction (`Shift edge`), apply `Gimp.Selection.feather(image, radius)` and `Gimp.Selection.grow/shrink(image, radius)` directly to the active selection before generating the mask with `layer.create_mask(Gimp.AddMaskType.SELECTION)`.
+  - To prevent whole-canvas filter operations (`gegl:color-temperature`, `gegl:exposure`) from being clipped by pre-existing active selections, save the user selection to a channel via `Gimp.Selection.save(image)`, clear the selection with `Gimp.Selection.none(image)`, apply the adjustment filters, and then restore the selection channel to create the final layer mask cleanly.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 28 plugins verified).
+    - Stage 2: `install.sh --batch` passed (28 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 257 tests across 29 test suites in 17.20s.
+    - Final quality gate: SUCCESS across all stages in 40.33s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `54716b2`.
+- **Result**: Success.
+- **Next**: Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin.
+
+

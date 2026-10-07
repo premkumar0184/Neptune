@@ -92,6 +92,7 @@ def test_pdb_registration():
         ("python-fu-charcoal-filter", "Charcoal & Fine-Art Sketch Helper"),
         ("python-fu-woodcut-filter", "Woodcut & Linocut Printmaking"),
         ("python-fu-swirling-sky", "Swirling Night Sky & Twirl Distortion"),
+        ("python-fu-sky-replacement", "Sky Selection & Replacement Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -4062,6 +4063,220 @@ def test_swirling_sky():
 
 
 # ==============================================================================
+# TEST 29: Sky Selection & Replacement Helper Plugin (Phase 34)
+# ==============================================================================
+def test_sky_replacement():
+    print("\n--- Test Suite 29: Sky Selection & Replacement Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-sky-replacement")
+    if proc is None:
+        record_fail("SR-01", "Procedure lookup", "Procedure python-fu-sky-replacement not found")
+        return
+
+    # Create a 64x64 test image with:
+    # Upper half (y < 32): cool daylight sky (0.60, 0.70, 0.85)
+    # Lower half (y >= 32): terrain ground (0.30, 0.40, 0.20)
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base", 64, 64, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        buf = base.get_buffer()
+        buf.set_color(Gegl.Rectangle.new(0, 0, 64, 32), Gegl.Color.new("rgb(0.60, 0.70, 0.85)"))
+        buf.set_color(Gegl.Rectangle.new(0, 32, 64, 32), Gegl.Color.new("rgb(0.30, 0.40, 0.20)"))
+        buf.flush()
+
+        p_base_sky = base.get_pixel(32, 16).get_rgba()
+        p_base_ground = base.get_pixel(32, 48).get_rgba()
+
+        # 29a: Execute with Sunset Golden Hour preset (default)
+        config = proc.create_config()
+        config.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        config.set_property("image", image)
+        config.set_property("preset", "sunset-gold")
+        config.set_property("mask-type", "automated-horizon")
+        config.set_property("fade-edge", 0.0)
+        config.set_property("opacity", 100.0)
+
+        res = proc.run(config)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SR-01", "Execution status", f"Expected SUCCESS, got status={status}")
+            return
+        record_pass("SR-01", "Execution status", "SUCCESS")
+
+        # 29b: Verify layer properties
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("SR-02", "Layer creation", f"Expected at least 2 layers, found {len(layers)}")
+            return
+        sky_layer = layers[0]
+        if "Sky Replacement" not in sky_layer.get_name() or sky_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SR-02", "Layer properties", f"Unexpected name={sky_layer.get_name()}, mode={sky_layer.get_mode()}")
+            return
+        record_pass("SR-02", "Layer mode & name", f"Layer '{sky_layer.get_name()}' mode={sky_layer.get_mode()}")
+
+        # 29c: Verify attached layer mask
+        mask = sky_layer.get_mask()
+        if mask is None:
+            record_fail("SR-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SR-03", "Layer mask attachment", "Automated horizon mask attached")
+
+        # 29d: Sunset Golden Hour warm temperature shift in sky
+        # 8500K warming shift: in sky (y=16), red increases and blue decreases relative to base
+        p_sunset_sky = get_composite_pixel(image, 32, 16)
+        warmth_delta = (p_sunset_sky[0] - p_sunset_sky[2]) - (p_base_sky[0] - p_base_sky[2])
+        if warmth_delta < 0.05:
+            record_fail("SR-04", "Sunset warmth shift", f"Warmth delta={warmth_delta:.4f} < 0.05")
+            return
+        record_pass("SR-04", "Sunset Golden Hour preset", f"Warming shift in sky (R={p_sunset_sky[0]:.3f}, B={p_sunset_sky[2]:.3f}, warmth delta +{warmth_delta:.3f})")
+
+        # 29e: Automated horizon mask ground protection
+        p_sunset_ground = get_composite_pixel(image, 32, 48)
+        ground_diff = max(abs(p_sunset_ground[i] - p_base_ground[i]) for i in range(3))
+        if ground_diff > 0.000001:
+            record_fail("SR-05", "Horizon protection", f"Ground altered by {ground_diff:.6f} > 0")
+            return
+        record_pass("SR-05", "Automated horizon mask protection", f"Ground zone 100% protected under horizon mask (diff {ground_diff:.6f})")
+
+        image.remove_layer(sky_layer)
+
+        # 29f: Deep Twilight preset (3600K nocturnal cooling shift)
+        cfg_twi = proc.create_config()
+        cfg_twi.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_twi.set_property("image", image)
+        cfg_twi.set_property("preset", "deep-twilight")
+        cfg_twi.set_property("mask-type", "automated-horizon")
+        cfg_twi.set_property("opacity", 100.0)
+
+        proc.run(cfg_twi)
+        twi_layer = image.get_layers()[0]
+        p_twi_sky = get_composite_pixel(image, 32, 16)
+        blue_dominance = p_twi_sky[2] - p_twi_sky[0]
+        if blue_dominance < 0.15:
+            record_fail("SR-06", "Deep Twilight cooling", f"B={p_twi_sky[2]:.3f}, R={p_twi_sky[0]:.3f}, diff={blue_dominance:.3f} < 0.15")
+            return
+        record_pass("SR-06", "Deep Twilight preset", f"Sapphire blue cooling dominance B={p_twi_sky[2]:.3f} > R={p_twi_sky[0]:.3f} (delta +{blue_dominance:.3f})")
+
+        image.remove_layer(twi_layer)
+
+        # 29g: Dramatic Storm Clouds preset (Soft Light mode, -0.40 EV exposure)
+        cfg_storm = proc.create_config()
+        cfg_storm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_storm.set_property("image", image)
+        cfg_storm.set_property("preset", "dramatic-storm")
+        cfg_storm.set_property("mask-type", "automated-horizon")
+        cfg_storm.set_property("opacity", 90.0)
+
+        proc.run(cfg_storm)
+        storm_layer = image.get_layers()[0]
+        if storm_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT or abs(storm_layer.get_opacity() - 90.0) > 0.01:
+            record_fail("SR-07", "Dramatic Storm mode", f"Expected Soft Light and 90%, got mode={storm_layer.get_mode()}, opacity={storm_layer.get_opacity()}%")
+            return
+        record_pass("SR-07", "Dramatic Storm Clouds preset", f"Soft Light mode ({storm_layer.get_mode()}) and 90.0% opacity verified")
+
+        image.remove_layer(storm_layer)
+
+        # 29h: Pastel Sunrise Dawn preset (Screen mode, 85.0% opacity)
+        cfg_dawn = proc.create_config()
+        cfg_dawn.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dawn.set_property("image", image)
+        cfg_dawn.set_property("preset", "pastel-dawn")
+        cfg_dawn.set_property("mask-type", "automated-horizon")
+        cfg_dawn.set_property("opacity", 85.0)
+
+        proc.run(cfg_dawn)
+        dawn_layer = image.get_layers()[0]
+        if dawn_layer.get_mode() != Gimp.LayerMode.SCREEN or abs(dawn_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("SR-08", "Pastel Dawn mode", f"Expected Screen and 85%, got mode={dawn_layer.get_mode()}, opacity={dawn_layer.get_opacity()}%")
+            return
+        record_pass("SR-08", "Pastel Sunrise Dawn preset", f"Screen blend mode ({dawn_layer.get_mode()}) and 85.0% opacity verified")
+
+        image.remove_layer(dawn_layer)
+
+        # 29i: Conceal-All Black Layer Mask
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "sunset-gold")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk = get_composite_pixel(image, 32, 16)
+        p_base = base.get_pixel(32, 16).get_rgba()
+        diff_blk = max(abs(p_blk[i] - p_base[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("SR-09", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("SR-09", "Conceal-all black layer mask", f"Black mask attached for selective brush painting (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 29j: Selection-Aware Masking
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 64, 20)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "sunset-gold")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("fade-edge", 0.0)
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 32, 10)
+        p_sel_out = get_composite_pixel(image, 32, 48)
+        out_diff = max(abs(p_sel_out[i] - p_base_ground[i]) for i in range(3))
+
+        if out_diff > 0.000001 or p_sel_inside[0] <= p_base_sky[0]:
+            record_fail("SR-10", "Selection-aware mask", f"Inside red {p_sel_inside[0]:.3f}, Outside diff {out_diff:.6f}")
+            return
+        record_pass("SR-10", "Selection-aware sky mask", f"Inside sky warmed ({p_sel_inside[0]:.3f} > {p_base_sky[0]:.3f}), outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 29k: Custom Sliders, Multiply blend mode, Opacity & Base layer preservation
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("color-temperature", 9000.0)
+        cfg_cust.set_property("brightness", 0.20)
+        cfg_cust.set_property("horizon-position", 50.0)
+        cfg_cust.set_property("fade-edge", 5.0)
+        cfg_cust.set_property("blend-mode", "multiply")
+        cfg_cust.set_property("opacity", 80.0)
+        cfg_cust.set_property("mask-type", "automated-horizon")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 80.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.MULTIPLY:
+            record_fail("SR-11", "Custom sliders", f"Expected opacity 80.0% and Multiply, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+
+        # Check non-destructive base layer invariance across all pixels
+        p_base_after_sky = base.get_pixel(32, 16).get_rgba()
+        p_base_after_ground = base.get_pixel(32, 48).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_sky[i] - p_base_sky[i]) for i in range(3)),
+            max(abs(p_base_after_ground[i] - p_base_ground[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SR-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SR-11", "Custom sliders & non-destructive preservation", f"Opacity 80.0%, Multiply mode ({cust_layer.get_mode()}), base pixels untouched (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SR-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -4099,6 +4314,7 @@ def run_all_tests():
     test_charcoal_filter()
     test_woodcut_filter()
     test_swirling_sky()
+    test_sky_replacement()
 
 
     elapsed = time.time() - start_time

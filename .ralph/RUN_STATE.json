@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-35",
+  "run_id": "iteration-36",
   "status": "completed",
-  "iteration": 35,
-  "current_task": "Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin",
+  "iteration": 36,
+  "current_task": "Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "940035f",
-  "last_verified_task": "Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin",
+  "last_commit": "54716b2",
+  "last_verified_task": "Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-07T19:20:46+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 27 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 27 plugins), Stage 3 (tests/gimp_e2e_suite.py with 245/245 assertions passing across 28 test suites, asserting PDB registration, layer properties, mask attachment, Starry Night Vortex rotational twirl distortion [star rotated into dark sky 0.947 > 0.30, lift +0.898], Deep Space Whirlpool Screen blend mode [31] and 90.0% opacity, Atmospheric Cyclone Soft Light mode [45] and 85.0% opacity, Counter-Clockwise Spiral inverted rotation angle [-180°, dark sky rotated into gold 0.202 < 0.25], Subtle Sky Drift preset, Conceal-All black layer mask [diff 0.000000], selection-aware sky mask [inside swirled 0.947 > 0.30, outside untouched diff 0.000000], custom sliders with 85.0% opacity and Lighten Only blend mode [36] verified, and 0.000000 base layer preservation across all points in 13.79s)."
+    "verified_at": "2026-10-07T19:33:06+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 28 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 28 plugins), Stage 3 (tests/gimp_e2e_suite.py with 257/257 assertions passing across 29 test suites, asserting PDB registration, layer properties, mask attachment, Sunset Golden Hour preset warming shift in sky [R=0.799, B=0.807, warmth delta +0.242], automated horizon mask protection [ground zone 100% protected under horizon mask diff 0.000000], Deep Twilight preset cooling shift [B=0.708 > R=0.287, delta +0.421], Dramatic Storm Clouds preset verified with Soft Light mode 45 and 90.0% opacity, Pastel Sunrise Dawn preset verified with Screen mode 31 and 85.0% opacity, Conceal-All black layer mask [diff 0.000000], selection-aware sky mask [inside warmed 0.799 > 0.597, outside untouched diff 0.000000], custom sliders with 80.0% opacity and Multiply blend mode 30 verified, and 0.000000 base layer preservation across all points in 17.20s)."
   },
-  "next_task": "Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin",
-  "last_transition": "2026-10-07T19:23:45+05:30",
+  "next_task": "Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin",
+  "last_transition": "2026-10-07T19:36:20+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

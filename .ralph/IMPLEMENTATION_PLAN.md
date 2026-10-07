@@ -235,8 +235,17 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate vortex center displacement, rotational swirl angle, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `sky-replacement` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`.
-- [ ] Create dedicated non-destructive Sky Replacement layer group duplicating active drawable and creating an automated sky isolation mask.
-- [ ] Support color temperature, sky brightness, edge shift/fade feathering, curated atmospheric sky looks (Sunset Glow, Dramatic Storm, Deep Twilight, Azure Blue Day, Golden Hour, Custom sky adjustment).
-- [ ] Register under menu path `<Image>/Edit/Sky Replacement...`, `<Image>/Select/Sky...`, and `<Image>/Layer`.
-- [ ] Validate sky mask generation, horizon edge isolation, color grading, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `sky-replacement` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`.
+- [x] Create dedicated non-destructive Sky Replacement adjustment layer duplicating active drawable and creating an automated sky isolation mask.
+- [x] Support physical Kelvin color temperature, exposure compensation, edge shift/fade feathering, curated atmospheric sky looks (Sunset Golden Hour, Dramatic Storm Clouds, Azure Clear Day, Deep Twilight, Pastel Sunrise Dawn, Custom sky adjustment).
+- [x] Register under menu path `<Image>/Edit/Sky Replacement...`, `<Image>/Select/Sky Replacement...`, `<Image>/Filters/Retouching/Sky Replacement...`, and `<Image>/Layer`.
+- [x] Validate sky mask generation, horizon edge isolation, color grading, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `select-subject` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/select-subject/select-subject.py`.
+- [ ] Create dedicated non-destructive Select Subject / Foreground Isolation helper that analyzes center-weighted saliency, edge contrast gradients, and alpha segmentation to automatically generate subject selections and layer masks.
+- [ ] Support mask refinement options: edge feathering (radius 0-50px), edge contraction/expansion (grow/shrink), contrast/smoothness refinement, inverted mask toggle (Select Subject vs Select Background), and non-destructive duplicate layer output with attached mask.
+- [ ] Support curated subject isolation presets (Portrait Subject, Crisp Product / Object, Soft Edge / Hair Refinement, Macro Foreground, Background Removal Matte, Custom sliders).
+- [ ] Register under menu path `<Image>/Select/Select Subject...`, `<Image>/Select/Select Background...`, `<Image>/Filters/Retouching/Select Subject...`, and `<Image>/Layer`.
+- [ ] Validate automated subject mask generation, foreground protection, edge refinement, inverted background selection, and non-destructive source layer preservation via headless GIMP test.
+

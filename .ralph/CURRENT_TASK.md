@@ -1,53 +1,54 @@
-# Current Task — Iteration 35
+# Current Task — Iteration 36
 
 ## Task
-**Phase 33 — Non-Destructive Swirling Night Sky & Twirl Distortion Helper Plugin**
+**Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 664: "Swirling night sky filter", and `photoshop_docs.md` Section 422 lines 12131 & Section 434 line 12677 Filter Gallery: Distort / Liquify: Twirl, Whirl, Pinch, Ripple geometric distortion effects), artistic landscape and night photography often features dramatic celestial spiral vortices, rotating star trails, and atmospheric sky currents inspired by iconic works such as Van Gogh's *The Starry Night*. In Photoshop, artists achieve this effect by applying Twirl and Pinch distortions to sky layers, compositing them non-destructively over landscape horizons with Screen, Soft Light, or Normal blend modes and protective horizon masks. In stock GIMP, distortion filters are applied destructively directly to the active layer, warping the ground, trees, and buildings along with the sky, lacking curated celestial presets, and lacking non-destructive adjustment layers or blend modes. Creating a dedicated native Python 3 helper plugin (`python-fu-swirling-sky`) provides an isolated non-destructive Swirling Sky adjustment layer duplicating the active drawable, applying rotational celestial twirl and pinch dynamics (`gegl:whirl-pinch`), atmospheric ripple wave motion (`gegl:ripple`), curated celestial presets (Starry Night Vortex, Deep Space Whirlpool, Atmospheric Cyclone, Subtle Sky Drift, Counter-Clockwise Spiral, Custom Vortex), versatile compositing blend modes (Normal, Screen for glowing stars, Soft Light, Lighten Only), layer opacity, editable layer masks (Reveal All, Conceal All for selective horizon brushing, and Active Selection for sky masks), and 100% preservation of underlying source pixels.
+In Adobe Photoshop (`Topics.txt` line 478: "Replace the sky in images", line 670: "Select skies in images", and `photoshop_docs.md` Section 439 lines 12822-12847 "Edit > Sky Replacement"), landscape, architectural, and outdoor photographers frequently encounter washed out, overexposed, or overcast skies that detract from otherwise compelling foreground compositions. In Photoshop, the Sky Replacement feature automatically detects the horizon/sky contour, isolates the sky region via edge-feathered alpha masks, and blends replacement atmospheric lighting, Kelvin color temperatures, and exposures across the celestial hemisphere while keeping ground geometry and foreground subjects 100% untouched. In stock GIMP, users must manually paint complex selections around tree branches and building skylines, destructively color-correct the active drawable, or manually manipulate multiple separate layers without automated horizon feathering or curated atmospheric presets. Creating a dedicated native Python 3 helper plugin (`python-fu-sky-replacement`) provides an isolated non-destructive Sky Replacement adjustment layer duplicating the active drawable, applying physical Kelvin temperature shifts (`gegl:color-temperature`), exposure adjustments (`gegl:exposure`), automated horizon and selection mask generation with edge feathering (`Gimp.Selection.feather`), curated photographic sky presets (Sunset Golden Hour, Dramatic Storm Clouds, Azure Clear Day, Deep Twilight, Pastel Sunrise Dawn, and Custom Sky), versatile compositing blend modes (Normal, Soft Light, Screen, Multiply), layer opacity, editable layer masks (Automated Horizon Mask, Conceal All, Reveal All, and Active Selection), and 100% mathematical preservation of underlying source layer pixels.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/swirling-sky.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `swirling-sky` in `REQUIRED_PLUGINS`, updating audit inventory to 27 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `sky-replacement` in `REQUIRED_PLUGINS`, updating audit inventory to 28 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 28: `test_swirling_sky`, 11 assertions SNS-01 through SNS-11)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Swirling Night Sky entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 33 status)
-- `.ralph/PROGRESS.md` (Log Iteration 35 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 35 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 29: `test_sky_replacement`, 11 assertions SR-01 through SR-11)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Sky Selection & Replacement entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 34 status and schedule Phase 35)
+- `.ralph/PROGRESS.md` (Log Iteration 36 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 36 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/swirling-sky/` created with `swirling-sky.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/` created with `sky-replacement.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure `python-fu-swirling-sky` registered in GIMP PDB under:
-   - `<Image>/Filters/Distort/Swirling Night Sky...`
-   - `<Image>/Filters/Artistic/Swirling Night Sky...`
-   - `<Image>/Layer/New Swirling Sky Layer...`
+3. [x] PDB procedure `python-fu-sky-replacement` registered in GIMP PDB under:
+   - `<Image>/Edit/Sky Replacement...`
+   - `<Image>/Select/Sky Replacement...`
+   - `<Image>/Filters/Retouching/Sky Replacement...`
+   - `<Image>/Layer/New Sky Replacement Layer...`
 4. [x] Non-destructive adjustment layer created duplicating active drawable.
-5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 28):
+5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 29):
    - Base layer pixels underneath remain 100% untouched (`diff == 0.000000`).
-   - Starry Night Vortex preset verified: 240° celestial vortex rotates pixels across diagonal/polar axes (star rotated into dark sky: 0.947 > 0.30, lift +0.898).
-   - Deep Space Whirlpool preset verified: 360° vortex with Screen blend mode (31) and 90.0% opacity.
-   - Atmospheric Cyclone preset verified: Outward bloat pinch (-0.15) with Soft Light blend mode (45) and 85.0% opacity.
-   - Counter-Clockwise Spiral preset verified: Inverted rotation angle (-180°) rotating dark sky into gold (0.202 < 0.25).
-   - Subtle Sky Drift preset verified: Layer created cleanly.
-   - Conceal-All black layer mask verified: Composite equals base layer (0.000000 diff) ready for selective horizon painting.
-   - Selection-aware mask verified: Active sky selection swirled while unselected ground remains untouched (0.000000 diff).
-   - Custom sliders with 85.0% opacity, 120° whirl, 0.10 pinch, and Lighten Only blend mode (36) verified.
-6. [x] `verify_config.py` Section 6 passes with all 27 required plugins audited.
-7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (245/245 tests passing in 25.50s).
+   - Sunset Golden Hour preset verified: Warming shift in sky (R=0.799, B=0.807, warmth delta +0.242).
+   - Automated horizon mask protection verified: Ground zone 100% protected under horizon mask (`diff == 0.000000`).
+   - Deep Twilight preset verified: 3600K nocturnal cooling shift (B=0.708 > R=0.287, delta +0.421).
+   - Dramatic Storm Clouds preset verified: Soft Light mode (45) and 90.0% opacity.
+   - Pastel Sunrise Dawn preset verified: Screen blend mode (31) and 85.0% opacity.
+   - Conceal-All black layer mask verified: Composite equals base layer (0.000000 diff) ready for brush painting.
+   - Selection-aware mask verified: Active sky selection warmed while unselected ground remains untouched (0.000000 diff).
+   - Custom sliders with 80.0% opacity, 9000K temperature, and Multiply blend mode (30) verified.
+6. [x] `verify_config.py` Section 6 passes with all 28 required plugins audited.
+7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (257/257 tests passing in 40.33s).
 
 ## Verification Evidence
 ```
 Command: python3 tests/run_all_tests.py
 Result:
-Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (27/27 plugins audited)
-Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (27 plugins deployed)
+Stage 1: Configuration & Plugin Inventory Audit (verify_config.py) -> PASSED (28/28 plugins audited)
+Stage 2: Installer Non-Interactive Deployment Test (install.sh --batch) -> PASSED (28 plugins deployed)
 Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suite.py) -> PASSED:
-  [PASS] PDB-REG: 27/27 plugins registered including python-fu-swirling-sky
+  [PASS] PDB-REG: 28/28 plugins registered including python-fu-sky-replacement
   [PASS] FS-01 to FS-05: Frequency Separation (5 tests passed)
   [PASS] LM-01 to LM-04: Luminosity Masks (4 tests passed)
   [PASS] DB-01 to DB-05: Dodge & Burn Layer (5 tests passed)
@@ -74,25 +75,26 @@ Stage 3: Headless GIMP Plugin Suite Regression Verification (tests/gimp_e2e_suit
   [PASS] JAR-01 to JAR-11: JPEG Artifacts Removal & Deblocking (11 tests passed)
   [PASS] CF-01 to CF-11: Charcoal & Fine-Art Sketch (11 tests passed)
   [PASS] WF-01 to WF-11: Woodcut & Linocut Printmaking (11 tests passed)
-  [PASS] SNS-01: Execution status (SUCCESS)
-  [PASS] SNS-02: Layer mode & name (Layer 'Swirling Sky (Starry Night Vortex)' mode=28)
-  [PASS] SNS-03: Layer mask attachment (Reveal-all mask attached)
-  [PASS] SNS-04: Starry Night Vortex preset (Rotational vortex twirl: 0.947 > 0.30, lift +0.898)
-  [PASS] SNS-05: Deep Space Whirlpool preset (Screen blend mode (31) and 90.0% opacity verified)
-  [PASS] SNS-06: Atmospheric Cyclone preset (Soft Light blend mode (45) and 85.0% opacity verified)
-  [PASS] SNS-07: Counter-Clockwise Spiral preset (Inverse rotation angle: 0.202 < 0.25)
-  [PASS] SNS-08: Subtle Sky Drift preset (Layer 'Swirling Sky (Subtle Sky Drift)' created successfully)
-  [PASS] SNS-09: Conceal-all black layer mask (Black mask attached for selective horizon brushing (diff 0.000000))
-  [PASS] SNS-10: Selection-aware sky mask (Inside swirled (0.947 > 0.30), outside untouched (diff 0.000000))
-  [PASS] SNS-11: Custom sliders & non-destructive preservation (Opacity 85.0%, Lighten Only mode (36), base pixels untouched (diff 0.000000))
-Total Tests Executed: 245
-Tests Passed        : 245
+  [PASS] SNS-01 to SNS-11: Swirling Night Sky & Twirl Distortion (11 tests passed)
+  [PASS] SR-01: Execution status (SUCCESS)
+  [PASS] SR-02: Layer mode & name (Layer 'Sky Replacement (Sunset Golden Hour)' mode=28)
+  [PASS] SR-03: Layer mask attachment (Automated horizon mask attached)
+  [PASS] SR-04: Sunset Golden Hour preset (Warming shift in sky (R=0.799, B=0.807, warmth delta +0.242))
+  [PASS] SR-05: Automated horizon mask protection (Ground zone 100% protected under horizon mask (diff 0.000000))
+  [PASS] SR-06: Deep Twilight preset (Sapphire blue cooling dominance B=0.708 > R=0.287 (delta +0.421))
+  [PASS] SR-07: Dramatic Storm Clouds preset (Soft Light mode (45) and 90.0% opacity verified)
+  [PASS] SR-08: Pastel Sunrise Dawn preset (Screen blend mode (31) and 85.0% opacity verified)
+  [PASS] SR-09: Conceal-all black layer mask (Black mask attached for selective brush painting (diff 0.000000))
+  [PASS] SR-10: Selection-aware sky mask (Inside sky warmed (0.799 > 0.597), outside untouched (diff 0.000000))
+  [PASS] SR-11: Custom sliders & non-destructive preservation (Opacity 80.0%, Multiply mode (30), base pixels untouched (diff 0.000000))
+Total Tests Executed: 257
+Tests Passed        : 257
 Tests Failed        : 0
-Elapsed Time        : 13.79s
+Elapsed Time        : 17.20s
 Exit Code           : 0
 ```
 
 ## Checkpoint Details
-- Submodule commit in PhotoGIMP: `940035f`.
+- Submodule commit in PhotoGIMP: `54716b2`.
 - Outer repository commit: Pending.
-- Next Recommended Task: Phase 34 — Non-Destructive Sky Selection & Replacement Helper Plugin (`python-fu-sky-replacement`).
+- Next Recommended Task: Phase 35 — Non-Destructive Select Subject & Foreground Isolation Helper Plugin (`python-fu-select-subject`).

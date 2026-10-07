@@ -474,6 +474,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Sky Selection & Replacement Helper
+- **Source topic**: Replace the sky in images / Select skies in images (`Topics.txt` lines 478 & 670, and `photoshop_docs.md` Section 439 lines 12822-12847 "Edit > Sky Replacement")
+- **Photoshop behavior**: Isolates sky hemisphere, creates feathered edge horizon masks, and blends replacement atmospheric lighting, color temperatures, and exposures across the celestial hemisphere while keeping ground geometry and foreground subjects 100% untouched.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-sky-replacement` in `<Image>/Edit/Sky Replacement...`, `<Image>/Select/Sky Replacement...`, `<Image>/Filters/Retouching/Sky Replacement...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/sky-replacement/sky-replacement.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies physical Kelvin temperature shifts via GEGL `gegl:color-temperature`, exposure compensation via GEGL `gegl:exposure`, automated horizon edge mask isolation with feathering (`Gimp.Selection.feather`), curated atmospheric sky presets (Sunset Golden Hour, Dramatic Storm Clouds, Azure Clear Day, Deep Twilight, Pastel Sunrise Dawn, and Custom Sky), versatile compositing blend modes (Normal, Soft Light, Screen, Multiply), layer opacity, editable layer masks (Automated Horizon Mask, Conceal All, Reveal All, Active Selection), and 100% preservation of underlying source layer pixels.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:color-temperature`, `gegl:exposure`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 34).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Sunset Golden Hour preset warming shift (R=0.799, B=0.807, warmth delta +0.242), automated horizon mask ground protection (0.000000 diff), Deep Twilight preset 3600K nocturnal cooling shift (B=0.708 > R=0.287, delta +0.421), Dramatic Storm Clouds Soft Light mode (45) and 90.0% opacity, Pastel Sunrise Dawn Screen mode (31) and 85.0% opacity, Conceal-All black layer mask (0.000000 diff), selection-aware sky mask (inside warmed 0.799 > 0.597, outside untouched diff 0.000000), custom sliders with 80.0% opacity, 9000K temperature, and Multiply mode (30) verified, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 36):
+  1. `verify_config.py`: Section 6 passed with 28 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Sunset Golden Hour preset warming shift in sky verified (R=0.799, B=0.807, warmth delta +0.242), automated horizon mask protection verified (ground zone 100% protected under horizon mask diff 0.000000), Deep Twilight preset cooling shift verified (B=0.708 > R=0.287, delta +0.421), Dramatic Storm Clouds preset verified with Soft Light mode (45) and 90.0% opacity, Pastel Sunrise Dawn preset verified with Screen mode (31) and 85.0% opacity, Conceal-All black layer mask verified (diff 0.000000), selection-aware sky mask verified (inside warmed 0.799 > 0.597, outside untouched diff 0.000000), custom sliders with 80.0% opacity and Multiply blend mode (30) verified, and base layer pixels 100% untouched across all points (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 36).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

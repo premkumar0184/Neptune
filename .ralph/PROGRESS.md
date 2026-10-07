@@ -1074,3 +1074,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin.
 
+## Iteration 45 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive HDR Toning & Tone Mapping Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 347: "HDR and channel manipulation - Adjust HDR exposure and toning", line 106: "Adjust image lighting with Light", line 269: "Adjust image shadows and highlights", and `photoshop_docs.md` Section 338 lines 9951-9985: "HDR Toning provides multiple tone-mapping methods including Local Adaptation, Equalize Histogram, Exposure and Gamma, and Highlight Compression. Each method offers different controls for managing contrast, exposure, and tonal range... Edge Glow, Tone and Detail, Color controls"). In Adobe Photoshop, `Image > Adjustments > HDR Toning...` destructively flattens all layers into a single background. Stock GIMP contains no integrated HDR Toning helper plugin. Implementing `python-fu-hdr-toning` brings full non-destructive Photoshop parity: 4 tone mapping methods (Local Adaptation via `gegl:mantiuk06` with contrast and detail scaling, Equalize Histogram via `gegl:stretch-contrast`, Exposure & Gamma via `gegl:exposure` and native PDB levels gamma, and Highlight Compression dynamic range peak suppression), Edge Glow microcontrast halo controls (radius 1.0 to 100.0px, strength 0.0 to 5.0 via `gegl:unsharp-mask`), shadow and highlight compensation, dual-slider Vibrance and Saturation with full Monochrome HDR support (`saturation = -100.0`), curated presets (Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-hdr-toning` with tone mapping methods, edge glow microcontrast, levels gamma midtone curves, highlight compression, vibrance/saturation, presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `hdr-toning` (37 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (37 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 38 (asserting PDB registration, procedure arguments, layer modes, mask attachment, Default Photorealistic dynamic range expansion and microcontrast boost, High Dynamic Vivid dramatic contrast and enriched saturation, Dramatic Monochrome exact neutral monochrome [R == G == B, spread 0.000000], Architectural Crisp edge glow and shadow detail lift, Equalize Histogram full dynamic range stretch, Exposure & Gamma linear EV and midtone gamma shift, Highlight Compression highlight peak compression and shadow lift, Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside tone-mapped, outside diff 0.000000], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added HDR Toning & Tone Mapping Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 43 complete and scheduled Phase 44 (Match Color & Perceptual Color Transfer Helper).
+- **Technical discoveries**:
+  - In GIMP 3.x, `gegl:gamma` is classified as a hidden compositor in `Gimp.DrawableFilter.new` (`Filters from category 'compositors' are hidden`). Midtone gamma curve adjustments are executed with full precision using native PDB procedure `gimp-drawable-levels` (`channel=Gimp.HistogramChannel.VALUE`, `low-input=0.0`, `high-input=1.0`, `gamma=gamma_val`).
+  - In `gegl:vibrance`, `saturation` expects non-negative values (`[0.0, 10.0]`, default 1.0). Mapping user slider (-100 to +100) via `1.0 + (sat_val / 100.0)` sets `saturation` to `0.0` when `sat_val = -100.0`, rendering exact neutral monochrome with zero GLib range warnings.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 37 plugins verified).
+    - Stage 2: `install.sh --batch` passed (37 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 365 tests across 38 test suites in 24.02s.
+    - Final quality gate: SUCCESS across all stages in 37.84s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `c0452fc`.
+- **Result**: Success.
+- **Next**: Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin.
+

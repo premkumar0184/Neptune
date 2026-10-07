@@ -627,6 +627,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive HDR Toning & Tone Mapping Helper
+- **Source topic**: HDR and channel manipulation - Adjust HDR exposure and toning (`Topics.txt` line 347, line 106, line 269, and `photoshop_docs.md` Section 338 lines 9951-9985: "HDR Toning provides multiple tone-mapping methods including Local Adaptation, Equalize Histogram, Exposure and Gamma, and Highlight Compression. Each method offers different controls for managing contrast, exposure, and tonal range... Edge Glow, Tone and Detail, Color controls")
+- **Photoshop behavior**: Simulates HDR exposure expansion and dynamic range conversion with local adaptation tone mapping, microcontrast Edge Glow halo filtering, tone and detail enhancement, Exposure, Gamma, and Color Vibrance/Saturation. In Photoshop, `Image > Adjustments > HDR Toning` is destructive and forces document layer flattening.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-hdr-toning` in `<Image>/Image/Adjustments/HDR Toning...`, `<Image>/Filters/Enhance/HDR Toning...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable and applies tone mapping algorithms: Local Adaptation (`gegl:mantiuk06` with adaptive contrast and detail scaling), Equalize Histogram (`gegl:stretch-contrast`), Exposure & Gamma (`gegl:exposure` and `gimp-drawable-levels`), Highlight Compression (dynamic range compression and shadow black-level lift). Includes Edge Glow microcontrast halo filtering (`gegl:unsharp-mask` with configurable radius and strength), linear Exposure EV compensation, midtone Gamma curves, Color Vibrance and Saturation controls with true Monochrome HDR mode, curated photographic presets (Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom sliders), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:mantiuk06`, `gegl:stretch-contrast`, `gegl:exposure`, `gegl:unsharp-mask`, `gegl:vibrance`, PDB `gimp-drawable-levels`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 43).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Default Photorealistic local tone mapping and edge glow microcontrast expansion, High Dynamic Vivid preset bold contrast and saturation pop, Dramatic Monochrome exact neutral monochrome (`spread == 0.000000`), Architectural Crisp equalize histogram dynamic range expansion, Exposure & Gamma linear EV and midtone gamma shadow lift (`0.209 > 0.080`), Highlight Compression shadow lift, Conceal-All black layer mask (`diff == 0.000000`), active selection-aware mask confinement, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 45):
+  1. `verify_config.py`: Section 6 passed with 37 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (python-fu-hdr-toning with all 13 arguments), layer mode NORMAL verified, attached reveal-all layer mask verified, Default Photorealistic tone mapping verified (shadows lifted, highlight edge glow expanded), High Dynamic Vivid verified, Dramatic Monochrome verified (R=G=B, spread 0.000000 == 0), Architectural Crisp verified, Exposure and Gamma method verified (linear EV +1.0 & Gamma 1.25 shadow lift 0.209 > 0.080), Highlight Compression verified, Conceal-All black mask verified (diff 0.000000), active selection mask verified (inside 1.00, outside 0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 45).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

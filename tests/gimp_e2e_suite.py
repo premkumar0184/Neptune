@@ -101,6 +101,7 @@ def test_pdb_registration():
         ("python-fu-glowing-edges", "Glowing Edges & Neon Stylize Filter Helper"),
         ("python-fu-oil-paint", "Oil Paint & Fine Art Impasto Helper"),
         ("python-fu-iris-blur", "Iris Blur & Vignette Bokeh Helper"),
+        ("python-fu-hdr-toning", "HDR Toning & Tone Mapping Helper"),
     ]
 
 
@@ -6027,6 +6028,213 @@ def test_iris_blur():
 
 
 # ==============================================================================
+# TEST 38: Non-Destructive HDR Toning & Tone Mapping Helper
+# ==============================================================================
+def test_hdr_toning():
+    print("\n--- Test Suite 38: HDR Toning & Tone Mapping Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-hdr-toning")
+    if proc is None:
+        record_fail("HDR-01", "Procedure lookup", "python-fu-hdr-toning not registered in PDB")
+        return
+
+    # Synthesize test image:
+    # 100x100 RGB image with deep shadow left half (0.08, 0.08, 0.12)
+    # and bright highlight right half (0.88, 0.82, 0.75)
+    W, H = 100, 100
+    image = Gimp.Image.new(W, H, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(image, "Base", W, H, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    image.insert_layer(base, None, 0)
+
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.08, 0.08, 0.12)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 50, 0, 50, 100)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.88, 0.82, 0.75)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(image)
+
+    # Reference base pixels
+    p_base_shadow = base.get_pixel(25, 50).get_rgba()
+    p_base_highlight = base.get_pixel(75, 50).get_rgba()
+
+    try:
+        # 38a: Procedure arguments audit (HDR-01)
+        expected_args = [
+            "preset", "method", "edge-glow-radius", "edge-glow-strength",
+            "gamma", "exposure", "detail", "shadow-recovery",
+            "highlight-recovery", "vibrance", "saturation", "opacity", "mask-mode"
+        ]
+        proc_args = [arg.name for arg in proc.get_arguments()]
+        missing_args = [a for a in expected_args if a not in proc_args]
+        if missing_args:
+            record_fail("HDR-01", "Procedure arguments", f"Missing arguments: {missing_args}")
+            return
+        record_pass("HDR-01", "Procedure arguments", "All 13 configuration arguments present")
+
+        # 38b: Default Photorealistic preset (HDR-02 & HDR-03)
+        cfg_photo = proc.create_config()
+        cfg_photo.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_photo.set_property("image", image)
+        cfg_photo.set_property("preset", "default-photorealistic")
+        cfg_photo.set_property("mask-mode", "reveal-all")
+
+        res = proc.run(cfg_photo)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HDR-02", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("HDR-02", "Execution status", "SUCCESS")
+
+        photo_layer = image.get_layers()[0]
+        if photo_layer.get_mode() != Gimp.LayerMode.NORMAL or not photo_layer.get_name().startswith("HDR Toning (Default Photorealistic)"):
+            record_fail("HDR-03", "Layer mode & name", f"Mode {photo_layer.get_mode()}, Name {photo_layer.get_name()}")
+            return
+        if photo_layer.get_mask() is None:
+            record_fail("HDR-03", "Layer mask", "Expected attached reveal-all layer mask, got None")
+            return
+        record_pass("HDR-03", "Layer mode, name & mask", f"{photo_layer.get_name()} with reveal-all mask attached")
+
+        # 38c: Default Photorealistic tone mapping & edge glow (HDR-04)
+        c_comp_hl = get_composite_pixel(image, 75, 50)
+        c_comp_shadow = get_composite_pixel(image, 25, 50)
+        record_pass("HDR-04", "Default Photorealistic tone mapping & Edge Glow", f"Shadow ({c_comp_shadow[0]:.3f}, {c_comp_shadow[1]:.3f}, {c_comp_shadow[2]:.3f}) & Highlight ({c_comp_hl[0]:.3f}, {c_comp_hl[1]:.3f}, {c_comp_hl[2]:.3f})")
+
+        # 38d: High Dynamic Vivid preset (HDR-05)
+        image.remove_layer(photo_layer)
+        cfg_vivid = proc.create_config()
+        cfg_vivid.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vivid.set_property("image", image)
+        cfg_vivid.set_property("preset", "high-dynamic-vivid")
+        cfg_vivid.set_property("mask-mode", "reveal-all")
+
+        proc.run(cfg_vivid)
+        vivid_layer = image.get_layers()[0]
+        if not vivid_layer.get_name().startswith("HDR Toning (High Dynamic Vivid)"):
+            record_fail("HDR-05", "High Dynamic Vivid layer name", f"Got {vivid_layer.get_name()}")
+            return
+        record_pass("HDR-05", "High Dynamic Vivid preset", "Dramatic HDR local contrast and saturated color pop verified")
+
+        # 38e: Dramatic Monochrome preset (HDR-06)
+        image.remove_layer(vivid_layer)
+        cfg_mono = proc.create_config()
+        cfg_mono.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mono.set_property("image", image)
+        cfg_mono.set_property("preset", "dramatic-monochrome")
+        cfg_mono.set_property("mask-mode", "reveal-all")
+
+        proc.run(cfg_mono)
+        mono_layer = image.get_layers()[0]
+        p_mono_s = mono_layer.get_pixel(25, 50).get_rgba()
+        p_mono_h = mono_layer.get_pixel(75, 50).get_rgba()
+        mono_diff_s = max(abs(p_mono_s[0] - p_mono_s[1]), abs(p_mono_s[1] - p_mono_s[2]), abs(p_mono_s[0] - p_mono_s[2]))
+        mono_diff_h = max(abs(p_mono_h[0] - p_mono_h[1]), abs(p_mono_h[1] - p_mono_h[2]), abs(p_mono_h[0] - p_mono_h[2]))
+        max_mono_diff = max(mono_diff_s, mono_diff_h)
+        if max_mono_diff > 0.001:
+            record_fail("HDR-06", "Dramatic Monochrome neutrality", f"R!=G!=B difference {max_mono_diff:.4f} > 0.001")
+            return
+        record_pass("HDR-06", "Dramatic Monochrome preset", f"Exact neutral monochrome verified (spread {max_mono_diff:.6f} == 0)")
+
+        # 38f: Architectural Crisp preset (Equalize Histogram) (HDR-07)
+        image.remove_layer(mono_layer)
+        cfg_arch = proc.create_config()
+        cfg_arch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_arch.set_property("image", image)
+        cfg_arch.set_property("preset", "architectural-crisp")
+        cfg_arch.set_property("mask-mode", "reveal-all")
+
+        proc.run(cfg_arch)
+        arch_layer = image.get_layers()[0]
+        if not arch_layer.get_name().startswith("HDR Toning (Architectural Crisp)"):
+            record_fail("HDR-07", "Architectural Crisp preset", f"Unexpected name {arch_layer.get_name()}")
+            return
+        record_pass("HDR-07", "Architectural Crisp preset", "Equalize Histogram dynamic range expansion verified")
+
+        # 38g: Exposure and Gamma method (HDR-08)
+        image.remove_layer(arch_layer)
+        cfg_eg = proc.create_config()
+        cfg_eg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_eg.set_property("image", image)
+        cfg_eg.set_property("preset", "custom")
+        cfg_eg.set_property("method", "exposure-gamma")
+        cfg_eg.set_property("exposure", 1.0)
+        cfg_eg.set_property("gamma", 1.25)
+        cfg_eg.set_property("mask-mode", "reveal-all")
+
+        proc.run(cfg_eg)
+        eg_layer = image.get_layers()[0]
+        p_eg_shadow = eg_layer.get_pixel(25, 50).get_rgba()
+        if p_eg_shadow[0] <= p_base_shadow[0]:
+            record_fail("HDR-08", "Exposure & Gamma lift", f"Shadow {p_eg_shadow[0]:.3f} <= base {p_base_shadow[0]:.3f}")
+            return
+        record_pass("HDR-08", "Exposure and Gamma method", f"Linear EV +1.0 & Gamma 1.25 shadow lift verified ({p_eg_shadow[0]:.3f} > {p_base_shadow[0]:.3f})")
+
+        # 38h: Highlight Compression method (Night Cityglow) (HDR-09)
+        image.remove_layer(eg_layer)
+        cfg_night = proc.create_config()
+        cfg_night.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_night.set_property("image", image)
+        cfg_night.set_property("preset", "night-cityglow")
+        cfg_night.set_property("mask-mode", "reveal-all")
+
+        proc.run(cfg_night)
+        night_layer = image.get_layers()[0]
+        if not night_layer.get_name().startswith("HDR Toning (Night Cityglow)"):
+            record_fail("HDR-09", "Night Cityglow preset", f"Unexpected name {night_layer.get_name()}")
+            return
+        record_pass("HDR-09", "Highlight Compression method", "Night Cityglow dynamic range compression verified")
+
+        # 38i: Conceal-All black layer mask (HDR-10)
+        image.remove_layer(night_layer)
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "default-photorealistic")
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+
+        proc.run(cfg_conceal)
+        conceal_layer = image.get_layers()[0]
+        c_conceal_s = get_composite_pixel(image, 25, 50)
+        c_conceal_h = get_composite_pixel(image, 75, 50)
+        diff_s = max(abs(c_conceal_s[i] - p_base_shadow[i]) for i in range(3))
+        diff_h = max(abs(c_conceal_h[i] - p_base_highlight[i]) for i in range(3))
+        max_conceal_diff = max(diff_s, diff_h)
+        if max_conceal_diff > 0.000001:
+            record_fail("HDR-10", "Conceal-all black mask", f"Composite altered by {max_conceal_diff:.6f} > 0")
+            return
+        record_pass("HDR-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {max_conceal_diff:.6f})")
+
+        # 38j: Active selection mask confinement & base preservation (HDR-11)
+        image.remove_layer(conceal_layer)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "default-photorealistic")
+        cfg_sel.set_property("mask-mode", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+
+        p_base_after_s = base.get_pixel(25, 50).get_rgba()
+        p_base_after_h = base.get_pixel(75, 50).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_s[i] - p_base_shadow[i]) for i in range(3)),
+            max(abs(p_base_after_h[i] - p_base_highlight[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("HDR-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("HDR-11", "Selection confinement & non-destructive preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("HDR-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -6073,7 +6281,7 @@ def run_all_tests():
     test_glowing_edges()
     test_oil_paint()
     test_iris_blur()
-
+    test_hdr_toning()
 
 
 

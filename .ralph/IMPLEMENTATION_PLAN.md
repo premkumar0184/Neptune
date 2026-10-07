@@ -305,12 +305,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate inner focal zone pin-sharp preservation, elliptical gradient falloff, outer defocus depth, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `hdr-toning` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`.
-- [ ] Create dedicated non-destructive HDR Toning adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > HDR Toning / tone mapping without flattening layers.
-- [ ] Support tone mapping methods (Local Adaptation via Mantiuk/Fattal, Equalize Contrast, Exposure and Gamma, Highlight Compression), Edge Glow detail radius and strength, Tone and Detail boost, Exposure (-5.0 to +5.0 EV), Gamma (0.1 to 3.0), and Color Vibrance/Saturation.
-- [ ] Support curated photographic presets (Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom sliders).
-- [ ] Register under menu path `<Image>/Image/Adjustments/HDR Toning...`, `<Image>/Filters/Enhance/HDR Toning...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate tone-mapping dynamic range expansion, shadow/highlight recovery, microcontrast detail enhancement, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `hdr-toning` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`.
+- [x] Create dedicated non-destructive HDR Toning adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > HDR Toning / tone mapping without flattening layers.
+- [x] Support tone mapping methods (Local Adaptation via Mantiuk/Fattal, Equalize Contrast, Exposure and Gamma, Highlight Compression), Edge Glow detail radius and strength, Tone and Detail boost, Exposure (-5.0 to +5.0 EV), Gamma (0.1 to 3.0 via gimp-drawable-levels), and Color Vibrance/Saturation.
+- [x] Support curated photographic presets (Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom sliders).
+- [x] Register under menu path `<Image>/Image/Adjustments/HDR Toning...`, `<Image>/Filters/Enhance/HDR Toning...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate tone-mapping dynamic range expansion, shadow/highlight recovery, microcontrast detail enhancement, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `match-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`.
+- [ ] Create dedicated non-destructive Match Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Match Color.
+- [ ] Support color transfer controls: Luminance (1% to 200%), Color Intensity / Saturation (1% to 200%), Fade (0% to 100%), and Neutralize color cast toggle.
+- [ ] Support curated grading palettes (Warm Golden Hour, Cool Cinema Blue, Vintage Film Tone, Lush Foliage Emerald, Skin Tone Harmony, Sunset Crimson, Custom palette) and multi-layer / multi-image source sampling.
+- [ ] Register under menu path `<Image>/Image/Adjustments/Match Color...`, `<Image>/Colors/Match Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate perceptual color statistics transfer, luminance scaling, cast neutralization, fade opacity blending, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

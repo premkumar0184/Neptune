@@ -610,6 +610,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Iris Blur & Vignette Bokeh Helper
+- **Source topic**: Blur Gallery depth-of-field effects / Overview of adding blur to images / Create depth of field with lens blur / Blur image backgrounds (`Topics.txt` lines 465, 460, 461, 659, and `photoshop_docs.md` Section 424 line 12334: "Blur Gallery: Interactive, on-canvas tools like Field Blur, Iris Blur, and Tilt-Shift that let you apply blur selectively and control it visually")
+- **Photoshop behavior**: Simulates optical camera depth-of-field by establishing an elliptical in-focus subject zone with smooth progressive feather falloff to an out-of-focus background with rich lens bokeh specular highlights.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-iris-blur` in `<Image>/Filters/Blur/Iris Blur...`, `<Image>/Filters/Blur Gallery/Iris Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable and applies optical lens blur (`gegl:lens-blur`) or digital Gaussian defocus (`gegl:gaussian-blur`). Implements an elliptical focal depth mask using GEGL vignette (`gegl:vignette`) with normalized focal center `(x, y)`, in-focus subject radius, proportion/aspect ratio, horizontal/vertical squeeze stretch (`[-1.0, 1.0]`), transition feather softness, and rotation angle. Features curated photographic presets (Portrait Face Isolation, Macro Subject Pinpoint, Street Photography Candid, Cinematic Anamorphic Oval, Vignette Peripheral Softness, Custom sliders), multiple layer mask modes (Iris Depth Mask, Inverted Depth Mask, Active Selection Mask, Full Reveal-All Mask), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:lens-blur`, `gegl:gaussian-blur`, `gegl:vignette`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 42).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Portrait Face Isolation focal subject pin-sharpness (diff 0.000000) and outer background defocus bleed (diff 0.0902 > 0.02), Macro Subject Pinpoint tight focus, Street Photography Candid asymmetrical focal center, Cinematic Anamorphic Oval wide horizontal ellipse (mask_h < mask_v), Vignette Peripheral Softness gaussian defocus, Inverted Depth Mask outer sharpness, Full Defocus Layer reveal-all mask, active selection-aware mask confinement, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 44):
+  1. `verify_config.py`: Section 6 passed with 36 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (python-fu-iris-blur with all 13 arguments), layer mode NORMAL verified, attached layer mask verified, Portrait Face Isolation verified (subject center diff 0.000000, outer defocus bleed 0.0902 > 0.02), Macro Subject Pinpoint tight focus verified (center diff 0.000000), Street Candid asymmetrical center (35%, 45%) sharp (diff 0.000000), Cinematic Anamorphic Oval verified with wide horizontal ellipse (Mask H=0.08 < V=1.00), Vignette Peripheral Softness verified, Inverted Depth Mask verified (periphery diff 0.000000, center blurred), Full Defocus Layer verified (reveal-all mask 1.00), active selection mask verified (inside 0.00, outside 1.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 44).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

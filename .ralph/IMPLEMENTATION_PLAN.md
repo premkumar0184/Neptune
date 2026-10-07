@@ -297,12 +297,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate painterly stroke clustering, high-frequency edge preservation, surface relief shine response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `iris-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`.
-- [ ] Create dedicated non-destructive Iris Blur adjustment layer duplicating active drawable and simulating optical Blur Gallery iris depth-of-field.
-- [ ] Support elliptical focal region controls: focal center (x, y), inner clear ellipse (rx, ry), outer feather ellipse transition (fade radius), rotation angle, optical blur radius (1 to 100px), and optical bokeh highlight boost.
-- [ ] Support curated photographic presets (Portrait Face Isolation, Macro Flower Subject, Street Photography Pinpoint, Cinematic Oval Anamorphic, Vignette Edge Defocus, Custom sliders).
-- [ ] Register under menu path `<Image>/Filters/Blur/Iris Blur...`, `<Image>/Filters/Blur Gallery/Iris Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate inner focal zone pin-sharp preservation, elliptical gradient falloff, outer defocus depth, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `iris-blur` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`.
+- [x] Create dedicated non-destructive Iris Blur adjustment layer duplicating active drawable and simulating optical Blur Gallery iris depth-of-field.
+- [x] Support elliptical focal region controls: focal center (x, y), in-focus subject radius, ellipse proportion, squeeze (-1.0 to 1.0), transition feather falloff, rotation angle, optical blur radius (1 to 100px), and optical bokeh specular highlight boost.
+- [x] Support curated photographic presets (Portrait Face Isolation, Macro Subject Pinpoint, Street Photography Candid, Cinematic Anamorphic Oval, Vignette Peripheral Softness, Custom sliders).
+- [x] Register under menu path `<Image>/Filters/Blur/Iris Blur...`, `<Image>/Filters/Blur Gallery/Iris Blur...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate inner focal zone pin-sharp preservation, elliptical gradient falloff, outer defocus depth, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `hdr-toning` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py`.
+- [ ] Create dedicated non-destructive HDR Toning adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > HDR Toning / tone mapping without flattening layers.
+- [ ] Support tone mapping methods (Local Adaptation via Mantiuk/Fattal, Equalize Contrast, Exposure and Gamma, Highlight Compression), Edge Glow detail radius and strength, Tone and Detail boost, Exposure (-5.0 to +5.0 EV), Gamma (0.1 to 3.0), and Color Vibrance/Saturation.
+- [ ] Support curated photographic presets (Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom sliders).
+- [ ] Register under menu path `<Image>/Image/Adjustments/HDR Toning...`, `<Image>/Filters/Enhance/HDR Toning...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate tone-mapping dynamic range expansion, shadow/highlight recovery, microcontrast detail enhancement, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

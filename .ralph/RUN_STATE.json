@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-43",
+  "run_id": "iteration-44",
   "status": "completed",
-  "iteration": 43,
-  "current_task": "Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin",
+  "iteration": 44,
+  "current_task": "Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "d11c8d6",
-  "last_verified_task": "Phase 41 — Non-Destructive Oil Paint & Fine Art Impasto Helper Plugin",
+  "last_commit": "519f498",
+  "last_verified_task": "Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-07T21:52:35+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 35 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 35 plugins), Stage 3 (tests/gimp_e2e_suite.py with 341/341 assertions passing across 36 test suites, asserting PDB registration, layer modes, mask attachment, Classic Impressionist Oil stroke clustering [stripe diff reduced from 0.7964 to 0.0000], Thick Impasto Palette Knife heavy relief [contrast 0.5906], Smooth Glaze Portrait fluid glaze execution, Expressionist Dynamic bold brushwork with bristle relief, Directional lighting response across incident angles [delta 0.2318 across 0° vs 90°], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation in 22.14s)."
+    "verified_at": "2026-10-07T22:15:41+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 36 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 36 plugins), Stage 3 (tests/gimp_e2e_suite.py with 353/353 assertions passing across 37 test suites, asserting PDB registration, procedure arguments, layer modes, mask attachment, Portrait Face Isolation focal subject pin-sharpness [diff 0.000000] and outer background defocus bleed [diff 0.0902 > 0.02], Macro Subject Pinpoint tight focus [center diff 0.000000], Street Candid asymmetrical center [35%, 45%] sharp [diff 0.000000], Cinematic Anamorphic Oval wide horizontal ellipse [Mask H=0.08 < V=1.00], Vignette Peripheral Softness gaussian defocus, Inverted Depth Mask outer sharpness [diff 0.000000] and center defocus, Full Defocus Layer reveal-all mask [1.00], active selection mask [inside 0.00, outside 1.00], and 0.000000 base layer preservation in 25.54s)."
   },
-  "next_task": "Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin",
-  "last_transition": "2026-10-07T21:57:00+05:30",
+  "next_task": "Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin",
+  "last_transition": "2026-10-07T22:20:00+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

@@ -1047,3 +1047,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `d11c8d6`.
 - **Result**: Success.
 - **Next**: Phase 42 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin.
+
+## Iteration 44 — Non-Destructive Iris Blur & Vignette Bokeh Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Iris Blur & Vignette Bokeh Filter plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 465: "Use Blur Gallery depth-of-field effects", line 460: "Overview of adding blur to images", line 461: "Create depth of field with lens blur", line 659: "Blur image backgrounds", and `photoshop_docs.md` Section 424 line 12334: "Blur Gallery: Interactive, on-canvas tools like Field Blur, Iris Blur, and Tilt-Shift that let you apply blur selectively and control it visually"). Iris Blur is one of Photoshop's premier Blur Gallery tools, simulating optical camera depth of field around an elliptical subject focal zone with smooth progressive feather falloff to an out-of-focus background with rich lens bokeh specular highlights. In stock GIMP, achieving iris blur requires complex manual multi-step channel masking, lens blur filtering, and gradient masking. Implementing `python-fu-iris-blur` brings full Photoshop parity: normalized focal center `(x, y)`, in-focus subject radius, proportion/aspect ratio, horizontal/vertical squeeze stretch (`[-1.0, 1.0]`), transition feather softness, rotation angle, optical lens blur (`gegl:lens-blur`) with aperture bokeh specular highlight boost vs smooth Gaussian digital blur (`gegl:gaussian-blur`), curated photographic presets (Portrait Face Isolation, Macro Subject Pinpoint, Street Photography Candid, Cinematic Anamorphic Oval, Vignette Peripheral Softness, Custom sliders), multiple layer mask modes (Iris Depth Mask, Inverted Depth Mask, Active Selection Mask, Full Reveal-All Mask), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/iris-blur/iris-blur.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-iris-blur` with `gegl:lens-blur` and `gegl:gaussian-blur` defocus, `gegl:vignette` elliptical focal falloff masking with squeeze stretching and rotation, presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `iris-blur` (36 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (36 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 37 (asserting PDB registration, procedure arguments, layer modes, mask attachment, Portrait Face Isolation focal subject pin-sharpness [diff 0.000000] and outer background defocus bleed [diff 0.0902 > 0.02], Macro Subject Pinpoint tight focus [center diff 0.000000], Street Candid asymmetrical center [35%, 45%] sharp [diff 0.000000], Cinematic Anamorphic Oval wide horizontal ellipse [Mask H=0.08 < V=1.00], Vignette Peripheral Softness gaussian defocus, Inverted Depth Mask outer sharpness [diff 0.000000] and center defocus, Full Defocus Layer reveal-all mask [1.00], active selection mask [inside 0.00, outside 1.00], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Iris Blur & Vignette Bokeh Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 42 complete and scheduled Phase 43 (HDR Toning & Tone Mapping Helper).
+- **Technical discoveries**:
+  - In `gegl:vignette`, the property `proportion` has a strict range of `[0.0, 1.0]`. To achieve horizontal vs vertical elliptical elongation (such as wide horizontal anamorphic focus or vertical portrait face focus), GEGL provides the `squeeze` property with range `[-1.0, 1.0]` (default 0.0). Positive values stretch horizontally (`squeeze > 0`), while negative values stretch vertically (`squeeze < 0`).
+  - Combining `gegl:lens-blur` with `highlight-factor` on an isolated duplicate layer and masking with `gegl:vignette` guarantees that central subject pixels remain 100% mathematically unblurred (`diff == 0.000000`) while peripheral highlights expand into optical bokeh discs.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 36 plugins verified).
+    - Stage 2: `install.sh --batch` passed (36 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 353 tests across 37 test suites in 25.54s.
+    - Final quality gate: SUCCESS across all stages in 50.35s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `519f498`.
+- **Result**: Success.
+- **Next**: Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin.
+

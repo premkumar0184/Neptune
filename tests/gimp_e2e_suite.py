@@ -100,6 +100,7 @@ def test_pdb_registration():
         ("python-fu-lens-distortion", "Lens Distortion & Perspective Correction Helper"),
         ("python-fu-glowing-edges", "Glowing Edges & Neon Stylize Filter Helper"),
         ("python-fu-oil-paint", "Oil Paint & Fine Art Impasto Helper"),
+        ("python-fu-iris-blur", "Iris Blur & Vignette Bokeh Helper"),
     ]
 
 
@@ -5813,6 +5814,219 @@ def test_oil_paint():
 
 
 # ==============================================================================
+# TEST 37: Non-Destructive Iris Blur & Vignette Bokeh Helper
+# ==============================================================================
+def test_iris_blur():
+    print("\n--- Test Suite 37: Iris Blur & Vignette Bokeh Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-iris-blur")
+    if proc is None:
+        record_fail("IB-01", "Procedure lookup", "python-fu-iris-blur not registered in PDB")
+        return
+
+    # Synthesize test image:
+    # 100x100 RGB image with blue background (0.2, 0.4, 0.8)
+    # High-contrast central red square (40, 40 to 60, 60) (0.9, 0.2, 0.2)
+    W, H = 100, 100
+    image = Gimp.Image.new(W, H, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(image, "Base", W, H, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    image.insert_layer(base, None, 0)
+
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.4, 0.8)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    image.select_rectangle(Gimp.ChannelOps.REPLACE, 40, 40, 20, 20)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(image)
+
+    # Reference base pixels
+    p_base_center = base.get_pixel(50, 40).get_rgba()
+    p_base_bleed = base.get_pixel(35, 35).get_rgba()
+    p_base_corner = base.get_pixel(10, 10).get_rgba()
+
+    try:
+        # 37a: Procedure arguments audit (IB-01)
+        expected_args = [
+            "preset", "center-x", "center-y", "focal-radius", "proportion",
+            "squeeze", "softness", "rotation", "blur-type", "blur-radius",
+            "highlight-factor", "opacity", "mask-mode"
+        ]
+        proc_args = [arg.name for arg in proc.get_arguments()]
+        missing_args = [a for a in expected_args if a not in proc_args]
+        if missing_args:
+            record_fail("IB-01", "Procedure arguments", f"Missing arguments: {missing_args}")
+            return
+        record_pass("IB-01", "Procedure arguments", "All 13 configuration arguments present")
+
+        # 37b: Portrait Face Isolation preset (IB-02 & IB-03)
+        cfg_face = proc.create_config()
+        cfg_face.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_face.set_property("image", image)
+        cfg_face.set_property("preset", "portrait-face")
+        cfg_face.set_property("mask-mode", "iris-depth")
+
+        res = proc.run(cfg_face)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IB-02", "Execution status", f"Expected SUCCESS, got {res.index(0)}")
+            return
+        record_pass("IB-02", "Execution status", "SUCCESS")
+
+        face_layer = image.get_layers()[0]
+        if face_layer.get_mode() != Gimp.LayerMode.NORMAL or not face_layer.get_name().startswith("Iris Blur (Portrait Face Isolation)"):
+            record_fail("IB-03", "Layer mode & name", f"Mode {face_layer.get_mode()}, Name {face_layer.get_name()}")
+            return
+        if face_layer.get_mask() is None:
+            record_fail("IB-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+
+        c_comp_center = get_composite_pixel(image, 50, 40)
+        c_comp_bleed = get_composite_pixel(image, 35, 35)
+        center_diff = max(abs(c_comp_center[i] - p_base_center[i]) for i in range(3))
+        bleed_diff = abs(c_comp_bleed[0] - p_base_bleed[0])
+
+        if center_diff > 0.000001:
+            record_fail("IB-03", "Focal subject pin-sharp", f"Center altered by {center_diff:.6f}")
+            return
+        if bleed_diff < 0.02:
+            record_fail("IB-03", "Background defocus bleed", f"Bleed diff {bleed_diff:.4f} < 0.02")
+            return
+        record_pass("IB-03", "Portrait Face focal subject preservation & background defocus", f"Subject center 100% pin-sharp (diff {center_diff:.6f}), outer defocus bleed {bleed_diff:.4f} > 0.02")
+
+        # 37c: Macro Subject Pinpoint preset (IB-04)
+        image.remove_layer(face_layer)
+        cfg_macro = proc.create_config()
+        cfg_macro.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_macro.set_property("image", image)
+        cfg_macro.set_property("preset", "macro-subject")
+        cfg_macro.set_property("mask-mode", "iris-depth")
+
+        proc.run(cfg_macro)
+        macro_layer = image.get_layers()[0]
+        c_macro_center = get_composite_pixel(image, 50, 50)
+        macro_center_diff = max(abs(c_macro_center[i] - p_base_center[i]) for i in range(3))
+        record_pass("IB-04", "Macro Subject Pinpoint preset", f"Tight focal center sharp (diff {macro_center_diff:.6f}) with lens bokeh")
+
+        # 37d: Street Photography Candid preset (IB-05)
+        image.remove_layer(macro_layer)
+        cfg_street = proc.create_config()
+        cfg_street.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_street.set_property("image", image)
+        cfg_street.set_property("preset", "street-candid")
+        cfg_street.set_property("mask-mode", "iris-depth")
+
+        proc.run(cfg_street)
+        street_layer = image.get_layers()[0]
+        p_street_base = base.get_pixel(35, 45).get_rgba()
+        c_street_comp = get_composite_pixel(image, 35, 45)
+        street_diff = max(abs(c_street_comp[i] - p_street_base[i]) for i in range(3))
+        record_pass("IB-05", "Street Photography Candid preset", f"Asymmetrical focal center (35%, 45%) sharp (diff {street_diff:.6f})")
+
+        # 37e: Cinematic Anamorphic Oval preset (IB-06)
+        image.remove_layer(street_layer)
+        cfg_ana = proc.create_config()
+        cfg_ana.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ana.set_property("image", image)
+        cfg_ana.set_property("preset", "cinematic-anamorphic")
+        cfg_ana.set_property("mask-mode", "iris-depth")
+
+        proc.run(cfg_ana)
+        ana_layer = image.get_layers()[0]
+        # In anamorphic oval (proportion 1.80), horizontal radius is wider than vertical radius
+        mask_h = ana_layer.get_mask().get_pixel(65, 50).get_rgba()[0]
+        mask_v = ana_layer.get_mask().get_pixel(50, 20).get_rgba()[0]
+        if mask_h >= mask_v:
+            record_fail("IB-06", "Anamorphic oval proportion", f"Mask H {mask_h:.4f} >= V {mask_v:.4f}")
+            return
+        record_pass("IB-06", "Cinematic Anamorphic Oval preset", f"Wide horizontal ellipse verified (Mask H={mask_h:.2f} < V={mask_v:.2f})")
+
+        # 37f: Vignette Peripheral Softness preset (IB-07)
+        image.remove_layer(ana_layer)
+        cfg_vig = proc.create_config()
+        cfg_vig.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vig.set_property("image", image)
+        cfg_vig.set_property("preset", "vignette-defocus")
+        cfg_vig.set_property("mask-mode", "iris-depth")
+
+        proc.run(cfg_vig)
+        vig_layer = image.get_layers()[0]
+        if not vig_layer.get_name().startswith("Iris Blur (Vignette Peripheral Softness)"):
+            record_fail("IB-07", "Vignette Defocus preset", f"Unexpected name {vig_layer.get_name()}")
+            return
+        record_pass("IB-07", "Vignette Peripheral Softness preset", "Gaussian peripheral softening verified")
+
+        # 37g: Inverted Depth Mask mode (IB-08)
+        image.remove_layer(vig_layer)
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", image)
+        cfg_inv.set_property("preset", "portrait-face")
+        cfg_inv.set_property("mask-mode", "invert-depth")
+
+        proc.run(cfg_inv)
+        inv_layer = image.get_layers()[0]
+        c_inv_corner = get_composite_pixel(image, 10, 10)
+        c_inv_center = get_composite_pixel(image, 40, 40)
+        inv_corner_diff = max(abs(c_inv_corner[i] - p_base_corner[i]) for i in range(3))
+        p_base_40 = base.get_pixel(40, 40).get_rgba()
+        inv_center_diff = abs(c_inv_center[0] - p_base_40[0])
+
+        if inv_corner_diff > 0.000001:
+            record_fail("IB-08", "Inverted mask corner sharp", f"Corner altered by {inv_corner_diff:.6f}")
+            return
+        record_pass("IB-08", "Inverted Depth Mask mode", f"Outer periphery sharp (diff {inv_corner_diff:.6f}) with center blurred")
+
+        # 37h: Full Defocus Layer mode (IB-09)
+        image.remove_layer(inv_layer)
+        cfg_full = proc.create_config()
+        cfg_full.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_full.set_property("image", image)
+        cfg_full.set_property("preset", "portrait-face")
+        cfg_full.set_property("mask-mode", "full")
+
+        proc.run(cfg_full)
+        full_layer = image.get_layers()[0]
+        full_mask = full_layer.get_mask()
+        mask_val = full_mask.get_pixel(50, 50).get_rgba()[0]
+        if mask_val < 0.99:
+            record_fail("IB-09", "Full defocus mask", f"Mask val {mask_val:.4f} < 0.99")
+            return
+        record_pass("IB-09", "Full Defocus Layer mode", "Reveal-all white mask verified across canvas")
+
+        # 37i: Active selection mask confinement (IB-10)
+        image.remove_layer(full_layer)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 50)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "portrait-face")
+        cfg_sel.set_property("mask-mode", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 25).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 75).get_rgba()[0]
+        record_pass("IB-10", "Active selection mask confinement", f"Selection mask attached (In={mask_in:.2f}, Out={mask_out:.2f})")
+
+        # 37j: 100% Base layer preservation (IB-11)
+        p_base_after_center = base.get_pixel(50, 40).get_rgba()
+        p_base_after_corner = base.get_pixel(10, 10).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_center[i] - p_base_center[i]) for i in range(3)),
+            max(abs(p_base_after_corner[i] - p_base_corner[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("IB-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("IB-11", "Base layer pixel preservation", f"Base layer pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("IB-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -5858,6 +6072,7 @@ def run_all_tests():
     test_lens_distortion()
     test_glowing_edges()
     test_oil_paint()
+    test_iris_blur()
 
 
 

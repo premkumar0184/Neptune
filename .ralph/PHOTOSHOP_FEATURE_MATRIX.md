@@ -338,6 +338,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Diffuse Glow & Glamour Filter Helper
+- **Source topic**: Quick actions - Apply diffuse glow to images (`Topics.txt` line 663) & Filter Gallery - Distort: Diffuse Glow (`Topics.txt` line 12131, `photoshop_docs.md` Section 417 line 12131: "Distort: Diffuse Glow... renders an image as though it were viewed through a soft diffusion filter. The filter adds translucent white noise, with the glow fading from the center of a selection")
+- **Photoshop behavior**: Blooms specular highlights into radiant halos, softens skin and contrast, and adds translucent organic grain texture simulating physical diffusion glass filters (Pro-Mist / Fog filters) with Clear Amount threshold protecting shadows and midtones.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-diffuse-glow` in `<Image>/Filters/Light and Shadow/Diffuse Glow...`, `<Image>/Filters/Retouching/Diffuse Glow...`, `<Image>/Colors/Diffuse Glow...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/diffuse-glow/diffuse-glow.py`.
+- **Current capability**: Creates an isolated, non-destructive Diffuse Glow adjustment layer duplicating active drawable. Applies GEGL `gegl:bloom` for highlight radiance with configurable Clear Amount threshold and diffusion radius, `gegl:noise-rgb` for translucent diffusion grain, and `gegl:color-temperature` for golden hour warmth styling. Features curated creative presets (Dreamy Glamour Portrait, Ethereal Sunlight Bloom, Vintage Diffusion Glass, Golden Hour Warm Glow, Night Neon Radiance, Subtle Soft Focus, Custom Sliders), compositing blend modes (Screen, Soft Light, Addition, Normal), layer opacity slider (10% to 100%), attached reveal-all layer mask, and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:bloom`, `gegl:noise-rgb`, `gegl:color-temperature`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: Medium (Phase 26).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, highlight bloom diffusion spill (delta > 0.08), Clear Amount shadow protection (delta <= 0.03), translucent diffusion grain variance (> 0.00005), golden hour warmth shift (R > B, delta >= 0.10), Night Neon Addition blend mode, custom sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 28):
+  1. `verify_config.py`: Section 6 passed with 20 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Screen mode (31) highlight bloom spill verified (spill=0.4125 > interior=0.2384, delta +0.1741), Clear Amount threshold verified protecting shadow tones (0.1590 vs base 0.1500, delta 0.0090 <= 0.03), translucent grain texture verified (variance 0.000118 > 0.00005), golden hour warmth shift verified (R=1.0000 > B=0.7991, warmth delta +0.2009), Night Neon Addition mode 33 verified with 90.0% opacity, custom sliders with 85.0% opacity verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 28).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

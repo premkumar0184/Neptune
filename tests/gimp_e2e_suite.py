@@ -84,6 +84,7 @@ def test_pdb_registration():
         ("python-fu-film-grain", "Film Grain & Analog Texture Helper"),
         ("python-fu-light-tone", "Light & Tonal Range Helper"),
         ("python-fu-duotone-effect", "Duotone & Tritone Print Effect Helper"),
+        ("python-fu-diffuse-glow", "Diffuse Glow & Glamour Filter Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -2362,6 +2363,196 @@ def test_duotone_effect():
 
 
 # ==============================================================================
+# 21. DIFFUSE GLOW & GLAMOUR FILTER TEST SUITE
+# ==============================================================================
+def test_diffuse_glow():
+    print("\n--- Test Suite 21: Diffuse Glow & Glamour Filter Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-diffuse-glow")
+    if proc is None:
+        record_fail("DG-01", "Procedure lookup", "Procedure python-fu-diffuse-glow not found")
+        return
+
+    image = Gimp.Image.new(80, 80, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseDiffuseGlow", 80, 80, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Fill 2 tonal zones: Shadows left half (0-40, value 0.15), Highlights right half (40-80, value 0.85)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 40, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.15, 0.15, 0.15)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 40, 0, 40, 80)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.85, 0.85, 0.85)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_orig_sh = base.get_pixel(10, 40).get_rgba()
+        p_base_orig_hl = base.get_pixel(70, 40).get_rgba()
+
+        # 21a: Run Dreamy Glamour Portrait preset (default)
+        cfg_dreamy = proc.create_config()
+        cfg_dreamy.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dreamy.set_property("image", image)
+        cfg_dreamy.set_property("preset", "dreamy-glamour")
+        cfg_dreamy.set_property("add-mask", True)
+
+        res_dreamy = proc.run(cfg_dreamy)
+        if res_dreamy.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("DG-01", "Execution status", f"Expected SUCCESS, got status {res_dreamy.index(0)}")
+            return
+        record_pass("DG-01", "Execution status", "SUCCESS")
+
+        glow_layer = image.get_layers()[0]
+        if "Dreamy Glamour Portrait" not in glow_layer.get_name() or glow_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("DG-02", "Layer mode & name", f"Expected Soft Light (mode {int(Gimp.LayerMode.SOFTLIGHT)}), got name={glow_layer.get_name()}, mode={glow_layer.get_mode()}")
+            return
+        record_pass("DG-02", "Layer mode & name", f"{glow_layer.get_name()} ({glow_layer.get_mode()})")
+
+        mask = glow_layer.get_mask()
+        if mask is None:
+            record_fail("DG-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("DG-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 21b: Run Ethereal Sunlight Bloom preset (Screen blend mode & wide highlight bloom)
+        image.remove_layer(glow_layer)
+        cfg_eth = proc.create_config()
+        cfg_eth.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_eth.set_property("image", image)
+        cfg_eth.set_property("preset", "ethereal-bloom")
+        cfg_eth.set_property("add-mask", False)
+
+        proc.run(cfg_eth)
+        eth_layer = image.get_layers()[0]
+        if eth_layer.get_mode() != Gimp.LayerMode.SCREEN:
+            record_fail("DG-04", "Ethereal bloom mode", f"Expected Screen mode ({int(Gimp.LayerMode.SCREEN)}), got {eth_layer.get_mode()}")
+            return
+
+        p_eth_spill = eth_layer.get_pixel(37, 40).get_rgba()
+        p_eth_interior = eth_layer.get_pixel(10, 40).get_rgba()
+        bloom_spill = p_eth_spill[0] - p_eth_interior[0]
+        if bloom_spill <= 0.08:
+            record_fail("DG-04", "Highlight bloom diffusion", f"Expected bloom spill > 0.08 across boundary, got {bloom_spill:.4f}")
+            return
+        record_pass("DG-04", "Highlight bloom diffusion", f"Screen mode ({eth_layer.get_mode()}) and radiant bloom spill (spill={p_eth_spill[0]:.4f} > interior={p_eth_interior[0]:.4f}, delta +{bloom_spill:.4f}) verified")
+
+        # 21c: Clear Amount threshold test (high threshold 80.0 preserves shadow clearness)
+        image.remove_layer(eth_layer)
+        cfg_clear = proc.create_config()
+        cfg_clear.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clear.set_property("image", image)
+        cfg_clear.set_property("preset", "custom")
+        cfg_clear.set_property("glow-amount", 50.0)
+        cfg_clear.set_property("clear-amount", 80.0)
+        cfg_clear.set_property("radius", 15.0)
+        cfg_clear.set_property("graininess", 0.0)
+        cfg_clear.set_property("warmth", 0.0)
+        cfg_clear.set_property("blend-mode", "screen")
+        cfg_clear.set_property("opacity", 100.0)
+        cfg_clear.set_property("add-mask", False)
+
+        proc.run(cfg_clear)
+        clear_layer = image.get_layers()[0]
+        p_clear_sh = clear_layer.get_pixel(10, 40).get_rgba()
+        sh_delta = abs(p_clear_sh[0] - p_base_orig_sh[0])
+        if sh_delta > 0.03:
+            record_fail("DG-05", "Clear amount threshold", f"Expected shadow clearness delta <= 0.03, got {sh_delta:.4f}")
+            return
+        record_pass("DG-05", "Clear amount threshold", f"High clear threshold (80.0%) protects shadow tones (shadow {p_clear_sh[0]:.4f} vs base {p_base_orig_sh[0]:.4f}, delta {sh_delta:.4f} <= 0.03) verified")
+
+        # 21d: Vintage Diffusion Glass preset (monochromatic graininess variance)
+        image.remove_layer(clear_layer)
+        cfg_vint = proc.create_config()
+        cfg_vint.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vint.set_property("image", image)
+        cfg_vint.set_property("preset", "vintage-diffusion")
+        cfg_vint.set_property("add-mask", False)
+
+        proc.run(cfg_vint)
+        vint_layer = image.get_layers()[0]
+        samples = [vint_layer.get_pixel(70, y).get_rgba()[0] for y in range(20, 60)]
+        mean_v = sum(samples) / len(samples)
+        var_v = sum((s - mean_v) ** 2 for s in samples) / len(samples)
+        if var_v <= 0.00005:
+            record_fail("DG-06", "Diffusion graininess", f"Expected grain variance > 0.00005, got {var_v:.6f}")
+            return
+        record_pass("DG-06", "Translucent diffusion graininess", f"Optical diffusion grain texture verified (variance {var_v:.6f} > 0.00005)")
+
+        # 21e: Golden Hour Warm Glow preset (color temperature warming shift)
+        image.remove_layer(vint_layer)
+        cfg_gold = proc.create_config()
+        cfg_gold.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gold.set_property("image", image)
+        cfg_gold.set_property("preset", "golden-hour-bloom")
+        cfg_gold.set_property("add-mask", False)
+
+        proc.run(cfg_gold)
+        gold_layer = image.get_layers()[0]
+        p_gold_hl = gold_layer.get_pixel(70, 40).get_rgba()
+        if p_gold_hl[0] <= p_gold_hl[2] or (p_gold_hl[0] - p_gold_hl[2]) < 0.10:
+            record_fail("DG-07", "Golden hour warmth", f"Expected R > B (delta >= 0.10) in highlight bloom, got R={p_gold_hl[0]:.4f}, B={p_gold_hl[2]:.4f}")
+            return
+        record_pass("DG-07", "Golden hour warmth shift", f"Golden highlight bloom verified (R={p_gold_hl[0]:.4f} > B={p_gold_hl[2]:.4f}, warmth delta +{p_gold_hl[0]-p_gold_hl[2]:.4f})")
+
+        # 21f: Night Neon Radiance preset (Addition blend mode & 90% opacity)
+        image.remove_layer(gold_layer)
+        cfg_night = proc.create_config()
+        cfg_night.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_night.set_property("image", image)
+        cfg_night.set_property("preset", "night-radiance")
+        cfg_night.set_property("add-mask", False)
+
+        proc.run(cfg_night)
+        night_layer = image.get_layers()[0]
+        if night_layer.get_mode() != Gimp.LayerMode.ADDITION or abs(night_layer.get_opacity() - 90.0) > 0.01:
+            record_fail("DG-08", "Night radiance mode", f"Expected Addition mode ({int(Gimp.LayerMode.ADDITION)}) and 90.0% opacity, got mode={night_layer.get_mode()}, opacity={night_layer.get_opacity()}%")
+            return
+        record_pass("DG-08", "Night neon radiance mode", f"Addition blend mode ({night_layer.get_mode()}) and 90.0% opacity verified")
+
+        # 21g: Custom Sliders & Opacity
+        image.remove_layer(night_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("glow-amount", 60.0)
+        cfg_cust.set_property("clear-amount", 30.0)
+        cfg_cust.set_property("radius", 20.0)
+        cfg_cust.set_property("graininess", 10.0)
+        cfg_cust.set_property("warmth", 0.0)
+        cfg_cust.set_property("blend-mode", "normal")
+        cfg_cust.set_property("opacity", 85.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 85.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("DG-09", "Custom opacity & mode", f"Expected 85.0% and NORMAL ({int(Gimp.LayerMode.NORMAL)}), got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+        record_pass("DG-09", "Custom sliders & opacity", f"Opacity 85.0%, Normal blend mode ({cust_layer.get_mode()}) verified")
+
+        # 21h: Non-destructive base layer invariance
+        p_base_after_sh = base.get_pixel(10, 40).get_rgba()
+        p_base_after_hl = base.get_pixel(70, 40).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_sh[i] - p_base_orig_sh[i]) for i in range(3)),
+            max(abs(p_base_after_hl[i] - p_base_orig_hl[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("DG-10", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("DG-10", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("DG-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2391,6 +2582,7 @@ def run_all_tests():
     test_film_grain()
     test_light_tone()
     test_duotone_effect()
+    test_diffuse_glow()
 
 
     elapsed = time.time() - start_time

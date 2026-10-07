@@ -629,6 +629,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 26 — Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper Plugin.
 
+## Iteration 28 — Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Diffuse Glow & Dreamy Glamour Filter Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/diffuse-glow/diffuse-glow.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 663: "Apply diffuse glow to images", and `photoshop_docs.md` Section 417 line 12131: "Distort: Diffuse Glow... renders an image as though it were viewed through a soft diffusion filter. The filter adds translucent white noise, with the glow fading from the center of a selection"). Replaces destructive or complex multi-step blurring and noise generation with an isolated non-destructive adjustment layer duplicating the active drawable and executing a unified optical diffusion pipeline: `gegl:bloom` for highlight radiance with configurable Clear Amount threshold and diffusion radius, `gegl:noise-rgb` for translucent diffusion grain simulating optical diffusion glass (Pro-Mist / Fog filters), and `gegl:color-temperature` for golden hour warmth styling, complete with authentic presets (Dreamy Glamour Portrait, Ethereal Sunlight Bloom, Vintage Diffusion Glass, Golden Hour Warm Glow, Night Neon Radiance, Subtle Soft Focus, Custom sliders), compositing blend modes (Screen, Soft Light, Addition, Normal), layer opacity control, and an attached reveal-all layer mask.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/diffuse-glow/diffuse-glow.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-diffuse-glow` with highlight bloom, Clear Amount thresholding, diffusion grain, golden hour warmth, presets, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `diffuse-glow` (20 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (20 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 21 (asserting PDB registration, layer modes, mask attachment, Screen mode highlight bloom spill [delta +0.1741 > 0.08], Clear Amount shadow protection [delta 0.0090 <= 0.03], translucent grain texture variance [0.000118 > 0.00005], golden hour warmth shift [R=1.0000 > B=0.7991, warmth delta +0.2009], Night Neon Addition mode 33 at 90.0% opacity, custom sliders with 85.0% opacity, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Diffuse Glow & Glamour Filter Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 26 complete and scheduled Phase 27 (Skin Smoothing & Portrait Beauty Retouching).
+- **Technical discoveries**:
+  - `gegl:bloom` threshold property maps 1-to-1 to Photoshop's "Clear Amount" slider: higher threshold values restrict diffusion bloom to specular highlights and keep darker image areas clear and unaffected.
+  - Applying subtle monochromatic `gegl:noise-rgb` to the bloom layer simulates physical diffusion glass filtration (Pro-Mist / Black Satin / Fog filters) without degrading base image sharpness.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 20 plugins verified).
+    - Stage 2: `install.sh --batch` passed (20 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 162 tests across 21 test suites in 8.45s.
+    - Final quality gate: SUCCESS across all stages in 19.75s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `b45b0c5`.
+- **Result**: Success.
+- **Next**: Phase 27 — Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper Plugin.
+
 
 
 

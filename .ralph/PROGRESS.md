@@ -682,10 +682,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 28 — Non-Destructive Selective Color & Background Desaturation Helper Plugin.
 
-
-
-
-
-
-
-
+## Iteration 30 — Non-Destructive Selective Color & Background Desaturation Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Selective Color & Background Desaturation Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 667: "Desaturate image backgrounds to black and white", line 333: "Selective color adjustments", line 339: "Make selective color adjustments", and `photoshop_docs.md` Section 331 lines 9698-9712 and Section 107 lines 3233-3240: Quick Action background desaturation and non-destructive adjustment layers with selection masks). Replaces laborious manual layer duplication, destructive desaturation, and manual painting with an isolated non-destructive adjustment layer duplicating active drawable and executing a unified desaturation pipeline: GEGL `gegl:mono-mixer` for neutral and dramatic high-contrast B&W backgrounds, `gegl:saturation` for subtle muted pastel backgrounds, and `gegl:sepia` for warm archival sepia background toning. Features intelligent focal depth masking (radial subject focus falloff with softness, active selection subject masking, or manual brush masking), creative inverted mask option (monochrome subject on colored background), curated presets (Classic B&W Background, Dramatic High-Contrast B&W, Muted Pastel Desaturated, Vintage Sepia Toned, Cool Monochrome Noir, Custom Sliders), layer opacity control, and 100% source pixel preservation underneath.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-selective-color-pop` with whole-layer selection preservation, mono-mixer, saturation scaling, sepia toning, radial and selection masking, invert option, presets, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `selective-color-pop` (22 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (22 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 23 (asserting PDB registration, layer modes, mask attachment, center subject full color preservation [diff 0.000000], peripheral background exact monochrome conversion [R=G=B=0.3968, spread 0.000000], selection-aware subject masking [inside diff 0.000000, outside spread 0.000000], invert effect option [center spread 0.000000, edge diff 0.000000], muted pastel chroma reduction [-75.4%], vintage sepia warm tone [R=0.665 > G=0.546 > B=0.356], custom sliders with 80.0% opacity, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/DECISIONS.md`: Recorded D-003 regarding active selection isolation during layer filter merging.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Selective Color & Background Desaturation Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 28 complete and scheduled Phase 29 (Vintage Photo Restoration & Colorization).
+- **Technical discoveries**:
+  - In GIMP 3.x, `Drawable.merge_filter()` automatically restricts pixel operations to whatever active selection exists on the image. When creating a background adjustment layer from an active subject selection, saving and clearing the selection before filtering is essential so the entire layer is processed before attaching the inverted mask.
+  - Standard vignette falloff on a black mask (`color='white'`) seamlessly shields center subjects in 100% original base color while converting peripheral background pixels to pure monochrome without edge fringes.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 22 plugins verified).
+    - Stage 2: `install.sh --batch` passed (22 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 185 tests across 23 test suites in 9.47s.
+    - Final quality gate: SUCCESS across all stages in 20.50s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `3b82baa`.
+- **Result**: Success.
+- **Next**: Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin.

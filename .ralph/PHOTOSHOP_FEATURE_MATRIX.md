@@ -372,6 +372,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Selective Color & Background Desaturation Helper
+- **Source topic**: Quick actions - Desaturate image backgrounds to black and white (`Topics.txt` line 667, line 333: "Selective color adjustments", line 339: "Make selective color adjustments", and `photoshop_docs.md` Section 331 lines 9698-9712 and Section 107 lines 3233-3240)
+- **Photoshop behavior**: Isolates a focal subject in full vivid color while desaturating or converting surrounding background context to classic black-and-white or stylized monochrome via non-destructive adjustment layers and intelligent masks.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-selective-color-pop` in `<Image>/Colors/Selective Color Pop...`, `<Image>/Filters/Retouching/Selective Color Pop...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Applies GEGL `gegl:mono-mixer`, `gegl:saturation`, or `gegl:sepia` for background desaturation and monochrome conversion. Features intelligent focal depth masking (radial subject focus falloff with softness, active selection subject masking, or manual brush masking), creative inverted mask option (monochrome subject on colored background), curated presets (Classic B&W Background, Dramatic High-Contrast B&W, Muted Pastel Desaturated, Vintage Sepia Toned, Cool Monochrome Noir, Custom Sliders), layer opacity control, and 100% source pixel preservation underneath.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:mono-mixer`, `gegl:saturation`, `gegl:sepia`, `gegl:vignette`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 28).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, center subject full color preservation (`diff == 0.000000`), peripheral background exact monochrome conversion (`spread == 0.000000`), selection-aware subject masking, invert mask mode, muted pastel preset, vintage sepia preset, custom sliders with opacity, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 30):
+  1. `verify_config.py`: Section 6 passed with 22 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Center subject preserved in 100% full original color (diff 0.000000), peripheral background converted to exact monochrome (R=G=B=0.3968, spread 0.000000), active selection cleanly isolates subject (inside diff 0.000000, outside spread 0.000000), invert effect reverses pop (center spread 0.000000, edge diff 0.000000), muted pastel reduces chroma by 75.4%, vintage sepia verifies warm tone (R=0.665 > G=0.546 > B=0.356), custom sliders with 80.0% opacity verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 30).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

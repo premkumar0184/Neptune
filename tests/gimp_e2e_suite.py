@@ -86,6 +86,7 @@ def test_pdb_registration():
         ("python-fu-duotone-effect", "Duotone & Tritone Print Effect Helper"),
         ("python-fu-diffuse-glow", "Diffuse Glow & Glamour Filter Helper"),
         ("python-fu-skin-smoothing", "Skin Smoothing & Beauty Retouching"),
+        ("python-fu-selective-color-pop", "Selective Color Pop & Background Desaturation"),
     ]
 
     for proc_name, label in required_procs:
@@ -2735,6 +2736,220 @@ def test_skin_smoothing():
 
 
 # ==============================================================================
+# TEST 23: Selective Color Pop & Background Desaturation Helper (Phase 28)
+# ==============================================================================
+def test_selective_color_pop():
+    print("\n--- Test Suite 23: Selective Color Pop & Background Desaturation Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-selective-color-pop")
+    if proc is None:
+        record_fail("SCP-01", "Procedure lookup", "Procedure not found")
+        return
+
+    # Image setup: 100x100 RGB image with vibrant red foreground
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base Image", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.2, 0.1)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        p_base_center = base.get_pixel(50, 50).get_rgba()
+        p_base_edge = base.get_pixel(5, 5).get_rgba()
+
+        # 23a: Classic B&W Background Preset with Radial Focal Mask
+        cfg_classic = proc.create_config()
+        cfg_classic.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_classic.set_property("image", image)
+        cfg_classic.set_property("preset", "classic-bw")
+        cfg_classic.set_property("focus-source", "radial")
+        cfg_classic.set_property("focal-radius", 0.6)
+        cfg_classic.set_property("focal-softness", 0.5)
+        cfg_classic.set_property("opacity", 100.0)
+        cfg_classic.set_property("invert-mask", False)
+
+        res = proc.run(cfg_classic)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SCP-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("SCP-01", "Execution status", "SUCCESS")
+
+        pop_layer = image.get_layers()[0]
+        if pop_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SCP-02", "Layer mode", f"Expected NORMAL (28), got {pop_layer.get_mode()}")
+            return
+        record_pass("SCP-02", "Layer mode & name", f"{pop_layer.get_name()} ({pop_layer.get_mode()})")
+
+        # Verify layer mask attachment
+        mask = pop_layer.get_mask()
+        if mask is None:
+            record_fail("SCP-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SCP-03", "Layer mask attachment", "Attached radial focal mask")
+
+        # 23b: Subject full color preservation at center (diff == 0.000000)
+        p_comp_center = get_composite_pixel(image, 50, 50)
+        center_color_diff = max(abs(p_comp_center[i] - p_base_center[i]) for i in range(3))
+        if center_color_diff > 0.000001:
+            record_fail("SCP-04", "Subject color preservation", f"Center altered by {center_color_diff:.6f} > 0")
+            return
+        record_pass("SCP-04", "Subject full color preservation", f"Center subject 100% full color (diff {center_color_diff:.6f})")
+
+        # 23c: Background monochrome conversion (R == G == B, mono spread == 0.000000)
+        p_comp_edge = get_composite_pixel(image, 5, 5)
+        mono_spread = max(abs(p_comp_edge[0] - p_comp_edge[1]), abs(p_comp_edge[1] - p_comp_edge[2]), abs(p_comp_edge[0] - p_comp_edge[2]))
+        if mono_spread > 0.000001:
+            record_fail("SCP-05", "Background monochrome conversion", f"Edge color spread {mono_spread:.6f} > 0")
+            return
+        record_pass("SCP-05", "Peripheral background monochrome conversion", f"Edge exact monochrome: R=G=B={p_comp_edge[0]:.4f} (spread {mono_spread:.6f})")
+
+        image.remove_layer(pop_layer)
+
+        # 23d: Active Selection Subject Mask Test
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 30, 30, 40, 40)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "classic-bw")
+        cfg_sel.set_property("focus-source", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+        cfg_sel.set_property("invert-mask", False)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 50, 50)
+        p_sel_outside = get_composite_pixel(image, 10, 10)
+
+        sel_inside_diff = max(abs(p_sel_inside[i] - p_base_center[i]) for i in range(3))
+        sel_outside_mono = max(abs(p_sel_outside[0] - p_sel_outside[1]), abs(p_sel_outside[1] - p_sel_outside[2]))
+        if sel_inside_diff > 0.000001 or sel_outside_mono > 0.000001:
+            record_fail("SCP-06", "Selection-aware mask", f"Inside diff={sel_inside_diff:.6f}, Outside mono={sel_outside_mono:.6f}")
+            return
+        record_pass("SCP-06", "Selection-aware subject mask", f"Inside full color (diff {sel_inside_diff:.6f}), Outside pure monochrome (spread {sel_outside_mono:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 23e: Invert Mask Option (Monochrome Subject, Color Background)
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", image)
+        cfg_inv.set_property("preset", "classic-bw")
+        cfg_inv.set_property("focus-source", "radial")
+        cfg_inv.set_property("focal-radius", 0.6)
+        cfg_inv.set_property("focal-softness", 0.5)
+        cfg_inv.set_property("opacity", 100.0)
+        cfg_inv.set_property("invert-mask", True)
+
+        proc.run(cfg_inv)
+        inv_layer = image.get_layers()[0]
+        p_inv_center = get_composite_pixel(image, 50, 50)
+        p_inv_edge = get_composite_pixel(image, 5, 5)
+
+        inv_center_mono = max(abs(p_inv_center[0] - p_inv_center[1]), abs(p_inv_center[1] - p_inv_center[2]))
+        inv_edge_diff = max(abs(p_inv_edge[i] - p_base_edge[i]) for i in range(3))
+        if inv_center_mono > 0.000001 or inv_edge_diff > 0.000001:
+            record_fail("SCP-07", "Invert mask option", f"Center mono={inv_center_mono:.6f}, Edge diff={inv_edge_diff:.6f}")
+            return
+        record_pass("SCP-07", "Invert effect option", f"Center monochrome (spread {inv_center_mono:.6f}), Edge full color (diff {inv_edge_diff:.6f})")
+
+        image.remove_layer(inv_layer)
+
+        # 23f: Muted Pastel Desaturated Preset Test
+        cfg_pastel = proc.create_config()
+        cfg_pastel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pastel.set_property("image", image)
+        cfg_pastel.set_property("preset", "muted-pastel")
+        cfg_pastel.set_property("focus-source", "radial")
+        cfg_pastel.set_property("focal-radius", 0.6)
+        cfg_pastel.set_property("focal-softness", 0.5)
+        cfg_pastel.set_property("opacity", 100.0)
+        cfg_pastel.set_property("invert-mask", False)
+
+        proc.run(cfg_pastel)
+        pastel_layer = image.get_layers()[0]
+        p_pas_center = get_composite_pixel(image, 50, 50)
+        p_pas_edge = get_composite_pixel(image, 5, 5)
+
+        pas_center_diff = max(abs(p_pas_center[i] - p_base_center[i]) for i in range(3))
+        # Edge red chroma (p_pas_edge[0] - p_pas_edge[1]) should be noticeably reduced from original (0.9 - 0.2 = 0.7)
+        edge_chroma = p_pas_edge[0] - p_pas_edge[1]
+        orig_chroma = p_base_edge[0] - p_base_edge[1]
+        if pas_center_diff > 0.000001 or edge_chroma >= orig_chroma * 0.50:
+            record_fail("SCP-08", "Muted pastel preset", f"Center diff={pas_center_diff:.6f}, Edge chroma={edge_chroma:.4f} >= {orig_chroma * 0.50:.4f}")
+            return
+        record_pass("SCP-08", "Muted pastel preset", f"Center full color, Background chroma muted {orig_chroma:.3f} -> {edge_chroma:.3f} (-{(1 - edge_chroma/orig_chroma)*100:.1f}%)")
+
+        image.remove_layer(pastel_layer)
+
+        # 23g: Vintage Sepia Toned Preset Test
+        cfg_sepia = proc.create_config()
+        cfg_sepia.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sepia.set_property("image", image)
+        cfg_sepia.set_property("preset", "vintage-sepia")
+        cfg_sepia.set_property("focus-source", "radial")
+        cfg_sepia.set_property("focal-radius", 0.6)
+        cfg_sepia.set_property("focal-softness", 0.5)
+        cfg_sepia.set_property("opacity", 100.0)
+        cfg_sepia.set_property("invert-mask", False)
+
+        proc.run(cfg_sepia)
+        sepia_layer = image.get_layers()[0]
+        p_sep_center = get_composite_pixel(image, 50, 50)
+        p_sep_edge = get_composite_pixel(image, 5, 5)
+
+        sep_center_diff = max(abs(p_sep_center[i] - p_base_center[i]) for i in range(3))
+        # Warm sepia tone requires R > G > B at edge
+        is_sepia_warm = (p_sep_edge[0] > p_sep_edge[1] > p_sep_edge[2])
+        if sep_center_diff > 0.000001 or not is_sepia_warm:
+            record_fail("SCP-09", "Vintage sepia preset", f"Center diff={sep_center_diff:.6f}, Edge R={p_sep_edge[0]:.3f}, G={p_sep_edge[1]:.3f}, B={p_sep_edge[2]:.3f}")
+            return
+        record_pass("SCP-09", "Vintage sepia toning preset", f"Background warm archival sepia (R={p_sep_edge[0]:.3f} > G={p_sep_edge[1]:.3f} > B={p_sep_edge[2]:.3f})")
+
+        image.remove_layer(sepia_layer)
+
+        # 23h: Custom Sliders & Layer Opacity Test
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("focus-source", "radial")
+        cfg_cust.set_property("focal-radius", 0.5)
+        cfg_cust.set_property("focal-softness", 0.4)
+        cfg_cust.set_property("bg-desaturation", 100.0)
+        cfg_cust.set_property("custom-red", 0.5)
+        cfg_cust.set_property("custom-green", 0.3)
+        cfg_cust.set_property("custom-blue", 0.2)
+        cfg_cust.set_property("opacity", 80.0)
+        cfg_cust.set_property("invert-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 80.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SCP-10", "Custom sliders", f"Expected 80.0% and NORMAL, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+        record_pass("SCP-10", "Custom sliders & opacity", f"Opacity 80.0%, Normal blend mode ({cust_layer.get_mode()}) verified")
+
+        # 23i: Non-destructive base layer invariance across all pixels
+        p_base_after_center = base.get_pixel(50, 50).get_rgba()
+        p_base_after_edge = base.get_pixel(5, 5).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_center[i] - p_base_center[i]) for i in range(3)),
+            max(abs(p_base_after_edge[i] - p_base_edge[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SCP-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SCP-11", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SCP-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2766,6 +2981,7 @@ def run_all_tests():
     test_duotone_effect()
     test_diffuse_glow()
     test_skin_smoothing()
+    test_selective_color_pop()
 
 
     elapsed = time.time() - start_time

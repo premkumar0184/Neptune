@@ -189,9 +189,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate skin tone variance reduction, high-contrast facial edge preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 28 — Non-Destructive Selective Color & Background Desaturation Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `selective-color-pop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`.
-- [ ] Create dedicated non-destructive Background Desaturation / Color Pop adjustment layer duplicating active drawable.
-- [ ] Support non-destructively desaturating backgrounds to monochrome black and white while keeping the subject in vibrant full color.
-- [ ] Support radial/elliptical subject focus falloff, subject feathering, monochrome tinting, opacity, and attached editable layer mask.
-- [ ] Register under menu path `<Image>/Colors/Selective Color Pop...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate background desaturation, subject color preservation, mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `selective-color-pop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`.
+- [x] Create dedicated non-destructive Background Desaturation / Color Pop adjustment layer duplicating active drawable.
+- [x] Support non-destructively desaturating backgrounds to monochrome black and white while keeping the subject in vibrant full color.
+- [x] Support radial/elliptical subject focus falloff, active selection masking, subject feathering, monochrome tinting, opacity, and attached editable layer mask.
+- [x] Register under menu path `<Image>/Colors/Selective Color Pop...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate background desaturation, subject color preservation, mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 29 — Non-Destructive Vintage Photo Restoration & Colorization Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `photo-colorize` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/photo-colorize/photo-colorize.py`.
+- [ ] Create dedicated non-destructive Vintage Photo Colorization adjustment layer duplicating active drawable.
+- [ ] Support colorizing grayscale and vintage images with single-hue monotone washes or multi-tonal hand-colored photograph palettes (Sepia Antique, Cyanotype Blue, Vintage Amber, Rose Tint, Platinum Archival, Custom Hue/Saturation).
+- [ ] Support Color blend mode, layer opacity control, and attached editable layer mask for selective multi-color brush hand-painting.
+- [ ] Register under menu path `<Image>/Colors/Colorize Photograph...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate monotone colorization, Hue/Saturation tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+

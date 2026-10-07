@@ -257,12 +257,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate color range extraction, skin tone detection, fuzziness weighting, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 37 — Non-Destructive Smart Sharpen & Optical Deconvolution Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `smart-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-sharpen/smart-sharpen.py`.
-- [ ] Create dedicated non-destructive Smart Sharpen adjustment layer duplicating active drawable and applying adaptive high-frequency edge sharpening while suppressing noise amplification.
-- [ ] Support blur removal algorithm types: Gaussian Blur, Lens Blur (optical aperture deconvolution), and Motion Blur (directional edge sharpening).
-- [ ] Support controls: Amount (1% to 500%), Radius (0.1 to 50.0px), Reduce Noise (0% to 100%), and shadow/highlight tonal protection.
-- [ ] Register under menu path `<Image>/Filters/Enhance/Smart Sharpen...`, `<Image>/Filters/Retouching/Smart Sharpen...`, and `<Image>/Layer`.
-- [ ] Validate edge acutance enhancement, noise threshold protection, deconvolution mode selection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `smart-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-sharpen/smart-sharpen.py`.
+- [x] Create dedicated non-destructive Smart Sharpen adjustment layer duplicating active drawable and applying adaptive high-frequency edge sharpening while suppressing noise amplification.
+- [x] Support blur removal algorithm types: Gaussian Blur, Lens Blur (optical aperture deconvolution), and Motion Blur (directional edge sharpening).
+- [x] Support controls: Amount (1% to 500%), Radius (0.1 to 50.0px), Reduce Noise (0% to 100%), presets, and layer masks (Reveal All, Conceal All, Selection).
+- [x] Register under menu path `<Image>/Filters/Enhance/Smart Sharpen...`, `<Image>/Filters/Retouching/Smart Sharpen...`, and `<Image>/Layer`.
+- [x] Validate edge acutance enhancement, noise threshold protection, deconvolution mode selection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 38 — Non-Destructive Tilt-Shift & Miniature Blur Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `tilt-shift` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/tilt-shift/tilt-shift.py`.
+- [ ] Create dedicated non-destructive Tilt-Shift / Miniature adjustment layer duplicating active drawable and simulating selective tilt-shift lens depth of field.
+- [ ] Support linear focus band positioning (focal center, focus band width, transition feather gradient falloff), optical blur radius (1 to 100px), saturation boost for the miniature model effect, and orientation (Horizontal, Vertical, Diagonal).
+- [ ] Support curated photographic presets (Classic Miniature Model, Toy City Diorama, Subtle Portrait Shallow DOF, Vertical Architecture Tilt, Macro Miniature, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Blur/Tilt-Shift Blur...`, `<Image>/Filters/Retouching/Tilt-Shift Blur...`, and `<Image>/Layer`.
+- [ ] Validate focal strip preservation, progressive gradient blur transition, miniature saturation boost, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

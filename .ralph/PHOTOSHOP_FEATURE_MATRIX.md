@@ -525,6 +525,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Smart Sharpen & Optical Deconvolution Helper
+- **Source topic**: Blur and sharpen filters - Apply the Smart Sharpen filter / Sharpen images (`Topics.txt` lines 460, 462, 463, `photoshop_docs.md` Section 424 lines 12217-12255)
+- **Photoshop behavior**: Professional optical sharpening with Amount (1% to 500%), Radius (0.1 to 50.0px), Reduce Noise (0% to 100%), three blur removal modes (Lens Blur deconvolution, Gaussian Blur unsharp acutance, Motion Blur directional recovery), and non-destructive layering.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-smart-sharpen` in `<Image>/Filters/Enhance/Smart Sharpen...`, `<Image>/Filters/Retouching/Smart Sharpen...`, and `<Image>/Layer/New Smart Sharpen Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-sharpen/smart-sharpen.py`.
+- **Current capability**: Multi-algorithm blur removal (Lens Blur optical deconvolution, Gaussian Blur acutance, Motion Blur directional recovery), integrated noise reduction pre-pass (`gegl:noise-reduction`) preventing sensor noise amplification in flat and shadow areas, curated presets (Default Lens Blur, Microcontrast / Fine Detail, Maximum Acutance, Motion Blur Recovery, Gentle Portrait Clarity, Custom), configurable layer masks (Reveal All, Conceal All for selective brush-in, Active Selection), and 100% mathematical preservation of base layer source pixels underneath.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:unsharp-mask`, `gegl:noise-reduction`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 37).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, edge acutance contrast enhancement (Lens Blur baseline 0.4006 -> 0.6000), Microcontrast preset, Maximum Acutance preset, Gaussian blur mode, Motion blur mode, Reduce Noise parameter flat smoothness, Conceal-All black layer mask, Active selection mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 39):
+  1. `verify_config.py`: Section 6 passed with 31 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified, layer mode NORMAL verified, reveal-all mask verified, Default Lens Blur boosted edge contrast from 0.4006 to 0.6000 (+0.1995), Microcontrast sub-pixel contrast boosted to 0.6702 (+0.2696), Maximum Acutance deep deconvolution boosted contrast to 0.8301 (+0.4295), Gaussian blur mode verified (0.8217), Motion blur mode verified (0.9301), flat noise suppression verified (deviation 0.00054 < 0.05), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified, and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 39).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

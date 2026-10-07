@@ -95,6 +95,7 @@ def test_pdb_registration():
         ("python-fu-sky-replacement", "Sky Selection & Replacement Helper"),
         ("python-fu-select-subject", "Select Subject & Background Isolation Helper"),
         ("python-fu-color-range", "Color Range Selection & Isolation Helper"),
+        ("python-fu-smart-sharpen", "Smart Sharpen & Optical Deconvolution Helper"),
     ]
 
 
@@ -4739,6 +4740,219 @@ def test_color_range():
 
 
 # ==============================================================================
+# TEST 32: Smart Sharpen & Optical Deconvolution Helper Plugin (Phase 37)
+# ==============================================================================
+def test_smart_sharpen():
+    print("\n--- Test Suite 32: Smart Sharpen & Optical Deconvolution Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-smart-sharpen")
+    if proc is None:
+        record_fail("SSH-01", "Procedure lookup", "python-fu-smart-sharpen not registered")
+        return
+
+    image = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer with high-contrast step edge (left half dark 0.3, right half bright 0.7)
+        base = Gimp.Layer.new(image, "Base Step Edge", 200, 200, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.3, 0.3)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 100, 0, 100, 200)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.7, 0.7, 0.7)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(image)
+
+        # Baseline step contrast: 0.7000 - 0.3000 = 0.4000
+        p_base_left = base.get_pixel(98, 100).get_rgba()
+        p_base_right = base.get_pixel(102, 100).get_rgba()
+        baseline_contrast = p_base_right[0] - p_base_left[0]
+
+        # 32a: Default Lens Blur preset execution
+        cfg_lens = proc.create_config()
+        cfg_lens.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_lens.set_property("image", image)
+        cfg_lens.set_property("preset", "lens-blur")
+        cfg_lens.set_property("mask-type", "reveal-all")
+
+        res = proc.run(cfg_lens)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SSH-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("SSH-01", "Execution status", "SUCCESS")
+
+        lens_layer = image.get_layers()[0]
+        if lens_layer.get_mode() != Gimp.LayerMode.NORMAL or not lens_layer.get_name().startswith("Smart Sharpen"):
+            record_fail("SSH-02", "Layer mode & name", f"Unexpected mode {lens_layer.get_mode()} or name {lens_layer.get_name()}")
+            return
+        record_pass("SSH-02", "Layer mode & name", f"{lens_layer.get_name()} (NORMAL)")
+
+        mask = lens_layer.get_mask()
+        if mask is None:
+            record_fail("SSH-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SSH-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # Verify edge acutance contrast enhancement
+        p_comp_left = get_composite_pixel(image, 98, 100)[0]
+        p_comp_right = get_composite_pixel(image, 102, 100)[0]
+        sharp_contrast = p_comp_right - p_comp_left
+        if sharp_contrast <= baseline_contrast:
+            record_fail("SSH-04", "Default Lens Blur contrast", f"Sharpened contrast {sharp_contrast:.4f} <= baseline {baseline_contrast:.4f}")
+            return
+        record_pass("SSH-04", "Default Lens Blur optical deconvolution", f"Baseline {baseline_contrast:.4f} -> Sharpened {sharp_contrast:.4f} (+{sharp_contrast - baseline_contrast:.4f})")
+
+        # 32b: Microcontrast / Fine Detail preset
+        image.remove_layer(lens_layer)
+        cfg_micro = proc.create_config()
+        cfg_micro.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_micro.set_property("image", image)
+        cfg_micro.set_property("preset", "micro-contrast")
+        cfg_micro.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_micro)
+        micro_layer = image.get_layers()[0]
+        p_micro_l = get_composite_pixel(image, 99, 100)[0]
+        p_micro_r = get_composite_pixel(image, 101, 100)[0]
+        micro_contrast = p_micro_r - p_micro_l
+        if micro_contrast <= baseline_contrast:
+            record_fail("SSH-05", "Microcontrast enhancement", f"Microcontrast {micro_contrast:.4f} <= {baseline_contrast:.4f}")
+            return
+        record_pass("SSH-05", "Microcontrast / fine detail preset", f"Sub-pixel edge contrast {micro_contrast:.4f} (+{micro_contrast - baseline_contrast:.4f})")
+
+        # 32c: Maximum Acutance preset
+        image.remove_layer(micro_layer)
+        cfg_heavy = proc.create_config()
+        cfg_heavy.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_heavy.set_property("image", image)
+        cfg_heavy.set_property("preset", "heavy-deconv")
+        cfg_heavy.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_heavy)
+        heavy_layer = image.get_layers()[0]
+        p_heavy_l = get_composite_pixel(image, 97, 100)[0]
+        p_heavy_r = get_composite_pixel(image, 103, 100)[0]
+        heavy_contrast = p_heavy_r - p_heavy_l
+        if heavy_contrast <= baseline_contrast:
+            record_fail("SSH-06", "Maximum Acutance contrast", f"Heavy contrast {heavy_contrast:.4f} <= {baseline_contrast:.4f}")
+            return
+        record_pass("SSH-06", "Maximum Acutance preset", f"Deep deconvolution contrast {heavy_contrast:.4f} (+{heavy_contrast - baseline_contrast:.4f})")
+
+        # 32d: Gaussian Blur algorithm mode (custom preset)
+        image.remove_layer(heavy_layer)
+        cfg_gauss = proc.create_config()
+        cfg_gauss.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gauss.set_property("image", image)
+        cfg_gauss.set_property("preset", "custom")
+        cfg_gauss.set_property("amount", 200.0)
+        cfg_gauss.set_property("radius", 2.0)
+        cfg_gauss.set_property("noise-reduction", 0.0)
+        cfg_gauss.set_property("remove-blur", "gaussian-blur")
+        cfg_gauss.set_property("opacity", 100.0)
+        cfg_gauss.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_gauss)
+        gauss_layer = image.get_layers()[0]
+        p_gauss_l = get_composite_pixel(image, 98, 100)[0]
+        p_gauss_r = get_composite_pixel(image, 102, 100)[0]
+        gauss_contrast = p_gauss_r - p_gauss_l
+        if gauss_contrast <= baseline_contrast:
+            record_fail("SSH-07", "Gaussian blur unsharp mode", f"Gaussian contrast {gauss_contrast:.4f} <= baseline {baseline_contrast:.4f}")
+            return
+        record_pass("SSH-07", "Gaussian blur algorithm mode", f"Classic unsharp contrast {gauss_contrast:.4f}")
+
+        # 32e: Motion Blur recovery algorithm mode
+        image.remove_layer(gauss_layer)
+        cfg_motion = proc.create_config()
+        cfg_motion.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_motion.set_property("image", image)
+        cfg_motion.set_property("preset", "motion-recovery")
+        cfg_motion.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_motion)
+        motion_layer = image.get_layers()[0]
+        p_motion_l = get_composite_pixel(image, 97, 100)[0]
+        p_motion_r = get_composite_pixel(image, 103, 100)[0]
+        motion_contrast = p_motion_r - p_motion_l
+        if motion_contrast <= baseline_contrast:
+            record_fail("SSH-08", "Motion blur recovery mode", f"Motion contrast {motion_contrast:.4f} <= baseline {baseline_contrast:.4f}")
+            return
+        record_pass("SSH-08", "Motion blur recovery mode", f"Directional recovery contrast {motion_contrast:.4f}")
+
+        # 32f: Reduce Noise parameter suppression
+        image.remove_layer(motion_layer)
+        cfg_noise = proc.create_config()
+        cfg_noise.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_noise.set_property("image", image)
+        cfg_noise.set_property("preset", "portrait-smooth")
+        cfg_noise.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_noise)
+        noise_layer = image.get_layers()[0]
+        # In smooth flat area (x=20, y=100), noise reduction ensures flat tones remain smooth
+        flat_p = get_composite_pixel(image, 20, 100)[0]
+        flat_diff = abs(flat_p - 0.3)
+        if flat_diff > 0.05:
+            record_fail("SSH-09", "Flat noise suppression", f"Flat area deviation {flat_diff:.4f} > 0.05")
+            return
+        record_pass("SSH-09", "Reduce Noise parameter & flat smoothness", f"Flat area deviation {flat_diff:.5f} < 0.05")
+
+        # 32g: Conceal-All black layer mask (brush ready)
+        image.remove_layer(noise_layer)
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "heavy-deconv")
+        cfg_conceal.set_property("mask-type", "conceal-all")
+
+        proc.run(cfg_conceal)
+        conceal_layer = image.get_layers()[0]
+        # With black mask, composite MUST be identical to base layer (diff == 0.000000)
+        c_left = get_composite_pixel(image, 98, 100)[0]
+        c_right = get_composite_pixel(image, 102, 100)[0]
+        conceal_diff = max(abs(c_left - p_base_left[0]), abs(c_right - p_base_right[0]))
+        if conceal_diff > 0.000001:
+            record_fail("SSH-10", "Conceal-all black mask", f"Expected composite equal to base, diff={conceal_diff:.6f}")
+            return
+        record_pass("SSH-10", "Conceal-All black layer mask", f"Sharpening fully concealed by black mask (diff {conceal_diff:.6f})")
+
+        # 32h: Selection-aware mask & Non-destructive base preservation
+        image.remove_layer(conceal_layer)
+        # Select right half of image
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 100, 0, 100, 200)
+
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "lens-blur")
+        cfg_sel.set_property("mask-type", "selection")
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        if sel_layer.get_mask() is None:
+            record_fail("SSH-11", "Selection mask attachment", "Selection mask missing")
+            return
+
+        # Base layer underneath must be 100% untouched
+        p_base_after_l = base.get_pixel(98, 100).get_rgba()
+        p_base_after_r = base.get_pixel(102, 100).get_rgba()
+        base_diff = max(
+            max(abs(p_base_after_l[i] - p_base_left[i]) for i in range(3)),
+            max(abs(p_base_after_r[i] - p_base_right[i]) for i in range(3))
+        )
+        if base_diff > 0.000001:
+            record_fail("SSH-11", "Base layer preservation", f"Base layer modified by {base_diff:.6f}")
+            return
+        record_pass("SSH-11", "Active selection mask & base preservation", f"Base pixels 100% untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SSH-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -4779,6 +4993,7 @@ def run_all_tests():
     test_sky_replacement()
     test_select_subject()
     test_color_range()
+    test_smart_sharpen()
 
 
 

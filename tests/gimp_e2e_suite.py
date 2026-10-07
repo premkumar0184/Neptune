@@ -107,6 +107,8 @@ def test_pdb_registration():
         ("python-fu-replace-color", "Replace Color & Targeted Object Recoloring Helper"),
         ("python-fu-lens-blur", "Lens Blur & Optical Depth of Field Helper"),
         ("python-fu-texturizer", "Texturizer & Surface Canvas Helper"),
+        ("python-fu-guide-layout", "Guide Layout & Compositional Alignment Helper"),
+        ("python-fu-clear-guides", "Clear Guides Helper"),
     ]
 
 
@@ -7461,6 +7463,224 @@ def test_texturizer():
 
 
 # ==============================================================================
+# 44. GUIDE LAYOUT & COMPOSITIONAL ALIGNMENT TEST SUITE
+# ==============================================================================
+def test_guide_layout():
+    print("\n--- Test Suite 44: Guide Layout & Compositional Alignment Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_layout = pdb.lookup_procedure("python-fu-guide-layout")
+    proc_clear = pdb.lookup_procedure("python-fu-clear-guides")
+
+    if proc_layout is None:
+        record_fail("GL-01", "Procedure lookup", "Procedure python-fu-guide-layout not found")
+        return
+    if proc_clear is None:
+        record_fail("GL-01", "Procedure lookup", "Procedure python-fu-clear-guides not found")
+        return
+
+    # 44a: Procedure Argument Verification (GL-01)
+    args = {arg.name: arg for arg in proc_layout.get_arguments()}
+    expected_args = [
+        "preset", "clear-existing", "columns", "rows",
+        "col-gutter", "row-gutter",
+        "margin-top", "margin-bottom", "margin-left", "margin-right"
+    ]
+    missing = [a for a in expected_args if a not in args]
+    if missing:
+        record_fail("GL-01", "Argument check", f"Missing arguments: {missing}")
+        return
+    record_pass("GL-01", "Procedure arguments verified", f"{len(expected_args)} arguments verified")
+
+    image = Gimp.Image.new(300, 300, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "BaseGuideTest", 300, 300, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_before = base.get_pixel(150, 150).get_rgba()
+
+        # Helper to extract guides from image
+        def get_all_guides(img):
+            hg, vg = [], []
+            gid = img.find_next_guide(0)
+            while gid > 0:
+                orient = img.get_guide_orientation(gid)
+                pos = img.get_guide_position(gid)
+                if orient == Gimp.OrientationType.HORIZONTAL:
+                    hg.append(pos)
+                else:
+                    vg.append(pos)
+                gid = img.find_next_guide(gid)
+            return sorted(hg), sorted(vg)
+
+        # 44b: Execution status verified (GL-02)
+        cfg_rot = proc_layout.create_config()
+        cfg_rot.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rot.set_property("image", image)
+        cfg_rot.set_property("preset", "rule-of-thirds")
+        res = proc_layout.run(cfg_rot)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GL-02", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("GL-02", "Execution status", "SUCCESS")
+
+        # 44c: Rule of Thirds preset verified on 300x300 image (GL-03)
+        # On 300x300: thirds at 100px and 200px
+        hg, vg = get_all_guides(image)
+        if hg != [100, 200] or vg != [100, 200]:
+            record_fail("GL-03", "Rule of Thirds coordinates", f"Expected [100, 200], got H={hg}, V={vg}")
+            return
+        record_pass("GL-03", "Rule of Thirds preset", f"Exact thirds verified (H={hg}, V={vg})")
+
+        # 44d: Golden Ratio / Phi Grid preset verified on 1000x1000 image (GL-04)
+        img_phi = Gimp.Image.new(1000, 1000, Gimp.ImageBaseType.RGB)
+        try:
+            cfg_phi = proc_layout.create_config()
+            cfg_phi.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_phi.set_property("image", img_phi)
+            cfg_phi.set_property("preset", "golden-ratio")
+            proc_layout.run(cfg_phi)
+            hg_phi, vg_phi = get_all_guides(img_phi)
+            if hg_phi != [382, 618] or vg_phi != [382, 618]:
+                record_fail("GL-04", "Golden ratio coordinates", f"Expected [382, 618], got H={hg_phi}, V={vg_phi}")
+                return
+            record_pass("GL-04", "Golden Ratio / Phi Grid preset", f"Harmonic divine proportion verified (H={hg_phi}, V={vg_phi})")
+        finally:
+            img_phi.delete()
+
+        # 44e: Center Crosshairs preset verified on 400x600 image (GL-05)
+        img_ctr = Gimp.Image.new(400, 600, Gimp.ImageBaseType.RGB)
+        try:
+            cfg_ctr = proc_layout.create_config()
+            cfg_ctr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_ctr.set_property("image", img_ctr)
+            cfg_ctr.set_property("preset", "center-split")
+            proc_layout.run(cfg_ctr)
+            hg_ctr, vg_ctr = get_all_guides(img_ctr)
+            if hg_ctr != [300] or vg_ctr != [200]:
+                record_fail("GL-05", "Center split coordinates", f"Expected H=[300], V=[200], got H={hg_ctr}, V={vg_ctr}")
+                return
+            record_pass("GL-05", "Center Crosshairs preset", f"50% crosshairs verified (Center H={hg_ctr[0]}px, V={vg_ctr[0]}px)")
+        finally:
+            img_ctr.delete()
+
+        # 44f: Safe Margins Frame preset verified on 200x200 image (GL-06)
+        # 5% margins on 200x200: 10px and 190px
+        img_sm = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+        try:
+            cfg_sm = proc_layout.create_config()
+            cfg_sm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_sm.set_property("image", img_sm)
+            cfg_sm.set_property("preset", "safe-margins")
+            proc_layout.run(cfg_sm)
+            hg_sm, vg_sm = get_all_guides(img_sm)
+            if hg_sm != [10, 190] or vg_sm != [10, 190]:
+                record_fail("GL-06", "Safe margins coordinates", f"Expected [10, 190], got H={hg_sm}, V={vg_sm}")
+                return
+            record_pass("GL-06", "Safe Margins Frame preset", f"5% safe artwork boundaries verified (H={hg_sm}, V={vg_sm})")
+        finally:
+            img_sm.delete()
+
+        # 44g: Custom multi-column grid with gutters verified (GL-07)
+        img_web = Gimp.Image.new(1200, 800, Gimp.ImageBaseType.RGB)
+        try:
+            cfg_web = proc_layout.create_config()
+            cfg_web.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_web.set_property("image", img_web)
+            cfg_web.set_property("preset", "web-12-column")
+            proc_layout.run(cfg_web)
+            hg_web, vg_web = get_all_guides(img_web)
+            if len(vg_web) != 24:
+                record_fail("GL-07", "Web 12-column count", f"Expected 24 vertical guides, got {len(vg_web)}")
+                return
+            gutter_width = vg_web[2] - vg_web[1]
+            if gutter_width != 16:
+                record_fail("GL-07", "Web gutter width", f"Expected 16px gutter, got {gutter_width}px")
+                return
+            record_pass("GL-07", "Web 12-Column Grid preset", f"24 column/gutter guides verified with exact {gutter_width}px gutters")
+        finally:
+            img_web.delete()
+
+        # 44h: Custom multi-row grid with gutters verified (GL-08)
+        img_row = Gimp.Image.new(600, 600, Gimp.ImageBaseType.RGB)
+        try:
+            cfg_row = proc_layout.create_config()
+            cfg_row.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_row.set_property("image", img_row)
+            cfg_row.set_property("preset", "custom")
+            cfg_row.set_property("columns", 0)
+            cfg_row.set_property("rows", 3)
+            cfg_row.set_property("row-gutter", 20.0)
+            proc_layout.run(cfg_row)
+            hg_row, vg_row = get_all_guides(img_row)
+            if len(hg_row) != 4 or (hg_row[1] - hg_row[0]) != 20:
+                record_fail("GL-08", "Custom row grid", f"Expected 4 guides with 20px gutter, got {hg_row}")
+                return
+            record_pass("GL-08", "Custom multi-row grid with gutters", f"Row gutter pairs verified ({hg_row})")
+        finally:
+            img_row.delete()
+
+        # 44i: Clear Existing Guides option verified (GL-09)
+        cfg_repl = proc_layout.create_config()
+        cfg_repl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_repl.set_property("image", image)
+        cfg_repl.set_property("preset", "center-split")
+        cfg_repl.set_property("clear-existing", True)
+        proc_layout.run(cfg_repl)
+        hg_repl, vg_repl = get_all_guides(image)
+        if hg_repl != [150] or vg_repl != [150]:
+            record_fail("GL-09", "Clear existing toggle", f"Prior guides were not cleared: H={hg_repl}, V={vg_repl}")
+            return
+        record_pass("GL-09", "Clear Existing Guides option", "Wiped prior guides and generated new layout cleanly")
+
+        # 44j: Standalone python-fu-clear-guides procedure verified (GL-10)
+        cfg_clear = proc_clear.create_config()
+        cfg_clear.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clear.set_property("image", image)
+        res_clear = proc_clear.run(cfg_clear)
+        if res_clear.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GL-10", "Clear guides execution", f"Expected SUCCESS, got {res_clear.index(0)}")
+            return
+        hg_after_clear, vg_after_clear = get_all_guides(image)
+        if len(hg_after_clear) > 0 or len(vg_after_clear) > 0:
+            record_fail("GL-10", "Clear guides cleanup", f"Guides remain: H={hg_after_clear}, V={vg_after_clear}")
+            return
+        record_pass("GL-10", "Clear Guides helper procedure", "All guides wiped to 0 via 1-click clear procedure")
+
+        # 44k: Asymmetrical margins verified (GL-11)
+        cfg_asym = proc_layout.create_config()
+        cfg_asym.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_asym.set_property("image", image)
+        cfg_asym.set_property("preset", "custom")
+        cfg_asym.set_property("columns", 0)
+        cfg_asym.set_property("rows", 0)
+        cfg_asym.set_property("margin-top", 10.0)      # 30px
+        cfg_asym.set_property("margin-bottom", 20.0)   # 240px
+        cfg_asym.set_property("margin-left", 5.0)       # 15px
+        cfg_asym.set_property("margin-right", 15.0)     # 255px
+        proc_layout.run(cfg_asym)
+        hg_asym, vg_asym = get_all_guides(image)
+        if hg_asym != [30, 240] or vg_asym != [15, 255]:
+            record_fail("GL-11", "Asymmetrical margins", f"Expected H=[30, 240], V=[15, 255], got H={hg_asym}, V={vg_asym}")
+            return
+        record_pass("GL-11", "Asymmetrical margins", f"Custom margins verified (Top=30px, Bottom=240px, Left=15px, Right=255px)")
+
+        # 44l: Zero layer modification verified (GL-12)
+        p_base_after = base.get_pixel(150, 150).get_rgba()
+        diff_layer = max(abs(a - b) for a, b in zip(p_base_before, p_base_after))
+        if diff_layer > 0.000001:
+            record_fail("GL-12", "Layer invariance", f"Base layer altered by {diff_layer:.6f}")
+            return
+        record_pass("GL-12", "Zero layer modification", f"Guides float over canvas leaving pixels untouched (diff {diff_layer:.6f})")
+
+    except Exception as e:
+        record_fail("GL-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -7513,6 +7733,7 @@ def run_all_tests():
     test_replace_color()
     test_lens_blur()
     test_texturizer()
+    test_guide_layout()
 
 
 

@@ -1231,6 +1231,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 49 — Guide Layout & Compositional Alignment Helper Plugin.
 
+## Iteration 51 — Guide Layout & Compositional Alignment Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Guide Layout & Compositional Alignment Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 493-502: "Use grids and measurement guides: Alignment grids and guides, Overview of guides, grids, and smart guides, Create guides, Move guides, Edit guides, Remove guides" and `photoshop_docs.md` Section 450-454 lines 13150-13290: "View > New Guide Layout: Create guides in columns, rows, or margins", "View > Guides > Clear Guides"). Compositional alignment guides are fundamental to professional photography, retouching, typography, and graphic layout. Stock GIMP provides only primitive single-guide insertion (`Image > Guides > New Guide (by Orientation)...`), requiring users to manually calculate pixel coordinates for every third, golden ratio, gutter, and margin. Implementing `guide-layout.py` brings complete Photoshop parity to Linux photo editing with `python-fu-guide-layout` and companion `python-fu-clear-guides`: 6 curated compositional presets (Rule of Thirds, Golden Ratio / Phi Grid, Center Crosshairs, Safe Margins Frame, Web 12-Column Responsive Grid, Print Editorial 3x2 Grid, Custom), multi-column/row grid generation with pixel gutters, percentage margins (top, bottom, left, right), Clear Existing Guides toggle, 1-click Clear Guides command, full single-step undo grouping, and 100% non-destructive floating guides leaving layer pixels untouched (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-guide-layout` and `python-fu-clear-guides` with mathematical coordinate calculation for columns, rows, gutters, margins, golden ratio divine proportion, 1-click guide clearance, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `guide-layout` with its 2 procedures (43 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (43 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 44: `test_guide_layout` (asserting PDB registration of both procedures, procedure arguments, Rule of Thirds coordinates [100, 200], Golden Ratio divine proportion coordinates [382, 618], Center Crosshairs 50% [Center H=300px, V=200px], Safe Margins 5% frame [10, 190], Web 12-Column grid with 24 guides and exact 16px gutters, Custom row grid with 20px gutters, Clear Existing Guides option, Standalone Clear Guides procedure with 0 guides remaining, asymmetrical margins, and zero layer modification [diff == 0.000000]). Total tests increased to 439 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Guide Layout & Compositional Alignment Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 49 complete and scheduled Phase 50 (Frame Animation & Tweening Helper).
+- **Technical discoveries**:
+  - GIMP 3.x PyGObject provides native methods `image.add_hguide(y)`, `image.add_vguide(x)`, `image.delete_guide(gid)`, and `image.find_next_guide(gid)`. Iterating with `gid = image.find_next_guide(0)` allows clean retrieval and deletion of all document guides.
+  - Encapsulating guide operations within `image.undo_group_start()` and `image.undo_group_end()` allows entire 24-guide grids to be created or wiped with a single `Ctrl+Z` undo step.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 43 plugins verified).
+    - Stage 2: `install.sh --batch` passed (43 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 439 tests across 44 test suites in 40.71s.
+    - Final quality gate: SUCCESS across all stages in 54.82s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `26b34fc`.
+- **Result**: Success.
+- **Next**: Phase 50 — Frame Animation & Tweening Helper Plugin.
+
 
 
 

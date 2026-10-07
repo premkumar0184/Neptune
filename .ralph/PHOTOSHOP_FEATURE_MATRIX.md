@@ -729,6 +729,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Guide Layout & Compositional Alignment Helper
+- **Source topic**: Use grids and measurement guides - Alignment grids and guides / Create guides (`Topics.txt` lines 493-502, `photoshop_docs.md` Section 450-454)
+- **Photoshop behavior**: View > New Guide Layout: generate structured guide layouts (columns, rows, gutters, margins, clear existing guides). View > Guides > Clear Guides: instant 1-click removal of all document guides.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `guide-layout` providing `python-fu-guide-layout` and `python-fu-clear-guides` in `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides/New Guide Layout...`, `<Image>/View/New Guide Layout...`, `<Image>/View/Guides/Clear Guides`, and `<Image>/View/Clear Guides`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`.
+- **Current capability**: Compositional guide generation for Rule of Thirds (33.3%, 66.7%), Golden Ratio / Phi Grid (38.2%, 61.8%), Center Crosshairs (50% H & V), Safe Margins (5% / 10% outer boundary frame), Web 12-Column Grid (12 columns with 16px gutters and margins), Print Editorial 3x2 Grid (3 columns, 2 rows with gutters), and custom multi-column/multi-row layouts with gutters (px) and margins (%). Supports "Clear Existing Guides" checkbox and standalone 1-click `python-fu-clear-guides` procedure. Completely non-destructive: guides float over canvas with zero modification to layer pixels (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.add_hguide`, `image.add_vguide`, `image.delete_guide`, `image.find_next_guide`).
+- **Implementation priority**: High (Phase 49).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, Rule of Thirds coordinates ([100, 200]), Golden Ratio coordinates ([382, 618]), Center Crosshairs (50%), Safe Margins (5%), Web 12-Column grid with 16px gutters (24 vertical guides), Custom multi-row grid with gutters, Clear Existing Guides option, Standalone Clear Guides procedure (0 guides remaining), asymmetrical margins, and zero layer modification (`diff == 0.000000`).
+- **Verification evidence** (Iteration 51):
+  1. `verify_config.py`: Section 6 passed with 43 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-guide-layout` and `python-fu-clear-guides`), Rule of Thirds exact coordinates verified (H=[100, 200], V=[100, 200]), Golden Ratio divine proportion verified (H=[382, 618], V=[382, 618]), Center Crosshairs 50% verified (Center H=300px, V=200px), Safe Margins 5% frame verified (H=[10, 190], V=[10, 190]), Web 12-Column grid verified with 24 guides and exact 16px gutters, Custom row grid with 20px gutters verified, Clear Existing option verified, Standalone Clear Guides verified with 0 guides remaining, asymmetrical margins verified (Top=30px, Bottom=240px, Left=15px, Right=255px), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 51).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

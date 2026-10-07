@@ -353,12 +353,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate surface relief bump mapping, lighting angle response, relief scaling, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 49 — Guide Layout & Compositional Alignment Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `guide-layout` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`.
-- [ ] Create dedicated Guide Layout helper simulating Photoshop View > New Guide Layout and View > Guides > Clear Guides.
-- [ ] Support classic photographic and graphic design compositional guides: Rule of Thirds (3x3 grid), Golden Ratio / Phi Grid (1:0.618:1), Center Crosshairs (50% H & V), Margin Guides (top/bottom/left/right margins), and Modular Columns & Rows (custom columns/rows with gutters).
-- [ ] Support options: clear existing guides toggle, custom gutter width (px), custom margin percentages, horizontal and vertical orientation toggles.
-- [ ] Register under menu path `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides/New Guide Layout...`, and `<Image>/View/Guides/Clear All Guides`.
-- [ ] Validate guide placement coordinates, rule-of-thirds offsets, golden-ratio geometry, margin spacing, clear guides action, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `guide-layout` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/guide-layout/guide-layout.py`.
+- [x] Create dedicated Guide Layout helper simulating Photoshop View > New Guide Layout and View > Guides > Clear Guides.
+- [x] Support classic photographic and graphic design compositional guides: Rule of Thirds (3x3 grid), Golden Ratio / Phi Grid (1:0.618:1), Center Crosshairs (50% H & V), Margin Guides (top/bottom/left/right margins), and Modular Columns & Rows (custom columns/rows with gutters).
+- [x] Support options: clear existing guides toggle, custom gutter width (px), custom margin percentages, horizontal and vertical orientation toggles.
+- [x] Register under menu path `<Image>/View/Guides/New Guide Layout...`, `<Image>/Image/Guides/New Guide Layout...`, and `<Image>/View/Guides/Clear All Guides`.
+- [x] Validate guide placement coordinates, rule-of-thirds offsets, golden-ratio geometry, margin spacing, clear guides action, and headless GIMP test suite.
+
+### Phase 50 — Frame Animation & Tweening Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `frame-animation` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/frame-animation/frame-animation.py`.
+- [ ] Create dedicated Frame Animation helper simulating Photoshop Timeline > Create Frame Animation and Tweening controls.
+- [ ] Support animation setup: uniform frame delay (ms / standard FPS presets: 12 fps, 24 fps, 30 fps, 10 fps), frame disposal mode (`replace` vs `combine`), ping-pong reverse loop creation, and crossfade opacity tweening between adjacent keyframes.
+- [ ] Register under menu path `<Image>/Filters/Animation/Frame Animation Setup...`, `<Image>/Image/Animation/Frame Animation Setup...`, and `<Image>/Filters/Animation/Create Tween Frames...`.
+- [ ] Validate frame delay formatting in layer names, disposal tags, tween layer interpolation, ping-pong sequence generation, and headless GIMP test suite.
 
 
 

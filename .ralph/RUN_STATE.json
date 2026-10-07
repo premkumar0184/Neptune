@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "run_id": "iteration-32",
+  "run_id": "iteration-33",
   "status": "completed",
-  "iteration": 32,
-  "current_task": "Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin",
+  "iteration": 33,
+  "current_task": "Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "758f5d0",
-  "last_verified_task": "Phase 30 — Non-Destructive JPEG Artifacts Removal & Deblocking Helper Plugin",
+  "last_commit": "4630dc9",
+  "last_verified_task": "Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",
     "exit_code": 0,
-    "verified_at": "2026-10-07T18:40:30+05:30",
-    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 24 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 24 plugins), Stage 3 (tests/gimp_e2e_suite.py with 209/209 assertions passing across 25 test suites, asserting PDB registration, layer properties, mask attachment, 8x8 DCT block boundary step reduction [0.0491 -> 0.0123, >74% smoothing], sharp edge contrast preservation [0.3860, 112.1% contrast retained], isolated mosquito ringing spike suppression [0.847 -> 0.527, delta -0.320], 16x16 Macroblock preset verified, Conceal-All black layer mask [diff 0.000000], selection-aware subject masking [inside selection deblocked 0.0123 < 0.0491, outside untouched diff 0.000000], custom sliders with 85.0% opacity and size16x16 verified, and 0.000000 base layer preservation across all tonal zones in 11.06s)."
+    "verified_at": "2026-10-07T18:53:20+05:30",
+    "detail": "Stage 1 (verify_config.py 6/6 sections pass with REQUIRED_PLUGINS inventory audit of 25 plugins), Stage 2 (install.sh --batch executable permissions enforcement on 25 plugins), Stage 3 (tests/gimp_e2e_suite.py with 221/221 assertions passing across 26 test suites, asserting PDB registration, layer properties, mask attachment, Fine Charcoal tone mapping [paper highlight 0.956 > 0.85, charcoal contour stroke 0.061 < 0.15], Dramatic Heavy Vine deep carbon stroke [lightness 0.031 < 0.10], Chalk & Charcoal Duo warm tinted paper [R=0.939 > B=0.799, warmth +0.140], Architectural Line Art Multiply blend mode [30] at 85.0% opacity, Conceal-All black layer mask [diff 0.000000], selection-aware sketch mask [inside sketched 0.061 < 0.20, outside untouched diff 0.000000], custom sliders with 80.0% opacity and Soft Light blend mode [45] verified, and 0.000000 base layer preservation across all tonal zones in 11.85s)."
   },
-  "next_task": "Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin",
-  "last_transition": "2026-10-07T18:43:30+05:30",
+  "next_task": "Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin",
+  "last_transition": "2026-10-07T18:55:20+05:30",
   "notes": "Never store credentials, OAuth tokens, cookies, or secrets here."
 }

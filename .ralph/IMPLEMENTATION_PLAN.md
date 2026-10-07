@@ -213,12 +213,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate compression block variance reduction, edge contrast preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `charcoal-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`.
-- [ ] Create dedicated non-destructive Charcoal Sketch adjustment layer duplicating active drawable.
-- [ ] Support expressive charcoal strokes, edge extraction, charcoal thickness, paper contrast, chalk highlights, curated artistic sketch presets (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom sliders).
-- [ ] Support blend modes (Normal, Multiply for paper drawing overlay, Soft Light), layer opacity, and attached editable layer mask.
-- [ ] Register under menu path `<Image>/Filters/Artistic/Charcoal Sketch...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
-- [ ] Validate stroke rendering, tonal sketch response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `charcoal-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`.
+- [x] Create dedicated non-destructive Charcoal Sketch adjustment layer duplicating active drawable.
+- [x] Support expressive charcoal strokes, edge extraction, charcoal thickness, paper contrast, chalk highlights, curated artistic sketch presets (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom sliders).
+- [x] Support blend modes (Normal, Multiply for paper drawing overlay, Soft Light), layer opacity, and attached editable layer mask.
+- [x] Register under menu path `<Image>/Filters/Artistic/Charcoal Sketch...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
+- [x] Validate stroke rendering, tonal sketch response, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `woodcut-filter` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/woodcut-filter/woodcut-filter.py`.
+- [ ] Create dedicated non-destructive Woodcut Print adjustment layer duplicating active drawable.
+- [ ] Support woodblock relief carving, high-contrast woodcut ink reduction, block gouge edge styling, woodcut ink color, handmade paper tone, curated presets (Classic Japanese Woodblock, Modern Graphic Linocut, Detailed Ukiyo-e, Expressive Heavy Gouge, Fine Engraving, Custom sliders).
+- [ ] Register under menu path `<Image>/Filters/Artistic/Woodcut Print...`, `<Image>/Filters/Sketch`, and `<Image>/Layer`.
+- [ ] Validate relief gouge contrast, ink tone mapping, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 
 

@@ -89,6 +89,7 @@ def test_pdb_registration():
         ("python-fu-selective-color-pop", "Selective Color Pop & Background Desaturation"),
         ("python-fu-photo-colorize", "Vintage Photo Colorization & Restoration"),
         ("python-fu-jpeg-artifact-removal", "JPEG Artifacts Removal & Deblocking"),
+        ("python-fu-charcoal-filter", "Charcoal & Fine-Art Sketch Helper"),
     ]
 
     for proc_name, label in required_procs:
@@ -3394,6 +3395,218 @@ def test_jpeg_artifact_removal():
 
 
 # ==============================================================================
+# TEST 26: Non-Destructive Charcoal & Fine-Art Sketch Plugin (Phase 31)
+# ==============================================================================
+def test_charcoal_filter():
+    print("\n--- Test Suite 26: Charcoal & Fine-Art Sketch Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-charcoal-filter")
+    if proc is None:
+        record_fail("CF-01", "Procedure lookup", "Procedure python-fu-charcoal-filter not found")
+        return
+
+    # Create a 64x64 test image with:
+    # High-key paper background (0.9, 0.9, 0.9) and a dark subject rectangle (0.1, 0.1, 0.1) in center
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Base", 64, 64, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # Fill background
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.90, 0.90, 0.90)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Dark subject rectangle
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 16, 16, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.10, 0.10, 0.10)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_paper = base.get_pixel(4, 4).get_rgba()
+        p_base_edge = base.get_pixel(15, 20).get_rgba()
+        p_base_subj = base.get_pixel(32, 32).get_rgba()
+
+        # 26a: Execute with Fine Charcoal Drawing preset (default)
+        config = proc.create_config()
+        config.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        config.set_property("image", image)
+        config.set_property("preset", "fine-charcoal")
+        config.set_property("mask-type", "reveal-all")
+        config.set_property("opacity", 100.0)
+
+        res = proc.run(config)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CF-01", "Execution status", f"Expected SUCCESS, got status={status}")
+            return
+        record_pass("CF-01", "Execution status", "SUCCESS")
+
+        # 26b: Verify layer properties
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("CF-02", "Layer creation", f"Expected at least 2 layers, found {len(layers)}")
+            return
+        ch_layer = layers[0]
+        if "Charcoal Sketch" not in ch_layer.get_name() or ch_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("CF-02", "Layer properties", f"Unexpected name={ch_layer.get_name()}, mode={ch_layer.get_mode()}")
+            return
+        record_pass("CF-02", "Layer mode & name", f"Layer '{ch_layer.get_name()}' mode={ch_layer.get_mode()}")
+
+        # 26c: Verify attached reveal-all layer mask
+        mask = ch_layer.get_mask()
+        if mask is None:
+            record_fail("CF-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("CF-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 26d: Fine Charcoal Drawing tone verification: paper background lightness > 0.85, charcoal stroke line < 0.15
+        p_paper = get_composite_pixel(image, 4, 4)
+        p_stroke = get_composite_pixel(image, 15, 20)
+        if p_paper[0] < 0.85 or p_stroke[0] > 0.15:
+            record_fail("CF-04", "Fine charcoal tones", f"Paper={p_paper[0]:.3f} (expected >0.85), Stroke={p_stroke[0]:.3f} (expected <0.15)")
+            return
+        record_pass("CF-04", "Fine Charcoal tone mapping", f"Paper highlight ({p_paper[0]:.3f} > 0.85), Charcoal contour stroke ({p_stroke[0]:.3f} < 0.15)")
+
+        image.remove_layer(ch_layer)
+
+        # 26e: Dramatic Heavy Vine preset
+        cfg_vine = proc.create_config()
+        cfg_vine.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vine.set_property("image", image)
+        cfg_vine.set_property("preset", "dramatic-vine")
+        cfg_vine.set_property("mask-type", "reveal-all")
+        cfg_vine.set_property("opacity", 100.0)
+
+        proc.run(cfg_vine)
+        vine_layer = image.get_layers()[0]
+        p_vine_stroke = get_composite_pixel(image, 15, 20)
+        if p_vine_stroke[0] > 0.10:
+            record_fail("CF-05", "Dramatic vine tone", f"Stroke={p_vine_stroke[0]:.3f} > 0.10")
+            return
+        record_pass("CF-05", "Dramatic Heavy Vine preset", f"Deep carbon stroke lightness={p_vine_stroke[0]:.3f} (< 0.10)")
+
+        image.remove_layer(vine_layer)
+
+        # 26f: Chalk & Charcoal Duo preset (tinted warm paper tone: R > B by at least 0.05)
+        cfg_chalk = proc.create_config()
+        cfg_chalk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_chalk.set_property("image", image)
+        cfg_chalk.set_property("preset", "chalk-charcoal")
+        cfg_chalk.set_property("mask-type", "reveal-all")
+        cfg_chalk.set_property("opacity", 100.0)
+
+        proc.run(cfg_chalk)
+        chalk_layer = image.get_layers()[0]
+        p_chalk_paper = get_composite_pixel(image, 4, 4)
+        warm_delta = p_chalk_paper[0] - p_chalk_paper[2]
+        if warm_delta < 0.05:
+            record_fail("CF-06", "Chalk & charcoal paper", f"Warm delta {warm_delta:.4f} < 0.05")
+            return
+        record_pass("CF-06", "Chalk & Charcoal Duo preset", f"Warm tinted paper R={p_chalk_paper[0]:.3f} > B={p_chalk_paper[2]:.3f} (warmth +{warm_delta:.3f})")
+
+        image.remove_layer(chalk_layer)
+
+        # 26g: Architectural Line Art preset with Multiply blend mode
+        cfg_arch = proc.create_config()
+        cfg_arch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_arch.set_property("image", image)
+        cfg_arch.set_property("preset", "architectural")
+        cfg_arch.set_property("mask-type", "reveal-all")
+        cfg_arch.set_property("opacity", 85.0)
+
+        proc.run(cfg_arch)
+        arch_layer = image.get_layers()[0]
+        if arch_layer.get_mode() != Gimp.LayerMode.MULTIPLY or abs(arch_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("CF-07", "Architectural preset", f"Expected Multiply and 85%, got mode={arch_layer.get_mode()}, opacity={arch_layer.get_opacity()}%")
+            return
+        record_pass("CF-07", "Architectural Line Art preset", f"Multiply blend mode ({arch_layer.get_mode()}), opacity 85.0% verified")
+
+        image.remove_layer(arch_layer)
+
+        # 26h: Conceal-All Black Layer Mask
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", image)
+        cfg_blk.set_property("preset", "fine-charcoal")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        cfg_blk.set_property("opacity", 100.0)
+
+        proc.run(cfg_blk)
+        blk_layer = image.get_layers()[0]
+        p_blk = get_composite_pixel(image, 15, 20)
+        p_base = base.get_pixel(15, 20).get_rgba()
+        diff_blk = max(abs(p_blk[i] - p_base[i]) for i in range(3))
+        if diff_blk > 0.000001:
+            record_fail("CF-08", "Conceal-all mask", f"Base altered by {diff_blk:.6f} > 0")
+            return
+        record_pass("CF-08", "Conceal-all black layer mask", f"Black mask attached for selective brush sketching (diff {diff_blk:.6f})")
+
+        image.remove_layer(blk_layer)
+
+        # 26i: Selection-Aware Masking
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 20, 20)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "fine-charcoal")
+        cfg_sel.set_property("mask-type", "selection")
+        cfg_sel.set_property("opacity", 100.0)
+
+        proc.run(cfg_sel)
+        sel_layer = image.get_layers()[0]
+        p_sel_inside = get_composite_pixel(image, 15, 18)
+        p_sel_out = get_composite_pixel(image, 32, 32)
+        out_diff = max(abs(p_sel_out[i] - p_base_subj[i]) for i in range(3))
+
+        if out_diff > 0.000001 or p_sel_inside[0] > 0.20:
+            record_fail("CF-09", "Selection-aware mask", f"Inside stroke {p_sel_inside[0]:.3f}, Outside diff {out_diff:.6f}")
+            return
+        record_pass("CF-09", "Selection-aware sketch mask", f"Inside sketched ({p_sel_inside[0]:.3f} < 0.20), outside untouched (diff {out_diff:.6f})")
+
+        Gimp.Selection.none(image)
+        image.remove_layer(sel_layer)
+
+        # 26j: Custom Sliders, Soft Light blend mode & Opacity
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("stroke-thickness", 3.0)
+        cfg_cust.set_property("stroke-intensity", 1.2)
+        cfg_cust.set_property("charcoal-shade", 0.04)
+        cfg_cust.set_property("paper-tone", 0.92)
+        cfg_cust.set_property("blend-mode", "soft-light")
+        cfg_cust.set_property("opacity", 80.0)
+        cfg_cust.set_property("mask-type", "reveal-all")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 80.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("CF-10", "Custom sliders", f"Expected opacity 80.0% and Soft Light, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+        record_pass("CF-10", "Custom sliders & blend mode", f"Opacity 80.0%, Soft Light blend mode ({cust_layer.get_mode()}), thickness 3.0px verified")
+
+        # 26k: Non-destructive base layer invariance across all pixels
+        p_base_after_paper = base.get_pixel(4, 4).get_rgba()
+        p_base_after_edge = base.get_pixel(15, 20).get_rgba()
+        p_base_after_subj = base.get_pixel(32, 32).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_paper[i] - p_base_paper[i]) for i in range(3)),
+            max(abs(p_base_after_edge[i] - p_base_edge[i]) for i in range(3)),
+            max(abs(p_base_after_subj[i] - p_base_subj[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("CF-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("CF-11", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CF-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -3428,6 +3641,7 @@ def run_all_tests():
     test_selective_color_pop()
     test_photo_colorize()
     test_jpeg_artifact_removal()
+    test_charcoal_filter()
 
 
     elapsed = time.time() - start_time

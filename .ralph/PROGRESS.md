@@ -761,3 +761,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 31 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin.
 
+## Iteration 33 — Non-Destructive Charcoal & Fine-Art Sketch Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Charcoal & Fine-Art Sketch Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 662: "Apply Charcoal filter to images", and `photoshop_docs.md` Section 422 line 12132 Sketch: Charcoal, Chalk & Charcoal, Pencil and paper effects). Replaces destructive manual sketch filters with an isolated non-destructive Charcoal adjustment layer duplicating active drawable, extracting artistic contour strokes and expressive line weights via GEGL `gegl:edge-neon`, mapping velvety charcoal carbon, graphite midtones, and archival paper tones via GEGL `gegl:gradient-map` across curated fine-art palettes (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom Sliders), selectable blend modes (Normal, Multiply for seamless drawing overlay over photo layers, Soft Light for tonal sketch glaze), layer opacity control, versatile mask options (Reveal All, Conceal All for selective hand-sketching, Active Selection), and 100% preservation of underlying base layer pixels.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-charcoal-filter` with edge-neon contour extraction, gradient-map ink and paper mapping, presets, blend modes, layer mask attachment, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `charcoal-filter` (25 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (25 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 26 (asserting PDB registration, layer properties, mask attachment, Fine Charcoal tone mapping [paper highlight 0.956 > 0.85, charcoal contour stroke 0.061 < 0.15], Dramatic Heavy Vine deep carbon stroke [lightness 0.031 < 0.10], Chalk & Charcoal Duo warm tinted paper [R=0.939 > B=0.799, warmth +0.140], Architectural Line Art Multiply blend mode [30] at 85.0% opacity, Conceal-All black layer mask [diff 0.000000], selection-aware sketch mask [inside sketched 0.061 < 0.20, outside untouched diff 0.000000], custom sliders with 80.0% opacity and Soft Light blend mode [45] verified, and 0.000000 base layer preservation across all tonal zones).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Charcoal & Fine-Art Sketch Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 31 complete and scheduled Phase 32 (Woodcut & Linocut Printmaking Helper).
+- **Technical discoveries**:
+  - `gegl:edge-neon` with customizable radius and amount extracts smooth, continuous contour line weights that mimic natural charcoal pencil and stick pressure.
+  - Feeding the edge intensity into `gegl:gradient-map` with dual ink and paper stops maps 0.0 (flat regions) to warm archival paper texture and 1.0 (stroke peaks) to deep velvety carbon, providing authentic fine-art drawing appearance with full color control.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 25 plugins verified).
+    - Stage 2: `install.sh --batch` passed (25 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 221 tests across 26 test suites in 11.85s.
+    - Final quality gate: SUCCESS across all stages in 23.12s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `4630dc9`.
+- **Result**: Success.
+- **Next**: Phase 32 — Non-Destructive Woodcut & Linocut Printmaking Helper Plugin.
+

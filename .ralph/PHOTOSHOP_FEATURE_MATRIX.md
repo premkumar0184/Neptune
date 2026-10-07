@@ -423,6 +423,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Charcoal & Fine-Art Sketch Helper
+- **Source topic**: Apply Charcoal filter to images (`Topics.txt` line 662, and `photoshop_docs.md` Section 422 line 12132 Sketch: Charcoal, Chalk & Charcoal, Pencil and paper effects)
+- **Photoshop behavior**: Redraws an image with bold charcoal strokes, delicate midtone hatching, and chalk highlights on textured sketch paper, with controls for stroke thickness, detail, light/dark balance, and foreground/background colors.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-charcoal-filter` in `<Image>/Filters/Artistic/Charcoal Sketch...`, `<Image>/Filters/Sketch/Charcoal Sketch...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/charcoal-filter/charcoal-filter.py`.
+- **Current capability**: Creates an isolated, non-destructive adjustment layer duplicating active drawable. Extracts expressive contour lines and charcoal strokes via GEGL `gegl:edge-neon`, mapping charcoal ink and fine-art paper tones via GEGL `gegl:gradient-map` across customizable palettes. Offers curated presets (Fine Charcoal Drawing, Dramatic Heavy Vine, Chalk & Charcoal Duo, Rough Sketchbook, Architectural Line Art, Custom Sliders), selectable blend modes (Normal, Multiply for paper drawing overlay, Soft Light for tonal glaze), layer opacity (10% to 100%), editable layer masks (Reveal All, Conceal All for selective brush sketching, Active Selection), and 100% preservation of underlying source pixels.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:edge-neon`, `gegl:gradient-map`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 31).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Fine Charcoal tone mapping (paper highlight > 0.85, stroke line < 0.15), Dramatic Heavy Vine carbon stroke (< 0.10), Chalk & Charcoal Duo warm tinted paper, Architectural Line Art Multiply blend mode, Conceal-All black layer mask, selection-aware masking, custom sliders with Soft Light mode, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 33):
+  1. `verify_config.py`: Section 6 passed with 25 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Fine Charcoal tone mapping verified (paper highlight 0.956 > 0.85, charcoal contour stroke 0.061 < 0.15), Dramatic Heavy Vine deep carbon stroke verified (lightness 0.031 < 0.10), Chalk & Charcoal Duo warm tinted paper verified (R=0.939 > B=0.799, warmth +0.140), Architectural Line Art Multiply blend mode (30) at 85.0% opacity verified, Conceal-All black layer mask verified (0.000000 diff), selection-aware sketch mask verified (inside sketched 0.061 < 0.20, outside untouched diff 0.000000), custom sliders with 80.0% opacity and Soft Light blend mode (45) verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 33).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

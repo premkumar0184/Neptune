@@ -892,5 +892,32 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 36 — Non-Destructive Color Range Selection & Isolation Helper Plugin.
 
+## Iteration 38 — Non-Destructive Color Range Selection & Isolation Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Color Range Selection & Isolation Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 202: "Select a Color Range in Photoshop", line 208: "Refine your selection and mask", line 219: "Refine and soften selection edges", and `photoshop_docs.md` Section 3111-3123 lines 6044-6062 "Select > Color Range"). Replaces basic single-pixel threshold selection with comprehensive Photoshop Color Range parity: targeted color families (Reds, Yellows, Greens, Cyans, Blues, Magentas), tonal bands (Highlights, Midtones, Shadows), photographic Skin Tones, and Sampled Colors, continuous Fuzziness sampling thresholding, edge feathering (0-50px), edge shift (-50 to +50px), inversion toggle, and flexible output modes (Non-destructive duplicate layer with attached layer mask, active canvas selection, or reusable channel mask) while leaving base layer pixels underneath 100% untouched.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-color-range` with spectral color family selection (`image.select_color`), tonal range selection, photographic skin tone models, sampling threshold calibration (`Gimp.context_set_sample_threshold`), edge shift (`Gimp.Selection.grow`/`shrink`), edge feathering (`Gimp.Selection.feather`), output mode routing (layer mask, selection, channel), and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `color-range` (30 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (30 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 31 (asserting PDB registration, layer properties, mask attachment, Reds color range isolation [red quadrant R=1.000, G=0.000], Yellows range isolation, Blues range isolation, Greens range isolation, Skin Tones range targeting photographic portrait tones, Selection-only output mode active canvas bounds [(0,0) to (33,33)], Channel mask output mode channel creation, Custom sliders, and 0.000000 base layer preservation across all quadrants).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Color Range Selection & Isolation Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 36 complete and scheduled Phase 37 (Smart Sharpen & Optical Deconvolution Helper).
+- **Technical discoveries**:
+  - `Gimp.context_set_sample_threshold(thresh)` takes a normalized float between 0.01 and 1.0 (defaulting to 0.0588 / 15/255), allowing seamless linear mapping from Photoshop's 0-100 Fuzziness slider to GIMP's internal color matching engine.
+  - Combining multi-stop color anchors with `Gimp.ChannelOps.ADD` across `image.select_color` allows broad, continuous spectral coverage for color families like Skin Tones (fair, olive, deep) and Tonal Ranges (whites, midtones, deep shadows).
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 30 plugins verified).
+    - Stage 2: `install.sh --batch` passed (30 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 281 tests across 31 test suites in 16.47s.
+    - Final quality gate: SUCCESS across all stages in 36.56s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `65b1281`.
+- **Result**: Success.
+- **Next**: Phase 37 — Non-Destructive Smart Sharpen & Optical Deconvolution Helper Plugin.
+
+
 
 

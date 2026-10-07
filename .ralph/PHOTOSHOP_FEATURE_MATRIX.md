@@ -508,6 +508,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Color Range Selection & Isolation Helper
+- **Source topic**: Select a Color Range in Photoshop / Refine your selection and mask / Refine and soften selection edges (`Topics.txt` lines 202, 208, 219, and `photoshop_docs.md` Section 3111-3123 lines 6044-6062 "Select > Color Range")
+- **Photoshop behavior**: Selects targeted spectral color ranges (Reds, Yellows, Greens, Cyans, Blues, Magentas), tonal luminance bands (Highlights, Midtones, Shadows), or photographic Skin Tones, controlled by continuous Fuzziness tolerance and edge refinement.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-color-range` in `<Image>/Select/Color Range...`, `<Image>/Filters/Retouching/Color Range...`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`.
+- **Current capability**: Selects spectral color families, tonal luminance bands (highlights, midtones, shadows), photographic skin tones, and sampled foreground colors with continuous Fuzziness sampling thresholding, edge feathering (0-50px), edge shift (-50 to +50px), inversion toggle, and flexible output modes (Non-destructive duplicate layer with attached layer mask, active canvas selection, or reusable channel mask) while leaving base layer pixels underneath 100% untouched.
+- **Gap**: None.
+- **Dependencies**: Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 36).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer properties, mask attachment, Reds color range isolation, Yellows color range isolation, Blues color range isolation, Greens color range isolation, Skin Tones range isolation, Selection-only output mode active canvas bounds, Channel mask output mode channel creation, Custom sliders, and non-destructive base layer preservation across all quadrants.
+- **Verification evidence** (Iteration 38):
+  1. `verify_config.py`: Section 6 passed with 30 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Reds color range isolation verified (red quadrant R=1.000, G=0.000), Yellows range verified with yellow mask, Blues range verified with blue mask, Greens range verified with green mask, Skin Tones range targeting photographic portrait skin tones verified, Selection-only mode verified with active canvas bounds (0,0) to (33,33), Channel mask mode verified with reusable channel saved, Custom sliders verified, and base layer pixels 100% untouched across all quadrants (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 38).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

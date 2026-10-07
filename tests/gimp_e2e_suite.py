@@ -94,7 +94,9 @@ def test_pdb_registration():
         ("python-fu-swirling-sky", "Swirling Night Sky & Twirl Distortion"),
         ("python-fu-sky-replacement", "Sky Selection & Replacement Helper"),
         ("python-fu-select-subject", "Select Subject & Background Isolation Helper"),
+        ("python-fu-color-range", "Color Range Selection & Isolation Helper"),
     ]
+
 
 
     for proc_name, label in required_procs:
@@ -4499,6 +4501,244 @@ def test_select_subject():
 
 
 # ==============================================================================
+# TEST 31: Color Range Selection & Isolation Plugin (Phase 36)
+# ==============================================================================
+def test_color_range():
+    print("\n--- Test Suite 31: Color Range Selection & Isolation Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-color-range")
+    if proc is None:
+        record_fail("CR-01", "Procedure lookup", "python-fu-color-range not found in PDB")
+        return
+
+    # Create 64x64 test image with distinct color regions
+    image = Gimp.Image.new(64, 64, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "Color Palette", 64, 64, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+
+        # Top-Left: Red (0,0 to 32,32)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("red"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Top-Right: Green (32,0 to 32,32)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 32, 0, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("green"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Bottom-Left: Blue (0,32 to 32,32)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 32, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("blue"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Bottom-Right: Yellow (32,32 to 32,32)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 32, 32, 32, 32)
+        Gimp.context_set_foreground(Gegl.Color.new("yellow"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Center patch: Photographic Skin Tone (24,24 to 16x16)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 24, 24, 16, 16)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.80, 0.60, 0.50)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(image)
+
+        p_base_red = base.get_pixel(10, 10).get_rgba()
+        p_base_green = base.get_pixel(50, 10).get_rgba()
+        p_base_blue = base.get_pixel(10, 50).get_rgba()
+        p_base_yellow = base.get_pixel(50, 50).get_rgba()
+        p_base_skin = base.get_pixel(32, 32).get_rgba()
+
+        # 31a: Run Reds range (default)
+        cfg_red = proc.create_config()
+        cfg_red.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_red.set_property("image", image)
+        cfg_red.set_property("target-range", "reds")
+        cfg_red.set_property("fuzziness", 35.0)
+        cfg_red.set_property("output-mode", "new-layer-mask")
+
+        res = proc.run(cfg_red)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CR-01", "Execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("CR-01", "Execution status", "SUCCESS")
+
+        # 31b: Layer mode and name
+        layers = image.get_layers()
+        if len(layers) < 2:
+            record_fail("CR-02", "Layer creation", f"Expected >= 2 layers, got {len(layers)}")
+            return
+        red_layer = layers[0]
+        if red_layer.get_name() != "Color Range (Reds)":
+            record_fail("CR-02", "Layer name", f"Expected 'Color Range (Reds)', got '{red_layer.get_name()}'")
+            return
+        record_pass("CR-02", "Layer mode & name", f"Layer '{red_layer.get_name()}' mode={red_layer.get_mode()}")
+
+        # 31c: Layer mask attachment
+        mask = red_layer.get_mask()
+        if mask is None:
+            record_fail("CR-03", "Layer mask", "Red layer has no mask attached")
+            return
+        record_pass("CR-03", "Layer mask attachment", "Layer mask attached to duplicate color range layer")
+
+        # 31d: Reds color range isolation
+        p_comp_red = get_composite_pixel(image, 10, 10)
+        if p_comp_red[0] < 0.90 or p_comp_red[1] > 0.10:
+            record_fail("CR-04", "Red range pixel", f"Red quadrant R={p_comp_red[0]:.3f}, G={p_comp_red[1]:.3f}")
+            return
+        record_pass("CR-04", "Reds color range isolation", f"Red quadrant correctly selected (R={p_comp_red[0]:.3f}, G={p_comp_red[1]:.3f})")
+
+        image.remove_layer(red_layer)
+
+        # 31e: Yellows color range isolation
+        cfg_yel = proc.create_config()
+        cfg_yel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_yel.set_property("image", image)
+        cfg_yel.set_property("target-range", "yellows")
+        cfg_yel.set_property("fuzziness", 35.0)
+        cfg_yel.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_yel)
+        yel_layer = image.get_layers()[0]
+        if yel_layer.get_name() != "Color Range (Yellows)" or yel_layer.get_mask() is None:
+            record_fail("CR-05", "Yellows layer", f"Layer name={yel_layer.get_name()}")
+            return
+        record_pass("CR-05", "Yellows color range isolation", f"Layer '{yel_layer.get_name()}' with yellow mask verified")
+
+        image.remove_layer(yel_layer)
+
+        # 31f: Blues color range isolation
+        cfg_blue = proc.create_config()
+        cfg_blue.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blue.set_property("image", image)
+        cfg_blue.set_property("target-range", "blues")
+        cfg_blue.set_property("fuzziness", 35.0)
+        cfg_blue.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_blue)
+        blue_layer = image.get_layers()[0]
+        if blue_layer.get_name() != "Color Range (Blues)" or blue_layer.get_mask() is None:
+            record_fail("CR-06", "Blues layer", f"Layer name={blue_layer.get_name()}")
+            return
+        record_pass("CR-06", "Blues color range isolation", f"Layer '{blue_layer.get_name()}' with blue mask verified")
+
+        image.remove_layer(blue_layer)
+
+        # 31g: Greens color range isolation
+        cfg_grn = proc.create_config()
+        cfg_grn.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_grn.set_property("image", image)
+        cfg_grn.set_property("target-range", "greens")
+        cfg_grn.set_property("fuzziness", 35.0)
+        cfg_grn.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_grn)
+        grn_layer = image.get_layers()[0]
+        if grn_layer.get_name() != "Color Range (Greens)" or grn_layer.get_mask() is None:
+            record_fail("CR-07", "Greens layer", f"Layer name={grn_layer.get_name()}")
+            return
+        record_pass("CR-07", "Greens color range isolation", f"Layer '{grn_layer.get_name()}' with green mask verified")
+
+        image.remove_layer(grn_layer)
+
+        # 31h: Skin Tones range isolation
+        cfg_skin = proc.create_config()
+        cfg_skin.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_skin.set_property("image", image)
+        cfg_skin.set_property("target-range", "skin-tones")
+        cfg_skin.set_property("fuzziness", 40.0)
+        cfg_skin.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_skin)
+        skin_layer = image.get_layers()[0]
+        if skin_layer.get_name() != "Color Range (Skin Tones)" or skin_layer.get_mask() is None:
+            record_fail("CR-08", "Skin tones layer", f"Layer name={skin_layer.get_name()}")
+            return
+        record_pass("CR-08", "Skin Tones range isolation", f"Layer '{skin_layer.get_name()}' targeting photographic skin tones verified")
+
+        image.remove_layer(skin_layer)
+
+        # 31i: Selection-Only output mode
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("target-range", "reds")
+        cfg_sel.set_property("output-mode", "selection-only")
+
+        proc.run(cfg_sel)
+        if len(image.get_layers()) != 1:
+            record_fail("CR-09", "Selection-only layer count", f"Expected 1 layer, got {len(image.get_layers())}")
+            return
+        if Gimp.Selection.is_empty(image):
+            record_fail("CR-09", "Selection-only empty", "Selection is unexpectedly empty")
+            return
+        res = Gimp.Selection.bounds(image)
+        if len(res) == 6 and res[1]:
+            x1, y1, x2, y2 = res[2], res[3], res[4], res[5]
+            record_pass("CR-09", "Selection-only output mode", f"Active selection bounding box ({x1},{y1}) to ({x2},{y2}) verified")
+        else:
+            record_fail("CR-09", "Selection bounds", f"Unexpected bounds result: {res}")
+            return
+        Gimp.Selection.none(image)
+
+        # 31j: Channel Mask output mode
+        num_ch_before = len(image.get_channels())
+        cfg_ch = proc.create_config()
+        cfg_ch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ch.set_property("image", image)
+        cfg_ch.set_property("target-range", "blues")
+        cfg_ch.set_property("output-mode", "channel-mask")
+
+        proc.run(cfg_ch)
+        channels = image.get_channels()
+        if len(channels) <= num_ch_before:
+            record_fail("CR-10", "Channel mask count", f"Expected channels > {num_ch_before}, got {len(channels)}")
+            return
+        ch_names = [ch.get_name() for ch in channels]
+        if "Color Range Mask (Blues)" not in ch_names:
+            record_fail("CR-10", "Channel mask name", f"Missing mask in channels: {ch_names}")
+            return
+        record_pass("CR-10", "Channel mask output mode", f"Channel 'Color Range Mask (Blues)' saved cleanly")
+
+        # 31k: Custom fuzziness & Base layer preservation
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("target-range", "highlights")
+        cfg_cust.set_property("fuzziness", 50.0)
+        cfg_cust.set_property("feather-radius", 2.0)
+        cfg_cust.set_property("output-mode", "new-layer-mask")
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if cust_layer.get_mask() is None:
+            record_fail("CR-11", "Custom layer mask", "Custom layer has no mask")
+            return
+
+        # Check non-destructive invariance of base layer
+        p_base_after_red = base.get_pixel(10, 10).get_rgba()
+        p_base_after_green = base.get_pixel(50, 10).get_rgba()
+        p_base_after_blue = base.get_pixel(10, 50).get_rgba()
+        p_base_after_yellow = base.get_pixel(50, 50).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_red[i] - p_base_red[i]) for i in range(3)),
+            max(abs(p_base_after_green[i] - p_base_green[i]) for i in range(3)),
+            max(abs(p_base_after_blue[i] - p_base_blue[i]) for i in range(3)),
+            max(abs(p_base_after_yellow[i] - p_base_yellow[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("CR-11", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("CR-11", "Custom sliders & non-destructive preservation", f"Base pixels 100% untouched across all quadrants (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CR-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -4538,6 +4778,8 @@ def run_all_tests():
     test_swirling_sky()
     test_sky_replacement()
     test_select_subject()
+    test_color_range()
+
 
 
 

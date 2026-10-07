@@ -250,10 +250,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate automated subject mask generation, foreground protection, edge refinement, inverted background selection, and non-destructive source layer preservation via headless GIMP test.
 
 ### Phase 36 — Non-Destructive Color Range Selection & Isolation Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `color-range` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`.
-- [ ] Create dedicated non-destructive Color Range selection helper that allows selecting specific hues and tonal ranges (Sampled Colors, Skin Tones, Highlights, Midtones, Shadows, Reds, Yellows, Greens, Cyans, Blues, Magentas).
-- [ ] Support fuzziness / color tolerance slider (0 to 200), range spread, edge feathering, and non-destructive duplicate layer output with attached layer mask.
-- [ ] Register under menu path `<Image>/Select/Color Range...`, `<Image>/Filters/Retouching/Color Range...`, and `<Image>/Layer`.
-- [ ] Validate color range extraction, skin tone detection, fuzziness weighting, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `color-range` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-range/color-range.py`.
+- [x] Create dedicated non-destructive Color Range selection helper that allows selecting specific hues and tonal ranges (Sampled Colors, Skin Tones, Highlights, Midtones, Shadows, Reds, Yellows, Greens, Cyans, Blues, Magentas).
+- [x] Support fuzziness / color tolerance slider (0 to 100), range spread, edge feathering, and non-destructive duplicate layer output with attached layer mask.
+- [x] Register under menu path `<Image>/Select/Color Range...`, `<Image>/Filters/Retouching/Color Range...`, and `<Image>/Layer`.
+- [x] Validate color range extraction, skin tone detection, fuzziness weighting, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 37 — Non-Destructive Smart Sharpen & Optical Deconvolution Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `smart-sharpen` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-sharpen/smart-sharpen.py`.
+- [ ] Create dedicated non-destructive Smart Sharpen adjustment layer duplicating active drawable and applying adaptive high-frequency edge sharpening while suppressing noise amplification.
+- [ ] Support blur removal algorithm types: Gaussian Blur, Lens Blur (optical aperture deconvolution), and Motion Blur (directional edge sharpening).
+- [ ] Support controls: Amount (1% to 500%), Radius (0.1 to 50.0px), Reduce Noise (0% to 100%), and shadow/highlight tonal protection.
+- [ ] Register under menu path `<Image>/Filters/Enhance/Smart Sharpen...`, `<Image>/Filters/Retouching/Smart Sharpen...`, and `<Image>/Layer`.
+- [ ] Validate edge acutance enhancement, noise threshold protection, deconvolution mode selection, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 

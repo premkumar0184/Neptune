@@ -1,57 +1,68 @@
-# Current Task — Iteration 46
+# Current Task — Iteration 47
 
 ## Task
-**Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin (`python-fu-match-color`)**
+**Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin (`python-fu-apply-image`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 333-336: "Selective color adjustments - Match color in different images, Match color between two images, Match color of two layers in the same image, Save and apply settings in Match Color", and `photoshop_docs.md` Section 327-330 lines 9575-9695: "The Match Color command in photoeditor adjusts colors in single or multiple images, layers, or selections to align with colors in another... works only in RGB mode... controls for: Luminance adjustment [1-200, default 100], Color Intensity [1-200, default 100, value of 1 converts to grayscale], Fade [0-100, default 0, moving right reduces effect], Neutralize [automatically removes any color cast in target image]"), Match Color is one of Photoshop's premier color standardization and grading commands. It is used across portraiture, landscape, cinematography, and compositing to align color balance across shots, match skin tones, transfer color palettes between reference images/layers, and neutralize color casts.
+In Adobe Photoshop (`Topics.txt` line 350: "HDR and channel manipulation - Blend channels with Apply Image and Calculations", and `photoshop_docs.md` Section 340 lines 10050-10100: "Image > Apply Image and Image > Calculations: Blend channels with Apply Image and Calculations... choose source image, layer, and channel... blending modes [Multiply, Screen, Overlay, Soft Light, Add, Subtract...], Invert checkbox, Opacity slider, Scale, Offset, and Mask options"), Apply Image and Calculations are the foundation of high-end commercial retouching, digital darkroom composite math, and channel-based adjustments.
 
-In stock GIMP, there is no direct equivalent to Photoshop's Match Color dialog. Photographers must manually adjust curves or levels by eye. Implementing native GIMP 3.x Python 3 plugin `python-fu-match-color` achieves full Photoshop parity with non-destructive workflow enhancements:
-1. Dynamic Source Layer Color Transfer: Computes statistical channel moments via PDB `gimp-drawable-histogram` between a source reference layer and target layer, mapping color distribution via `gegl:channel-mixer`.
-2. Curated Photographic Grading Palettes: Warm Golden Hour (warm amber sunlight), Cool Cinema Blue (moody teal/cyan cinema), Vintage Film Tone (analog film matte warmth), Lush Foliage Emerald (deep landscape greens), Sunset Crimson (radiant dusk orange/magenta), Skin Tone Harmony (healthy portrait skin balance), Neutralize Only, Source Layer, and Custom sliders.
-3. Luminance Slider (1 to 200, default 100): Maps to linear exposure EV via `gegl:exposure` (`ev = log2(lum / 100.0)`).
-4. Color Intensity Slider (1 to 200, default 100): Maps to `gegl:vibrance` saturation where `color_intensity = 1.0` yields pure neutral grayscale (`saturation = 0.0`) and `color_intensity = 200.0` yields double saturation.
-5. Fade Slider (0 to 100, default 0): Linearly modulates adjustment layer effective opacity back to the unadjusted base layer (`eff_opacity = opacity * (1.0 - fade / 100.0)`).
-6. Neutralize Color Cast Toggle: Automatically calculates chromatic channel imbalances and applies balancing gains to eliminate color casts (>95% cast reduction).
-7. Layer Mask Support: Reveal All (white mask), Conceal All (black mask), and Active Selection mask.
-8. 100% Non-Destructive Invariance: Duplicates target drawable into an isolated adjustment layer; base layer pixels underneath remain 100% mathematically untouched (`diff == 0.000000`).
+Retouchers and digital artists rely heavily on Apply Image for:
+1. Frequency Separation:
+   - 8-bit Frequency Separation texture extraction (Subtract blend mode, Scale 2, Offset 128).
+   - 16-bit Frequency Separation texture extraction (Add blend mode, Invert True, Scale 2, Offset 0).
+2. Channel Luminosity & Contrast Blending:
+   - Blending the Green channel onto the composite using Soft Light for flattering skin contrast and tone without color casts.
+   - Blending the Red channel onto the composite using Multiply for dramatic fine-art black & white landscape contrast.
+3. Channel Matte & Alpha Extraction:
+   - Blending high-contrast inverted channels using Screen or Overlay for hair and edge masking.
+4. Channel Math & Calculations:
+   - Combining any source channel (RGB, Red, Green, Blue, Alpha, Luminance) with full blending modes, opacity, scale, and offset.
+
+Stock GIMP provides no built-in `Apply Image` or `Calculations` dialog, forcing users to manually duplicate channels, paste floats, adjust curves, and flatten. Implementing native GIMP 3.x Python 3 plugin `python-fu-apply-image` bridges this major professional gap with non-destructive layering:
+- Source channel extraction (Composite RGB, Red, Green, Blue, Alpha, Luminance via `gegl:mono-mixer`).
+- Channel inversion support (`gegl:invert-linear`).
+- Precise scale & offset calibration via `gimp-drawable-levels`.
+- 12 Photoshop-standard blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Hard Light, Add, Subtract, Difference, Darken, Lighten, Linear Light).
+- Curated retouching presets (8-bit Frequency Separation, 16-bit Frequency Separation, Green Channel Contrast, Red Channel Multiply, Blue Matte Extract, Luminosity Blend, Custom).
+- Layer mask options (Reveal All, Conceal All, Active Selection).
+- 100% Non-destructive invariance: Base layer pixels underneath remain 100% mathematically untouched (`diff == 0.000000`).
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `match-color` in `REQUIRED_PLUGINS`, updating audit inventory to 38 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `apply-image` in `REQUIRED_PLUGINS`, updating audit inventory to 39 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 39: `test_match_color`, assertions MC-01 through MC-11)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Match Color entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 44 status and schedule Phase 45)
-- `.ralph/PROGRESS.md` (Log Iteration 46 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 46 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 40: `test_apply_image`, assertions AI-01 through AI-11)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Apply Image entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 45 status and schedule Phase 46)
+- `.ralph/PROGRESS.md` (Log Iteration 47 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 47 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/` created with `match-color.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/` created with `apply-image.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure `python-fu-match-color` registered in GIMP PDB under:
-   - `<Image>/Image/Adjustments/Match Color...`
-   - `<Image>/Colors/Match Color...`
+3. [x] PDB procedure `python-fu-apply-image` registered in GIMP PDB under:
+   - `<Image>/Image/Apply Image...`
+   - `<Image>/Image/Calculations...`
    - `<Image>/Filters/Retouching`
    - `<Image>/Layer`
-4. [x] Non-destructive adjustment layer created duplicating active drawable.
-5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 39):
-   - MC-01: Procedure arguments verified (preset, source-layer-id, luminance, color-intensity, fade, neutralize, mask-mode, opacity).
-   - MC-02: Execution status verified (PDB status SUCCESS).
-   - MC-03: Layer mode, name & mask verified (`Match Color (Warm Golden Hour)` with reveal-all mask attached).
-   - MC-04: Source Layer Color Matching verified (color statistics transferred from source layer to target: Red 0.202->0.361, Blue 0.799->0.082).
-   - MC-05: Warm Golden Hour preset verified (R=0.456 > G=0.283 > B=0.063 warm amber tone).
-   - MC-06: Cool Cinema Blue preset verified (B=0.905 > G=0.451 > R=0.144 cool cinema tone).
-   - MC-07: Lush Foliage Emerald preset verified (G=0.807 > R=0.093, B=0.181 landscape green).
-   - MC-08: Color Intensity = 1.0 verified (pure neutral grayscale, spread == 0.000000).
-   - MC-09: Neutralize Color Cast toggle verified (color cast neutralized from 0.5975 to 0.0049, >95% reduction).
-   - MC-10: Conceal-All black layer mask verified (composite diff == 0.000000).
-   - MC-11: Selection confinement & non-destructive preservation verified (effect confined to selection, base layer 100% untouched diff == 0.000000).
-6. [x] `verify_config.py` Section 6 passes with all 38 required plugins audited.
-7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (377/377 tests passing).
+4. [x] Non-destructive adjustment layer created duplicating active drawable or source channel.
+5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 40):
+   - AI-01: Procedure arguments verified (preset, source-layer-id, source-channel, invert, blend-mode, opacity, scale, offset, mask-mode).
+   - AI-02: Execution status verified (PDB status SUCCESS).
+   - AI-03: Layer mode, name & mask verified (`Apply Image (Frequency Separation (8-bit))` with `SUBTRACT` mode and reveal-all mask attached).
+   - AI-04: Frequency Separation 8-bit preset verified (Subtract, Scale 2, Offset 128 neutral gray baseline #808080).
+   - AI-05: Green Channel Contrast preset verified (Green channel isolated and blended via Soft Light).
+   - AI-06: Red Channel Multiply preset verified (Red channel isolated and blended via Multiply).
+   - AI-07: Invert flag verified (Source channel accurately inverted before blending).
+   - AI-08: Blend modes verified (Screen, Overlay, Add, Difference, Linear Light).
+   - AI-09: Scale and Offset calibration verified via levels math (Scale 4.0 & Offset 64.0 verified).
+   - AI-10: Conceal-All black layer mask verified (composite diff == 0.000000).
+   - AI-11: Selection confinement & non-destructive preservation verified (effect confined to selection, base layer 100% untouched diff == 0.000000).
+6. [x] `verify_config.py` Section 6 passes with all 39 required plugins audited.
+7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (389/389 tests passing).
 
 ## Verification Commands
 ```bash
@@ -60,6 +71,6 @@ bash PhotoGIMP/install.sh --batch
 python3 tests/run_all_tests.py
 ```
 
-## Expected Checkpoint
-- PhotoGIMP submodule commit: `7728b76` (`feat(plugins): implement non-destructive match color and perceptual color transfer helper plugin`)
-- Outer repository commit: `feat(ralph): complete iteration 46 - non-destructive match color plugin`
+## Checkpoint
+- PhotoGIMP submodule commit: `79a97b5` (`feat(plugins): implement non-destructive apply image and channel math helper plugin`)
+- Outer repository commit: `feat(ralph): complete iteration 47 - non-destructive apply image plugin`

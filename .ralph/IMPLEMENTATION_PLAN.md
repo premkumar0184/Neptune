@@ -321,12 +321,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate perceptual color statistics transfer, luminance scaling, cast neutralization, fade opacity blending, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `apply-image` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`.
-- [ ] Create dedicated non-destructive Apply Image & Channel Math helper duplicating active drawable and simulating Photoshop Image > Apply Image and Image > Calculations.
-- [ ] Support source channel selection (Composite RGB, Red, Green, Blue, Alpha, Invert channel), blending modes (Multiply, Screen, Overlay, Soft Light, Subtract, Add, Normal), Opacity (1% to 100%), Offset, Scale, and Mask blending.
-- [ ] Support darkroom composite techniques (Frequency Separation texture extraction, Luminosity mask extraction, High-contrast dodge/burn math).
-- [ ] Register under menu path `<Image>/Image/Apply Image...`, `<Image>/Image/Calculations...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate channel extraction, blend mode math, invert flag, offset/scale scaling, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `apply-image` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`.
+- [x] Create dedicated non-destructive Apply Image & Channel Math helper duplicating active drawable and simulating Photoshop Image > Apply Image and Image > Calculations.
+- [x] Support source channel selection (Composite RGB, Red, Green, Blue, Alpha, Luminance, Invert channel), blending modes (Multiply, Screen, Overlay, Soft Light, Subtract, Add, Normal, Difference, Linear Light, etc.), Opacity (1% to 100%), Offset, Scale, and Mask blending.
+- [x] Support darkroom composite techniques (Frequency Separation texture extraction, Luminosity channel extraction, High-contrast dodge/burn math).
+- [x] Register under menu path `<Image>/Image/Apply Image...`, `<Image>/Image/Calculations...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate channel extraction, blend mode math, invert flag, offset/scale scaling, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `replace-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/replace-color/replace-color.py`.
+- [ ] Create dedicated non-destructive Replace Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Replace Color.
+- [ ] Support color replacement pipeline: target sample color (R, G, B), Fuzziness tolerance (0 to 100) generating smooth alpha/layer mask falloff, Hue shift (-180° to +180°), Saturation shift (-100 to +100), Lightness shift (-100 to +100), and Colorize mode option.
+- [ ] Support blend modes (Color, Hue, Normal, Soft Light), layer opacity, and editable layer mask options (Fuzziness Mask, Selection, Reveal All).
+- [ ] Register under menu path `<Image>/Image/Adjustments/Replace Color...`, `<Image>/Colors/Replace Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate targeted color isolation, fuzziness mask falloff, hue/saturation/lightness remapping, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

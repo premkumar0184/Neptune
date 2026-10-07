@@ -661,6 +661,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Apply Image & Channel Math Helper
+- **Source topic**: HDR and channel manipulation - Blend channels with Apply Image and Calculations (`Topics.txt` line 350, `photoshop_docs.md` Section 340 lines 10050-10100: "Image > Apply Image and Image > Calculations: choose source image, layer, and channel... blending modes [Multiply, Screen, Overlay, Soft Light, Add, Subtract...], Invert checkbox, Opacity slider, Scale, Offset, and Mask options")
+- **Photoshop behavior**: Blends channel pixels from specified source layers or channels (RGB, Red, Green, Blue, Alpha, Luminance) onto the target using blending modes, channel inversion, and scale & offset calibration (especially for 8-bit / 16-bit frequency separation texture extraction and channel-based contrast masking).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-apply-image` in `<Image>/Image/Apply Image...`, `<Image>/Image/Calculations...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`.
+- **Current capability**: Non-destructive duplicate adjustment layer workflow, source channel extraction (Composite RGB, Red, Green, Blue, Alpha, Luminance via `gegl:mono-mixer`), channel inversion (`gegl:invert-linear`), scale & offset calibration via `gimp-drawable-levels` output mapping, 12 Photoshop-standard blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Hard Light, Add, Subtract, Difference, Darken, Lighten, Linear Light), curated retouching presets (8-bit Frequency Separation, 16-bit Frequency Separation, Green Channel Contrast, Red Channel Multiply, Blue Matte Extract, Luminosity Blend, Custom), layer mask options (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:mono-mixer`, `gegl:invert-linear`, PDB `gimp-drawable-levels`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 45).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Frequency Separation 8-bit preset (Subtract mode, Scale 2.0, Offset 128 baseline ~0.502), Green Channel Contrast preset, Red Channel Multiply preset, Invert flag verification, blend modes (Screen, Overlay, Add, Difference, Linear Light), Scale 4.0 and Offset 64.0 levels calibration, Conceal-All black layer mask, active selection-aware mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 47):
+  1. `verify_config.py`: Section 6 passed with 39 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-apply-image` with all 9 arguments), layer mode SUBTRACT verified, attached reveal-all layer mask verified, Frequency Separation 8-bit verified (R=0.852, G=0.652, B=0.552 vs baseline ~0.502), Green Channel Contrast verified (mono G=0.301 in Soft Light), Red Channel Multiply verified (mono R=0.701 in Multiply), Invert flag verified (inverted Red 0.7 -> 0.301), blend modes (Screen, Overlay, Add, Difference, Linear Light) verified, Scale 4.0 & Offset 64.0 verified via levels math (0.0 -> 0.250 ~ 0.251), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified (in=1.00, out=0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 47).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

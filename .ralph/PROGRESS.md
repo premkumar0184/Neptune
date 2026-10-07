@@ -1126,4 +1126,31 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin.
 
+## Iteration 47 — Non-Destructive Apply Image & Channel Math Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Apply Image & Channel Math Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 350: "HDR and channel manipulation - Blend channels with Apply Image and Calculations", and `photoshop_docs.md` Section 340 lines 10050-10100: "Image > Apply Image and Image > Calculations: choose source image, layer, and channel... blending modes [Multiply, Screen, Overlay, Soft Light, Add, Subtract...], Invert checkbox, Opacity slider, Scale, Offset, and Mask options"). In Adobe Photoshop, Apply Image and Calculations are foundational to commercial high-end retouching (e.g. 8-bit frequency separation texture extraction with Subtract/Scale 2/Offset 128, 16-bit frequency separation with Add/Invert/Scale 2/Offset 0, channel contrast blending via Green in Soft Light or Red in Multiply, and channel matte/alpha extraction). Stock GIMP lacks a dedicated Apply Image or Calculations command. Implementing `python-fu-apply-image` bridges this major professional gap with non-destructive layering: source channel extraction (RGB, Red, Green, Blue, Alpha, Luminance via `gegl:mono-mixer`), channel inversion support (`gegl:invert-linear`), precise scale & offset calibration via `gimp-drawable-levels` output mapping, 12 Photoshop-standard blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Hard Light, Add, Subtract, Difference, Darken, Lighten, Linear Light), curated retouching presets (8-bit Frequency Separation, 16-bit Frequency Separation, Green Channel Contrast, Red Channel Multiply, Blue Matte Extract, Luminosity Blend, Custom), layer mask options (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-apply-image` with channel extraction, channel inversion, scale/offset calibration via levels, 12 blend modes, presets, layer masks, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `apply-image` (39 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (39 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 40: `test_apply_image` (asserting PDB registration, procedure arguments, layer modes, mask attachment, Frequency Separation 8-bit preset [R=0.852, G=0.652, B=0.552 vs baseline ~0.502], Green Channel Contrast preset [mono G=0.301 in Soft Light], Red Channel Multiply preset [mono R=0.701 in Multiply], Invert flag verification [inverted Red 0.7 -> 0.301], blend modes [Screen, Overlay, Add, Difference, Linear Light], Scale 4.0 and Offset 64.0 levels calibration [0.0 -> 0.250 ~ 0.251], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation). Total tests increased to 389 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Apply Image & Channel Math Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 45 complete and scheduled Phase 46 (Replace Color & Targeted Object Recoloring Helper).
+- **Technical discoveries**:
+  - In Photoshop Apply Image math, $(Output = \frac{Input}{Scale} + \frac{Offset}{255.0})$. In GIMP 3.x, this linear affine mapping is cleanly executed via native PDB `gimp-drawable-levels` with `low-output = offset / 255.0` and `high-output = offset / 255.0 + 1.0 / scale` and `clamp-output = True`, achieving mathematical precision on any drawable.
+  - GEGL `gegl:mono-mixer` cleanly handles monochrome channel isolation without needing private GLib enum types or complex decomposition scripts.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 39 plugins verified).
+    - Stage 2: `install.sh --batch` passed (39 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 389 tests across 40 test suites in 37.91s.
+    - Final quality gate: SUCCESS across all stages in 51.85s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `79a97b5`.
+- **Result**: Success.
+- **Next**: Phase 46 — Non-Destructive Replace Color & Targeted Object Recoloring Helper Plugin.
+
+
 

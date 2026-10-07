@@ -103,6 +103,7 @@ def test_pdb_registration():
         ("python-fu-iris-blur", "Iris Blur & Vignette Bokeh Helper"),
         ("python-fu-hdr-toning", "HDR Toning & Tone Mapping Helper"),
         ("python-fu-match-color", "Match Color & Perceptual Color Transfer Helper"),
+        ("python-fu-apply-image", "Apply Image & Channel Math Helper"),
     ]
 
 
@@ -6468,6 +6469,235 @@ def test_match_color():
 
 
 # ==============================================================================
+# 40. APPLY IMAGE & CHANNEL MATH HELPER TEST SUITE
+# ==============================================================================
+def test_apply_image():
+    print("\n--- Test Suite 40: Apply Image & Channel Math Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-apply-image")
+    if proc is None:
+        record_fail("AI-01", "Procedure lookup", "Procedure python-fu-apply-image not found")
+        return
+
+    # 40a: Configuration argument verification (AI-01)
+    args = [arg.name for arg in proc.get_arguments()]
+    req_args = [
+        "preset",
+        "source-layer-id",
+        "source-channel",
+        "invert",
+        "blend-mode",
+        "opacity",
+        "scale",
+        "offset",
+        "mask-mode",
+    ]
+    missing = [ra for ra in req_args if ra not in args]
+    if missing:
+        record_fail("AI-01", "Procedure arguments", f"Missing arguments: {missing}")
+        return
+    record_pass("AI-01", "Procedure arguments", f"All {len(req_args)} configuration arguments present")
+
+    # Create test canvas (100x100)
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    try:
+        # Base target layer: Distinct color values (R=0.7, G=0.3, B=0.1)
+        base = Gimp.Layer.new(image, "BaseApplyImage", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.7, 0.3, 0.1)"))
+        base.fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(50, 50).get_rgba()
+
+        # 40b: Execution status (AI-02)
+        cfg_init = proc.create_config()
+        cfg_init.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_init.set_property("image", image)
+        cfg_init.set_property("preset", "frequency-separation-8bit")
+        res = proc.run(cfg_init)
+
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AI-02", "Execution status", f"Status {res.index(0)}")
+            return
+        record_pass("AI-02", "Execution status", "SUCCESS")
+
+        # 40c: Layer mode, name & mask (AI-03)
+        fs_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        if not fs_layer.get_name().startswith("Apply Image (Frequency Separation (8-bit))"):
+            record_fail("AI-03", "Layer name", f"Unexpected name {fs_layer.get_name()}")
+            return
+        if fs_layer.get_mode() != Gimp.LayerMode.SUBTRACT:
+            record_fail("AI-03", "Layer mode", f"Mode {fs_layer.get_mode()} != SUBTRACT")
+            return
+        if fs_layer.get_mask() is None:
+            record_fail("AI-03", "Layer mask", "Reveal-all mask not attached")
+            return
+        record_pass("AI-03", "Layer mode, name & mask", f"{fs_layer.get_name()} with SUBTRACT mode and reveal-all mask attached")
+
+        # 40d: Frequency Separation 8-bit preset verified (AI-04)
+        # In 8-bit FS: Scale 2.0, Offset 128. Output = input / 2 + 128/255.
+        # For R=0.7, G=0.3, B=0.1: R ~ 0.852, G ~ 0.652, B ~ 0.552.
+        p_fs = fs_layer.get_pixel(50, 50).get_rgba()
+        if abs(p_fs[0] - 0.852) > 0.02 or abs(p_fs[1] - 0.652) > 0.02 or abs(p_fs[2] - 0.552) > 0.02:
+            record_fail("AI-04", "FS 8-bit math calibration", f"Unexpected layer pixel values {p_fs[:3]}")
+            return
+        record_pass("AI-04", "Frequency Separation 8-bit preset", f"Scale 2.0 and Offset 128 verified (R={p_fs[0]:.3f}, G={p_fs[1]:.3f}, B={p_fs[2]:.3f} vs baseline ~0.502)")
+        image.remove_layer(fs_layer)
+
+        # 40e: Green Channel Contrast preset (AI-05)
+        image.set_selected_layers([base])
+        cfg_green = proc.create_config()
+        cfg_green.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_green.set_property("image", image)
+        cfg_green.set_property("preset", "green-channel-contrast")
+        proc.run(cfg_green)
+
+        green_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        if green_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT:
+            record_fail("AI-05", "Green contrast mode", f"Mode {green_layer.get_mode()} != SOFTLIGHT")
+            return
+        p_green = green_layer.get_pixel(50, 50).get_rgba()
+        # Green channel value was 0.3, extracted into monochrome R=G=B=0.3
+        if abs(p_green[0] - 0.3) > 0.02 or abs(p_green[1] - 0.3) > 0.02 or abs(p_green[2] - 0.3) > 0.02:
+            record_fail("AI-05", "Green channel extraction", f"Expected mono 0.3, got {p_green[:3]}")
+            return
+        record_pass("AI-05", "Green Channel Contrast preset", f"Green channel isolated to monochrome (G={p_green[1]:.3f}) and blended via Soft Light")
+        image.remove_layer(green_layer)
+
+        # 40f: Red Channel Multiply preset (AI-06)
+        image.set_selected_layers([base])
+        cfg_red = proc.create_config()
+        cfg_red.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_red.set_property("image", image)
+        cfg_red.set_property("preset", "red-channel-multiply")
+        proc.run(cfg_red)
+
+        red_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        if red_layer.get_mode() != Gimp.LayerMode.MULTIPLY:
+            record_fail("AI-06", "Red multiply mode", f"Mode {red_layer.get_mode()} != MULTIPLY")
+            return
+        p_red = red_layer.get_pixel(50, 50).get_rgba()
+        # Red channel value was 0.7, extracted into monochrome R=G=B=0.7
+        if abs(p_red[0] - 0.7) > 0.02 or abs(p_red[1] - 0.7) > 0.02 or abs(p_red[2] - 0.7) > 0.02:
+            record_fail("AI-06", "Red channel extraction", f"Expected mono 0.7, got {p_red[:3]}")
+            return
+        record_pass("AI-06", "Red Channel Multiply preset", f"Red channel isolated to monochrome (R={p_red[0]:.3f}) and blended via Multiply")
+        image.remove_layer(red_layer)
+
+        # 40g: Invert flag verified (AI-07)
+        image.set_selected_layers([base])
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", image)
+        cfg_inv.set_property("preset", "custom")
+        cfg_inv.set_property("source-channel", "red")
+        cfg_inv.set_property("invert", True)
+        proc.run(cfg_inv)
+
+        inv_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        p_inv = inv_layer.get_pixel(50, 50).get_rgba()
+        # Red was 0.7, inverted Red is 1.0 - 0.7 = 0.3
+        if abs(p_inv[0] - 0.3) > 0.02:
+            record_fail("AI-07", "Invert flag", f"Expected inverted red ~0.3, got {p_inv[0]:.3f}")
+            return
+        record_pass("AI-07", "Invert flag verification", f"Source channel accurately inverted before blending (0.7 -> {p_inv[0]:.3f})")
+        image.remove_layer(inv_layer)
+
+        # 40h: Blend modes verified (AI-08)
+        blend_checks = [
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("add", Gimp.LayerMode.ADDITION),
+            ("difference", Gimp.LayerMode.DIFFERENCE),
+            ("linear-light", Gimp.LayerMode.LINEAR_LIGHT),
+        ]
+        for bm_name, expected_mode in blend_checks:
+            image.set_selected_layers([base])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", image)
+            cfg_bm.set_property("preset", "custom")
+            cfg_bm.set_property("blend-mode", bm_name)
+            proc.run(cfg_bm)
+            bm_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+            if bm_layer.get_mode() != expected_mode:
+                record_fail("AI-08", f"Blend mode {bm_name}", f"Mode {bm_layer.get_mode()} != {expected_mode}")
+                return
+            image.remove_layer(bm_layer)
+        record_pass("AI-08", "Blend modes verified", "Screen, Overlay, Add, Difference, Linear Light validated")
+
+        # 40i: Scale and Offset calibration (AI-09)
+        # Pure black base layer: 0.0. Scale 4.0, Offset 64.0 -> Output = 64/255 = 0.251
+        black_layer = Gimp.Layer.new(image, "BlackBase", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(black_layer, None, 0)
+        image.set_selected_layers([black_layer])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 0.0)"))
+        black_layer.fill(Gimp.FillType.FOREGROUND)
+
+        cfg_so = proc.create_config()
+        cfg_so.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_so.set_property("image", image)
+        cfg_so.set_property("preset", "custom")
+        cfg_so.set_property("scale", 4.0)
+        cfg_so.set_property("offset", 64.0)
+        proc.run(cfg_so)
+
+        so_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        p_so = so_layer.get_pixel(50, 50).get_rgba()
+        if abs(p_so[0] - 0.251) > 0.02:
+            record_fail("AI-09", "Scale and Offset calibration", f"Expected ~0.251, got {p_so[0]:.3f}")
+            return
+        record_pass("AI-09", "Scale and Offset calibration", f"Scale 4.0 & Offset 64.0 verified via levels math (0.0 -> {p_so[0]:.3f} ~ 0.251)")
+        image.remove_layer(so_layer)
+        image.remove_layer(black_layer)
+
+        # 40j: Conceal-All black layer mask (AI-10)
+        image.set_selected_layers([base])
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "frequency-separation-8bit")
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+        proc.run(cfg_conceal)
+
+        conceal_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        c_conceal = get_composite_pixel(image, 50, 50)
+        conceal_diff = max(abs(c_conceal[i] - p_base_orig[i]) for i in range(3))
+        if conceal_diff > 0.000001:
+            record_fail("AI-10", "Conceal-all mask", f"Composite differs by {conceal_diff:.6f}")
+            return
+        record_pass("AI-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {conceal_diff:.6f})")
+        image.remove_layer(conceal_layer)
+
+        # 40k: Selection confinement & non-destructive preservation (AI-11)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        image.set_selected_layers([base])
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "frequency-separation-8bit")
+        cfg_sel.set_property("mask-mode", "selection")
+        proc.run(cfg_sel)
+
+        sel_layer = [l for l in image.get_layers() if l.get_name().startswith("Apply Image")][0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 50).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 50).get_rgba()[0]
+
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_orig[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("AI-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("AI-11", "Selection confinement & non-destructive preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("AI-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -6516,6 +6746,7 @@ def run_all_tests():
     test_iris_blur()
     test_hdr_toning()
     test_match_color()
+    test_apply_image()
 
 
 

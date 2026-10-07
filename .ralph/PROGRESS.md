@@ -1100,3 +1100,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin.
 
+## Iteration 46 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Match Color & Perceptual Color Transfer Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 333-336: "Selective color adjustments - Match color in different images, Match color between two images, Match color of two layers in the same image, Save and apply settings in Match Color", and `photoshop_docs.md` Section 327-330 lines 9575-9695: "The Match Color command in photoeditor adjusts colors in single or multiple images, layers, or selections to align with colors in another... works only in RGB mode... controls for: Luminance adjustment [1-200, default 100], Color Intensity [1-200, default 100, value of 1 converts to grayscale], Fade [0-100, default 0, moving right reduces effect], Neutralize [automatically removes any color cast in target image]"). Match Color is one of Photoshop's premier color standardization and grading tools, standardizing color statistics across shots, matching skin tones, transferring color palettes between reference images/layers, and neutralizing unwanted color casts. Stock GIMP lacks a Match Color dialog or statistical color transfer tool. Implementing `python-fu-match-color` brings full Photoshop parity with non-destructive workflow enhancements: Reinhard statistical color transfer using PDB `gimp-drawable-histogram` channel moments and `gegl:channel-mixer`, curated photographic palettes (Warm Golden Hour, Cool Cinema Blue, Vintage Film Tone, Lush Foliage Emerald, Sunset Crimson, Skin Tone Harmony, Neutralize Only, Source Layer, Custom sliders), linear exposure EV Luminance scaling (`gegl:exposure`), `gegl:vibrance` Color Intensity control with true neutral grayscale mode (`saturation = 0.0`), Fade effective opacity blending, Neutralize color cast algorithm (>95% reduction), versatile layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-match-color` with statistical color transfer, Reinhard profile mapping, channel-mixer, exposure luminance, vibrance color intensity, fade blending, neutralize color cast, presets, layer masks, and `do_set_i18n` localization override.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `match-color` (38 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (38 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 39 (asserting PDB registration, procedure arguments, layer modes, mask attachment, Source Layer Color Matching [cool target red 0.202->0.361 and blue 0.799->0.082], Warm Golden Hour preset [R=0.456 > G=0.283 > B=0.063], Cool Cinema Blue preset [B=0.905 > G=0.451 > R=0.144], Lush Foliage Emerald preset [G=0.807 > R=0.093, B=0.181], Color Intensity = 1.0 grayscale mode [spread 0.000000 == 0], Neutralize Color Cast toggle [>95% cast reduction from 0.5975 to 0.0049], Conceal-All black layer mask 0.000000 composite diff, active selection mask [inside 1.00, outside 0.00], and 0.000000 base layer preservation).
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Match Color & Perceptual Color Transfer Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 44 complete and scheduled Phase 45 (Apply Image & Channel Math Helper).
+- **Technical discoveries**:
+  - In statistical color transfer (Reinhard algorithm), matching a target layer's color distribution to a source profile requires computing relative channel gains $g_c = \frac{\mu_{s, c}}{\max(0.001, \mu_{t, c})}$. Normalizing these gains across RGB channels and applying via `gegl:channel-mixer` (`rr-gain`, `gg-gain`, `bb-gain`) transforms any base color (even high-contrast cool blues) into the desired palette without edge artifacts or luminance clipping.
+  - In GIMP 3.x, active selections can be preserved and restored onto masks using `saved = Gimp.Selection.save(image)` and `image.select_item(Gimp.ChannelOps.REPLACE, saved)` because GimpChannel inherits from GimpItem.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 38 plugins verified).
+    - Stage 2: `install.sh --batch` passed (38 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 377 tests across 39 test suites in 30.05s.
+    - Final quality gate: SUCCESS across all stages in 45.28s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `7728b76`.
+- **Result**: Success.
+- **Next**: Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin.
+
+

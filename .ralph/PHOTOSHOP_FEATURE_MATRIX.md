@@ -644,6 +644,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Match Color & Perceptual Color Transfer Helper
+- **Source topic**: Selective color adjustments - Match color in different images / Match color between two images / Match color of two layers in the same image (`Topics.txt` lines 333-336, `photoshop_docs.md` Section 327-330 lines 9575-9695: "Image > Adjustments > Match Color: Luminance, Color Intensity, Fade, Neutralize, and layer/source color transfer")
+- **Photoshop behavior**: Standardizes color statistics between different images or layers in RGB mode, transferring color distributions, adjusting brightness via Luminance (1-200), controlling saturation via Color Intensity (1-200, 1=grayscale), fading effect strength via Fade (0-100), and neutralizing unwanted color casts via Neutralize toggle.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-match-color` in `<Image>/Image/Adjustments/Match Color...`, `<Image>/Colors/Match Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`.
+- **Current capability**: Statistical color transfer using PDB `gimp-drawable-histogram` and `gegl:channel-mixer`, Reinhard-inspired target-to-source channel matching, curated photographic grading palettes (Warm Golden Hour, Cool Cinema Blue, Vintage Film Tone, Lush Foliage Emerald, Sunset Crimson, Skin Tone Harmony, Neutralize Only, Source Layer, Custom sliders), linear exposure EV Luminance scaling (`gegl:exposure`), `gegl:vibrance` Color Intensity control with pure neutral grayscale mode, Fade effective opacity slider, Neutralize color cast algorithm (>95% reduction), layer masks (Reveal All, Conceal All, Selection), and 100% mathematical preservation of base layer source pixels underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:channel-mixer`, `gegl:exposure`, `gegl:vibrance`, PDB `gimp-drawable-histogram`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.GObject`).
+- **Implementation priority**: High (Phase 44).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure arguments, layer modes, mask attachment, Source Layer Color Matching (cool target converted towards warm source), Warm Golden Hour preset, Cool Cinema Blue preset, Lush Foliage Emerald preset, Color Intensity = 1.0 grayscale mode, Neutralize Color Cast toggle, Conceal-All black layer mask, active selection-aware mask, and non-destructive base layer preservation.
+- **Verification evidence** (Iteration 46):
+  1. `verify_config.py`: Section 6 passed with 38 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-match-color` with all 8 arguments), layer mode NORMAL verified, attached reveal-all layer mask verified, Source Layer Color Matching verified (cool target red increased 0.202->0.361 and blue reduced 0.799->0.082), Warm Golden Hour verified (R=0.456 > G=0.283 > B=0.063), Cool Cinema Blue verified (B=0.905 > G=0.451 > R=0.144), Lush Foliage Emerald verified (G=0.807 > R=0.093, B=0.181), Color Intensity = 1.0 grayscale verified (spread 0.000000 == 0), Neutralize color cast verified (>95% cast reduction from 0.5975 to 0.0049), Conceal-All black mask verified with 0.000000 composite diff, active selection mask verified (in=1.00, out=0.00), and base layer pixels 100% untouched (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 46).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

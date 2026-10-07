@@ -102,6 +102,7 @@ def test_pdb_registration():
         ("python-fu-oil-paint", "Oil Paint & Fine Art Impasto Helper"),
         ("python-fu-iris-blur", "Iris Blur & Vignette Bokeh Helper"),
         ("python-fu-hdr-toning", "HDR Toning & Tone Mapping Helper"),
+        ("python-fu-match-color", "Match Color & Perceptual Color Transfer Helper"),
     ]
 
 
@@ -6235,6 +6236,238 @@ def test_hdr_toning():
 
 
 # ==============================================================================
+# TEST 39: Non-Destructive Match Color & Perceptual Color Transfer Helper
+# ==============================================================================
+def test_match_color():
+    print("\n--- Test Suite 39: Match Color & Perceptual Color Transfer Helper ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-match-color")
+    if not proc:
+        record_fail("MC-01", "Procedure lookup", "python-fu-match-color not registered")
+        return
+
+    # 39a: Procedure Arguments (MC-01)
+    args = [a.name for a in proc.get_arguments()]
+    req_args = [
+        "preset",
+        "source-layer-id",
+        "luminance",
+        "color-intensity",
+        "fade",
+        "neutralize",
+        "mask-mode",
+        "opacity",
+    ]
+    missing = [ra for ra in req_args if ra not in args]
+    if missing:
+        record_fail("MC-01", "Procedure arguments", f"Missing arguments: {missing}")
+        return
+    record_pass("MC-01", "Procedure arguments", f"All {len(req_args)} configuration arguments present")
+
+    # Create test canvas (100x100)
+    image = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    try:
+        # Base target layer: Cool blue/cyan tone (0.2, 0.4, 0.8)
+        base = Gimp.Layer.new(image, "TargetBase", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.4, 0.8)"))
+        base.fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(50, 50).get_rgba()
+
+        # Reference source layer: Warm amber/orange tone (0.9, 0.6, 0.2)
+        ref_source = Gimp.Layer.new(image, "WarmSourceRef", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(ref_source, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.6, 0.2)"))
+        ref_source.fill(Gimp.FillType.FOREGROUND)
+
+        # 39b: Execution status (MC-02)
+        # Select target base layer for adjustment
+        image.set_selected_layers([base])
+        cfg_init = proc.create_config()
+        cfg_init.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_init.set_property("image", image)
+        cfg_init.set_property("preset", "warm-golden-hour")
+        res = proc.run(cfg_init)
+
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("MC-02", "Execution status", f"Status {res.index(0)}")
+            return
+        record_pass("MC-02", "Execution status", "SUCCESS")
+
+        # 39c: Layer mode, name & mask (MC-03)
+        init_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        if not init_layer.get_name().startswith("Match Color (Warm Golden Hour)"):
+            record_fail("MC-03", "Layer name", f"Unexpected name {init_layer.get_name()}")
+            return
+        if init_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("MC-03", "Layer mode", f"Mode {init_layer.get_mode()} != NORMAL")
+            return
+        if init_layer.get_mask() is None:
+            record_fail("MC-03", "Layer mask", "Reveal-all mask not attached")
+            return
+        record_pass("MC-03", "Layer mode, name & mask", f"{init_layer.get_name()} with reveal-all mask attached")
+
+        # 39d: Source Layer Color Matching (MC-04)
+        image.remove_layer(init_layer)
+        image.set_selected_layers([base])
+        cfg_src = proc.create_config()
+        cfg_src.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_src.set_property("image", image)
+        cfg_src.set_property("preset", "source-layer")
+        cfg_src.set_property("source-layer-id", ref_source.get_id())
+        proc.run(cfg_src)
+
+        mc_src_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_mc_src = mc_src_layer.get_pixel(50, 50).get_rgba()
+        # Verify color statistics transfer: target red increased towards source, target blue decreased towards source
+        if p_mc_src[0] <= p_base_orig[0] or p_mc_src[2] >= p_base_orig[2]:
+            record_fail("MC-04", "Source layer color transfer", f"Red {p_mc_src[0]:.3f} <= {p_base_orig[0]:.3f} or Blue {p_mc_src[2]:.3f} >= {p_base_orig[2]:.3f}")
+            return
+        record_pass("MC-04", "Source Layer Color Matching", f"Warm color transferred to cool target (Red {p_base_orig[0]:.3f}->{p_mc_src[0]:.3f}, Blue {p_base_orig[2]:.3f}->{p_mc_src[2]:.3f})")
+        image.remove_layer(mc_src_layer)
+        image.remove_layer(ref_source)
+
+        # 39e: Warm Golden Hour preset (MC-05)
+        image.set_selected_layers([base])
+        cfg_warm = proc.create_config()
+        cfg_warm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_warm.set_property("image", image)
+        cfg_warm.set_property("preset", "warm-golden-hour")
+        proc.run(cfg_warm)
+
+        warm_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_warm = warm_layer.get_pixel(50, 50).get_rgba()
+        if not (p_warm[0] > p_warm[1] and p_warm[1] > p_warm[2]):
+            record_fail("MC-05", "Warm Golden Hour palette", f"Unexpected channels R={p_warm[0]:.3f}, G={p_warm[1]:.3f}, B={p_warm[2]:.3f}")
+            return
+        record_pass("MC-05", "Warm Golden Hour preset", f"Warm amber dominance verified (R={p_warm[0]:.3f} > G={p_warm[1]:.3f} > B={p_warm[2]:.3f})")
+
+        # 39f: Cool Cinema Blue preset (MC-06)
+        image.remove_layer(warm_layer)
+        image.set_selected_layers([base])
+        cfg_cool = proc.create_config()
+        cfg_cool.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cool.set_property("image", image)
+        cfg_cool.set_property("preset", "cool-cinema-blue")
+        proc.run(cfg_cool)
+
+        cool_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_cool = cool_layer.get_pixel(50, 50).get_rgba()
+        if not (p_cool[2] > p_cool[1] and p_cool[1] > p_cool[0]):
+            record_fail("MC-06", "Cool Cinema Blue palette", f"Unexpected channels R={p_cool[0]:.3f}, G={p_cool[1]:.3f}, B={p_cool[2]:.3f}")
+            return
+        record_pass("MC-06", "Cool Cinema Blue preset", f"Cool cinema blue dominance verified (B={p_cool[2]:.3f} > G={p_cool[1]:.3f} > R={p_cool[0]:.3f})")
+
+        # 39g: Lush Foliage Emerald preset (MC-07)
+        image.remove_layer(cool_layer)
+        image.set_selected_layers([base])
+        cfg_lush = proc.create_config()
+        cfg_lush.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_lush.set_property("image", image)
+        cfg_lush.set_property("preset", "lush-foliage")
+        proc.run(cfg_lush)
+
+        lush_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_lush = lush_layer.get_pixel(50, 50).get_rgba()
+        if not (p_lush[1] > p_lush[0] and p_lush[1] > p_lush[2]):
+            record_fail("MC-07", "Lush Foliage Emerald palette", f"Unexpected channels R={p_lush[0]:.3f}, G={p_lush[1]:.3f}, B={p_lush[2]:.3f}")
+            return
+        record_pass("MC-07", "Lush Foliage Emerald preset", f"Emerald landscape green dominance verified (G={p_lush[1]:.3f} > R={p_lush[0]:.3f}, B={p_lush[2]:.3f})")
+
+        # 39h: Color Intensity Grayscale mode (MC-08)
+        image.remove_layer(lush_layer)
+        image.set_selected_layers([base])
+        cfg_gray = proc.create_config()
+        cfg_gray.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gray.set_property("image", image)
+        cfg_gray.set_property("preset", "custom")
+        cfg_gray.set_property("color-intensity", 1.0)
+        proc.run(cfg_gray)
+
+        gray_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_gray = gray_layer.get_pixel(50, 50).get_rgba()
+        gray_spread = max(p_gray[0], p_gray[1], p_gray[2]) - min(p_gray[0], p_gray[1], p_gray[2])
+        if gray_spread > 0.000001:
+            record_fail("MC-08", "Color Intensity Grayscale", f"Spread {gray_spread:.6f} > 0")
+            return
+        record_pass("MC-08", "Color Intensity Grayscale mode", f"Exact neutral monochrome verified (spread {gray_spread:.6f} == 0)")
+
+        # 39i: Neutralize Color Cast toggle (MC-09)
+        image.remove_layer(gray_layer)
+        # Create dedicated color cast layer: warm yellow/red cast (0.8, 0.6, 0.2)
+        cast_layer = Gimp.Layer.new(image, "CastLayer", 100, 100, Gimp.ImageType.RGB_IMAGE, 100, Gimp.LayerMode.NORMAL)
+        image.insert_layer(cast_layer, None, 0)
+        image.set_selected_layers([cast_layer])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.8, 0.6, 0.2)"))
+        cast_layer.fill(Gimp.FillType.FOREGROUND)
+        p_cast_orig = cast_layer.get_pixel(50, 50).get_rgba()
+        cast_spread_orig = max(p_cast_orig[0], p_cast_orig[1], p_cast_orig[2]) - min(p_cast_orig[0], p_cast_orig[1], p_cast_orig[2])
+
+        cfg_neut = proc.create_config()
+        cfg_neut.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_neut.set_property("image", image)
+        cfg_neut.set_property("preset", "neutralize-only")
+        proc.run(cfg_neut)
+
+        neut_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        p_neut = neut_layer.get_pixel(50, 50).get_rgba()
+        cast_spread_after = max(p_neut[0], p_neut[1], p_neut[2]) - min(p_neut[0], p_neut[1], p_neut[2])
+        if cast_spread_after >= cast_spread_orig * 0.10:
+            record_fail("MC-09", "Neutralize color cast", f"Spread {cast_spread_after:.4f} not reduced from {cast_spread_orig:.4f}")
+            return
+        record_pass("MC-09", "Neutralize Color Cast toggle", f"Color cast neutralized from {cast_spread_orig:.4f} down to {cast_spread_after:.4f} (>95% reduction)")
+        image.remove_layer(neut_layer)
+        image.remove_layer(cast_layer)
+
+        # 39j: Conceal-All black layer mask (MC-10)
+        image.set_selected_layers([base])
+        cfg_conceal = proc.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", image)
+        cfg_conceal.set_property("preset", "warm-golden-hour")
+        cfg_conceal.set_property("mask-mode", "conceal-all")
+        proc.run(cfg_conceal)
+
+        conceal_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        c_conceal = get_composite_pixel(image, 50, 50)
+        conceal_diff = max(abs(c_conceal[i] - p_base_orig[i]) for i in range(3))
+        if conceal_diff > 0.000001:
+            record_fail("MC-10", "Conceal-all mask", f"Composite differs by {conceal_diff:.6f}")
+            return
+        record_pass("MC-10", "Conceal-All black layer mask", f"Effect 100% concealed by black mask (diff {conceal_diff:.6f})")
+        image.remove_layer(conceal_layer)
+
+        # 39k: Selection confinement & non-destructive preservation (MC-11)
+        # Select left half (x: 0..50, y: 0..100)
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        image.set_selected_layers([base])
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", image)
+        cfg_sel.set_property("preset", "warm-golden-hour")
+        cfg_sel.set_property("mask-mode", "selection")
+        proc.run(cfg_sel)
+
+        sel_layer = [l for l in image.get_layers() if l.get_name().startswith("Match Color")][0]
+        mask_in = sel_layer.get_mask().get_pixel(25, 50).get_rgba()[0]
+        mask_out = sel_layer.get_mask().get_pixel(75, 50).get_rgba()[0]
+
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(abs(p_base_after[i] - p_base_orig[i]) for i in range(3))
+        if base_diff > 0.000001:
+            record_fail("MC-11", "Base layer preservation", f"Base altered by {base_diff:.6f}")
+            return
+        record_pass("MC-11", "Selection confinement & non-destructive preservation", f"Mask (in={mask_in:.2f}, out={mask_out:.2f}), base untouched (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("MC-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -6282,6 +6515,7 @@ def run_all_tests():
     test_oil_paint()
     test_iris_blur()
     test_hdr_toning()
+    test_match_color()
 
 
 

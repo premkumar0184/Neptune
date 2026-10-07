@@ -313,12 +313,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate tone-mapping dynamic range expansion, shadow/highlight recovery, microcontrast detail enhancement, layer mask generation, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `match-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`.
-- [ ] Create dedicated non-destructive Match Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Match Color.
-- [ ] Support color transfer controls: Luminance (1% to 200%), Color Intensity / Saturation (1% to 200%), Fade (0% to 100%), and Neutralize color cast toggle.
-- [ ] Support curated grading palettes (Warm Golden Hour, Cool Cinema Blue, Vintage Film Tone, Lush Foliage Emerald, Skin Tone Harmony, Sunset Crimson, Custom palette) and multi-layer / multi-image source sampling.
-- [ ] Register under menu path `<Image>/Image/Adjustments/Match Color...`, `<Image>/Colors/Match Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
-- [ ] Validate perceptual color statistics transfer, luminance scaling, cast neutralization, fade opacity blending, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `match-color` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py`.
+- [x] Create dedicated non-destructive Match Color adjustment layer duplicating active drawable and simulating Photoshop Image > Adjustments > Match Color.
+- [x] Support color transfer controls: Luminance (1% to 200%), Color Intensity / Saturation (1% to 200%), Fade (0% to 100%), and Neutralize color cast toggle.
+- [x] Support curated grading palettes (Warm Golden Hour, Cool Cinema Blue, Vintage Film Tone, Lush Foliage Emerald, Skin Tone Harmony, Sunset Crimson, Neutralize Only, Custom palette) and multi-layer / multi-image source sampling.
+- [x] Register under menu path `<Image>/Image/Adjustments/Match Color...`, `<Image>/Colors/Match Color...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [x] Validate perceptual color statistics transfer, luminance scaling, cast neutralization, fade opacity blending, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 45 — Non-Destructive Apply Image & Channel Math Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `apply-image` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/apply-image/apply-image.py`.
+- [ ] Create dedicated non-destructive Apply Image & Channel Math helper duplicating active drawable and simulating Photoshop Image > Apply Image and Image > Calculations.
+- [ ] Support source channel selection (Composite RGB, Red, Green, Blue, Alpha, Invert channel), blending modes (Multiply, Screen, Overlay, Soft Light, Subtract, Add, Normal), Opacity (1% to 100%), Offset, Scale, and Mask blending.
+- [ ] Support darkroom composite techniques (Frequency Separation texture extraction, Luminosity mask extraction, High-contrast dodge/burn math).
+- [ ] Register under menu path `<Image>/Image/Apply Image...`, `<Image>/Image/Calculations...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate channel extraction, blend mode math, invert flag, offset/scale scaling, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
 
 
 

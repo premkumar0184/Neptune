@@ -1,58 +1,57 @@
-# Current Task — Iteration 45
+# Current Task — Iteration 46
 
 ## Task
-**Phase 43 — Non-Destructive HDR Toning & Tone Mapping Helper Plugin (`python-fu-hdr-toning`)**
+**Phase 44 — Non-Destructive Match Color & Perceptual Color Transfer Helper Plugin (`python-fu-match-color`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` line 347: "HDR and channel manipulation - Adjust HDR exposure and toning", line 106: "Adjust image lighting with Light", line 269: "Adjust image shadows and highlights", and `photoshop_docs.md` Section 338 lines 9951-9985: "HDR Toning provides multiple tone-mapping methods including Local Adaptation, Equalize Histogram, Exposure and Gamma, and Highlight Compression. Each method offers different controls for managing contrast, exposure, and tonal range... Edge Glow, Tone and Detail, Color controls"), HDR Toning is one of Photoshop's premier color and dynamic range grading tools. It is used extensively by landscape, architectural, portrait, and commercial photographers to expand perceived dynamic range, recover shadow and highlight details, produce local contrast microcontrast halos (Edge Glow), and enhance color vibrance.
+In Adobe Photoshop (`Topics.txt` lines 333-336: "Selective color adjustments - Match color in different images, Match color between two images, Match color of two layers in the same image, Save and apply settings in Match Color", and `photoshop_docs.md` Section 327-330 lines 9575-9695: "The Match Color command in photoeditor adjusts colors in single or multiple images, layers, or selections to align with colors in another... works only in RGB mode... controls for: Luminance adjustment [1-200, default 100], Color Intensity [1-200, default 100, value of 1 converts to grayscale], Fade [0-100, default 0, moving right reduces effect], Neutralize [automatically removes any color cast in target image]"), Match Color is one of Photoshop's premier color standardization and grading commands. It is used across portraiture, landscape, cinematography, and compositing to align color balance across shots, match skin tones, transfer color palettes between reference images/layers, and neutralize color casts.
 
-However, in Adobe Photoshop, `Image > Adjustments > HDR Toning...` has a notorious drawback: it is strictly destructive and forces all existing layers in the document to be flattened into a single image layer! Photographers have long requested a non-destructive HDR Toning adjustment layer.
-
-Stock GIMP contains no integrated HDR Toning helper plugin. Creating native GIMP 3.x Python 3 plugin `python-fu-hdr-toning` achieves complete Photoshop parity with major workflow enhancements:
-1. Tone Mapping Methods: Local Adaptation (Mantiuk 2006 tone mapping with contrast and detail scaling), Equalize Histogram (stretch contrast), Exposure & Gamma, Highlight Compression.
-2. Edge Glow / Detail Microcontrast: Configurable Edge Glow Radius (1.0 to 100.0px) and Strength (0.0 to 5.0) via `gegl:unsharp-mask` producing the signature HDR halo and crisp structural acutance.
-3. Exposure & Gamma Controls: Linear Exposure EV (-5.0 to +5.0 EV) and midtone Gamma curve (0.1 to 3.0 via `gimp-drawable-levels`).
-4. Shadow & Highlight Recovery: Adaptive dynamic range compensation opening deep shadows and preventing highlight clipping.
-5. Color Vibrance & Saturation: Dual-slider intelligent saturation control with full Monochrome HDR support (`saturation = -100.0`).
-6. Curated Photographic Presets: Default Photorealistic, High Dynamic Vivid, Dramatic Monochrome, Architectural Crisp, Surreal Dreamy, Night Cityglow, Custom.
-7. Flexible Layer Mask Modes: Reveal-All White Mask, Conceal-All Black Mask, Active Selection Mask.
-8. 100% Non-Destructive Invariance: Duplicates target drawable into an isolated layer; base layer pixels underneath remain 100% mathematically untouched (`diff == 0.000000`).
+In stock GIMP, there is no direct equivalent to Photoshop's Match Color dialog. Photographers must manually adjust curves or levels by eye. Implementing native GIMP 3.x Python 3 plugin `python-fu-match-color` achieves full Photoshop parity with non-destructive workflow enhancements:
+1. Dynamic Source Layer Color Transfer: Computes statistical channel moments via PDB `gimp-drawable-histogram` between a source reference layer and target layer, mapping color distribution via `gegl:channel-mixer`.
+2. Curated Photographic Grading Palettes: Warm Golden Hour (warm amber sunlight), Cool Cinema Blue (moody teal/cyan cinema), Vintage Film Tone (analog film matte warmth), Lush Foliage Emerald (deep landscape greens), Sunset Crimson (radiant dusk orange/magenta), Skin Tone Harmony (healthy portrait skin balance), Neutralize Only, Source Layer, and Custom sliders.
+3. Luminance Slider (1 to 200, default 100): Maps to linear exposure EV via `gegl:exposure` (`ev = log2(lum / 100.0)`).
+4. Color Intensity Slider (1 to 200, default 100): Maps to `gegl:vibrance` saturation where `color_intensity = 1.0` yields pure neutral grayscale (`saturation = 0.0`) and `color_intensity = 200.0` yields double saturation.
+5. Fade Slider (0 to 100, default 0): Linearly modulates adjustment layer effective opacity back to the unadjusted base layer (`eff_opacity = opacity * (1.0 - fade / 100.0)`).
+6. Neutralize Color Cast Toggle: Automatically calculates chromatic channel imbalances and applies balancing gains to eliminate color casts (>95% cast reduction).
+7. Layer Mask Support: Reveal All (white mask), Conceal All (black mask), and Active Selection mask.
+8. 100% Non-Destructive Invariance: Duplicates target drawable into an isolated adjustment layer; base layer pixels underneath remain 100% mathematically untouched (`diff == 0.000000`).
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/hdr-toning.py` (New plugin)
-- `PhotoGIMP/scripts/verify_config.py` (Register `hdr-toning` in `REQUIRED_PLUGINS`, updating audit inventory to 37 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/match-color.py` (New plugin)
+- `PhotoGIMP/scripts/verify_config.py` (Register `match-color` in `REQUIRED_PLUGINS`, updating audit inventory to 38 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 38: `test_hdr_toning`, assertions HDR-01 through HDR-11)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add HDR Toning & Tone Mapping entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 43 status and schedule Phase 44)
-- `.ralph/PROGRESS.md` (Log Iteration 45 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 45 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 39: `test_match_color`, assertions MC-01 through MC-11)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Match Color entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 44 status and schedule Phase 45)
+- `.ralph/PROGRESS.md` (Log Iteration 46 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 46 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/hdr-toning/` created with `hdr-toning.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/match-color/` created with `match-color.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure `python-fu-hdr-toning` registered in GIMP PDB under:
-   - `<Image>/Image/Adjustments/HDR Toning...`
-   - `<Image>/Filters/Enhance/HDR Toning...`
+3. [x] PDB procedure `python-fu-match-color` registered in GIMP PDB under:
+   - `<Image>/Image/Adjustments/Match Color...`
+   - `<Image>/Colors/Match Color...`
    - `<Image>/Filters/Retouching`
    - `<Image>/Layer`
 4. [x] Non-destructive adjustment layer created duplicating active drawable.
-5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 38):
-   - Base layer pixels underneath remain 100% untouched (`diff == 0.000000`).
-   - Default Photorealistic preset verified: dynamic range expansion and microcontrast boost.
-   - High Dynamic Vivid preset verified: dramatic contrast and enriched saturation.
-   - Dramatic Monochrome preset verified: exact neutral monochrome (`R == G == B`, spread `0.000000`).
-   - Architectural Crisp preset verified: sharp edge glow and shadow detail lift.
-   - Equalize Histogram method verified: histogram stretch across dynamic range.
-   - Exposure & Gamma method verified: EV brightening and midtone power gamma shift.
-   - Highlight Compression method verified: highlight peak compression and shadow lift.
-   - Conceal-All black layer mask verified: composite equals base layer (`diff == 0.000000`).
-   - Selection-aware mask verified: HDR toning confined strictly to active selection.
-6. [x] `verify_config.py` Section 6 passes with all 37 required plugins audited.
-7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all stages cleanly with exit code 0 (365/365 tests passing).
+5. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 39):
+   - MC-01: Procedure arguments verified (preset, source-layer-id, luminance, color-intensity, fade, neutralize, mask-mode, opacity).
+   - MC-02: Execution status verified (PDB status SUCCESS).
+   - MC-03: Layer mode, name & mask verified (`Match Color (Warm Golden Hour)` with reveal-all mask attached).
+   - MC-04: Source Layer Color Matching verified (color statistics transferred from source layer to target: Red 0.202->0.361, Blue 0.799->0.082).
+   - MC-05: Warm Golden Hour preset verified (R=0.456 > G=0.283 > B=0.063 warm amber tone).
+   - MC-06: Cool Cinema Blue preset verified (B=0.905 > G=0.451 > R=0.144 cool cinema tone).
+   - MC-07: Lush Foliage Emerald preset verified (G=0.807 > R=0.093, B=0.181 landscape green).
+   - MC-08: Color Intensity = 1.0 verified (pure neutral grayscale, spread == 0.000000).
+   - MC-09: Neutralize Color Cast toggle verified (color cast neutralized from 0.5975 to 0.0049, >95% reduction).
+   - MC-10: Conceal-All black layer mask verified (composite diff == 0.000000).
+   - MC-11: Selection confinement & non-destructive preservation verified (effect confined to selection, base layer 100% untouched diff == 0.000000).
+6. [x] `verify_config.py` Section 6 passes with all 38 required plugins audited.
+7. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (377/377 tests passing).
 
 ## Verification Commands
 ```bash
@@ -62,5 +61,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Expected Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive hdr toning and tone mapping helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 45 - non-destructive hdr toning plugin`
+- PhotoGIMP submodule commit: `7728b76` (`feat(plugins): implement non-destructive match color and perceptual color transfer helper plugin`)
+- Outer repository commit: `feat(ralph): complete iteration 46 - non-destructive match color plugin`

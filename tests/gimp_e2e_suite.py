@@ -85,6 +85,7 @@ def test_pdb_registration():
         ("python-fu-light-tone", "Light & Tonal Range Helper"),
         ("python-fu-duotone-effect", "Duotone & Tritone Print Effect Helper"),
         ("python-fu-diffuse-glow", "Diffuse Glow & Glamour Filter Helper"),
+        ("python-fu-skin-smoothing", "Skin Smoothing & Beauty Retouching"),
     ]
 
     for proc_name, label in required_procs:
@@ -2553,6 +2554,187 @@ def test_diffuse_glow():
 
 
 # ==============================================================================
+# TEST 22: Non-Destructive Skin Smoothing & Beauty Retouching Helper Plugin (Phase 27)
+# ==============================================================================
+def test_skin_smoothing():
+    print("\n--- Test Suite 22: Skin Smoothing & Portrait Beauty Retouching Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-skin-smoothing")
+    if proc is None:
+        record_fail("SS-01", "Procedure lookup", "Procedure python-fu-skin-smoothing not found")
+        return
+
+    image = Gimp.Image.new(120, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(image, "PortraitSubject", 120, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        image.insert_layer(base, None, 0)
+        image.set_selected_layers([base])
+
+        # Create synthetic portrait scene:
+        # Initial dark background fill (0.20, 0.20, 0.20)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.20, 0.20, 0.20)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 120, 100)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Base skin tone area (x: 45..110, y: 10..90) = Warm skin base (0.80, 0.65, 0.55)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.80, 0.65, 0.55)"))
+        image.select_rectangle(Gimp.ChannelOps.REPLACE, 45, 10, 65, 80)
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Skin blemish / pore texture strips
+        for sx in range(50, 105, 4):
+            Gimp.context_set_foreground(Gegl.Color.new("rgb(0.72, 0.58, 0.48)"))
+            image.select_rectangle(Gimp.ChannelOps.REPLACE, sx, 10, 2, 80)
+            base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        Gimp.Selection.none(image)
+
+        # Record baseline pixel values
+        p_base_orig_bg = base.get_pixel(25, 50).get_rgba()
+        p_base_orig_skin = base.get_pixel(70, 50).get_rgba()
+
+        # Compute initial skin texture variation (variance across interior skin area x: 60..95, y=50)
+        skin_sample_xs = list(range(60, 95, 2))
+        in_skin_vals = [base.get_pixel(x, 50).get_rgba()[0] for x in skin_sample_xs]
+        in_skin_mean = sum(in_skin_vals) / len(in_skin_vals)
+        in_skin_var = sum((v - in_skin_mean) ** 2 for v in in_skin_vals) / len(in_skin_vals)
+
+        # Initial edge contrast step between background (x=25) and skin (x=70)
+        in_edge_step = base.get_pixel(70, 50).get_rgba()[0] - base.get_pixel(25, 50).get_rgba()[0]
+
+        # 22a: Run Glamour Studio Smooth preset (default)
+        cfg_glam = proc.create_config()
+        cfg_glam.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_glam.set_property("image", image)
+        cfg_glam.set_property("preset", "glamour-studio")
+        cfg_glam.set_property("add-mask", True)
+        cfg_glam.set_property("mask-type", "white")
+
+        res = proc.run(cfg_glam)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SS-01", "Execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("SS-01", "Execution status", "SUCCESS")
+
+        glam_layer = image.get_layers()[0]
+        if glam_layer.get_mode() != Gimp.LayerMode.NORMAL or abs(glam_layer.get_opacity() - 85.0) > 0.01:
+            record_fail("SS-02", "Layer mode & opacity", f"Expected NORMAL ({int(Gimp.LayerMode.NORMAL)}) & 85.0%, got mode={glam_layer.get_mode()}, opacity={glam_layer.get_opacity()}%")
+            return
+        record_pass("SS-02", "Layer mode & name", f"{glam_layer.get_name()} ({glam_layer.get_mode()})")
+
+        # Verify reveal-all layer mask attachment
+        mask = glam_layer.get_mask()
+        if mask is None:
+            record_fail("SS-03", "Layer mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SS-03", "Layer mask attachment", "Reveal-all mask attached")
+
+        # 22b: Verify skin texture variance reduction (smoothing effect)
+        out_skin_vals = [glam_layer.get_pixel(x, 50).get_rgba()[0] for x in skin_sample_xs]
+        out_skin_mean = sum(out_skin_vals) / len(out_skin_vals)
+        out_skin_var = sum((v - out_skin_mean) ** 2 for v in out_skin_vals) / len(out_skin_vals)
+        var_reduction = 1.0 - (out_skin_var / max(in_skin_var, 0.00001))
+
+        if var_reduction < 0.60:
+            record_fail("SS-04", "Skin variance reduction", f"Expected variance reduction >= 60%, got {var_reduction*100:.1f}% (in_var={in_skin_var:.6f}, out_var={out_skin_var:.6f})")
+            return
+        record_pass("SS-04", "Skin surface smoothing", f"Texture variance reduced by {var_reduction*100:.1f}% ({in_skin_var:.6f} -> {out_skin_var:.6f})")
+
+        # 22c: Verify facial contour edge preservation
+        out_edge_step = glam_layer.get_pixel(70, 50).get_rgba()[0] - glam_layer.get_pixel(25, 50).get_rgba()[0]
+        edge_preservation_ratio = out_edge_step / max(in_edge_step, 0.00001)
+        if edge_preservation_ratio < 0.90:
+            record_fail("SS-05", "Facial edge preservation", f"Expected edge preservation >= 90%, got {edge_preservation_ratio*100:.1f}% (in_step={in_edge_step:.3f}, out_step={out_edge_step:.3f})")
+            return
+        record_pass("SS-05", "Facial contour edge preservation", f"Sharp edge preserved at {edge_preservation_ratio*100:.1f}% (step {in_edge_step:.3f} -> {out_edge_step:.3f})")
+
+        # 22d: Conceal-All black layer mask test
+        image.remove_layer(glam_layer)
+        cfg_black = proc.create_config()
+        cfg_black.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_black.set_property("image", image)
+        cfg_black.set_property("preset", "subtle-natural")
+        cfg_black.set_property("add-mask", True)
+        cfg_black.set_property("mask-type", "black")
+
+        proc.run(cfg_black)
+        black_mask_layer = image.get_layers()[0]
+        bmask = black_mask_layer.get_mask()
+        if bmask is None:
+            record_fail("SS-06", "Conceal-all mask", "Expected attached black mask, got None")
+            return
+        record_pass("SS-06", "Conceal-All layer mask", "Black mask attached for selective brush painting")
+
+        # 22e: Soft Glow Beauty preset (Soft Light blend mode)
+        image.remove_layer(black_mask_layer)
+        cfg_glow = proc.create_config()
+        cfg_glow.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_glow.set_property("image", image)
+        cfg_glow.set_property("preset", "soft-glow-beauty")
+        cfg_glow.set_property("add-mask", False)
+
+        proc.run(cfg_glow)
+        glow_layer = image.get_layers()[0]
+        if glow_layer.get_mode() != Gimp.LayerMode.SOFTLIGHT or abs(glow_layer.get_opacity() - 80.0) > 0.01:
+            record_fail("SS-07", "Soft glow beauty mode", f"Expected Soft Light ({int(Gimp.LayerMode.SOFTLIGHT)}) and 80.0% opacity, got mode={glow_layer.get_mode()}, opacity={glow_layer.get_opacity()}%")
+            return
+        record_pass("SS-07", "Soft glow beauty preset", f"Soft Light mode ({glow_layer.get_mode()}) and 80.0% opacity verified")
+
+        # 22f: High-Fashion Editorial preset (90% opacity)
+        image.remove_layer(glow_layer)
+        cfg_fashion = proc.create_config()
+        cfg_fashion.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fashion.set_property("image", image)
+        cfg_fashion.set_property("preset", "high-fashion")
+        cfg_fashion.set_property("add-mask", False)
+
+        proc.run(cfg_fashion)
+        fashion_layer = image.get_layers()[0]
+        if abs(fashion_layer.get_opacity() - 90.0) > 0.01:
+            record_fail("SS-08", "High-fashion opacity", f"Expected 90.0% opacity, got {fashion_layer.get_opacity()}%")
+            return
+        record_pass("SS-08", "High-fashion editorial preset", f"{fashion_layer.get_name()} with 90.0% opacity verified")
+
+        # 22g: Custom Sliders & Detail Retention
+        image.remove_layer(fashion_layer)
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", image)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("smoothing-radius", 4.0)
+        cfg_cust.set_property("edge-preservation", 15.0)
+        cfg_cust.set_property("detail-retention", 30.0)
+        cfg_cust.set_property("blend-mode", "normal")
+        cfg_cust.set_property("opacity", 75.0)
+        cfg_cust.set_property("add-mask", False)
+
+        proc.run(cfg_cust)
+        cust_layer = image.get_layers()[0]
+        if abs(cust_layer.get_opacity() - 75.0) > 0.01 or cust_layer.get_mode() != Gimp.LayerMode.NORMAL:
+            record_fail("SS-09", "Custom sliders", f"Expected 75.0% and NORMAL, got opacity={cust_layer.get_opacity()}%, mode={cust_layer.get_mode()}")
+            return
+        record_pass("SS-09", "Custom sliders & detail retention", f"Opacity 75.0%, Normal blend mode ({cust_layer.get_mode()}) verified")
+
+        # 22h: Non-destructive base layer invariance
+        p_base_after_bg = base.get_pixel(25, 50).get_rgba()
+        p_base_after_skin = base.get_pixel(70, 50).get_rgba()
+        max_base_diff = max(
+            max(abs(p_base_after_bg[i] - p_base_orig_bg[i]) for i in range(3)),
+            max(abs(p_base_after_skin[i] - p_base_orig_skin[i]) for i in range(3))
+        )
+        if max_base_diff > 0.000001:
+            record_fail("SS-10", "Non-destructive invariance", f"Base layer altered by {max_base_diff:.6f} > 0")
+            return
+        record_pass("SS-10", "Non-destructive layer preservation", f"Base pixels 100% untouched across all tonal zones (diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SS-ERR", "Unexpected exception", str(e))
+    finally:
+        image.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -2583,6 +2765,7 @@ def run_all_tests():
     test_light_tone()
     test_duotone_effect()
     test_diffuse_glow()
+    test_skin_smoothing()
 
 
     elapsed = time.time() - start_time

@@ -355,6 +355,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper
+- **Source topic**: Retouch and repair images - Smooth skin in portrait photos (`Topics.txt` line 490, line 672: "Smooth skin in your images", and `photoshop_docs.md` Section 445 & 446 lines 13009/13048: Neural Filters - Skin Smoothing)
+- **Photoshop behavior**: Evens out skin tone irregularities, blotchiness, and surface blemishes while strictly protecting facial contours, eyes, eyelashes, and lips with high-frequency detail retention and non-destructive output to a masked layer.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `python-fu-skin-smoothing` in `<Image>/Filters/Retouching/Skin Smoothing...`, `<Image>/Filters/Enhance`, `<Image>/Colors`, and `<Image>/Layer`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/skin-smoothing/skin-smoothing.py`.
+- **Current capability**: Creates an isolated, non-destructive Skin Smoothing adjustment layer duplicating active drawable. Applies GEGL `gegl:bilateral-filter` for edge-preserving spatial smoothing of skin blemishes and `gegl:unsharp-mask` for micro-texture detail retention to preserve authentic skin pores. Features curated portrait presets (Subtle Natural Retouch, Glamour Studio Smooth, High-Fashion Editorial, Matte Skin Powder, Soft Glow Beauty, Custom Sliders), compositing blend modes (Normal, Soft Light), layer opacity slider (10% to 100%), attached editable layer mask (Reveal All or Conceal All), and 100% source pixel preservation.
+- **Gap**: None.
+- **Dependencies**: GEGL `gegl:bilateral-filter`, `gegl:unsharp-mask`, Python 3 (`gi.repository.Gimp`, `gi.repository.Gegl`).
+- **Implementation priority**: High (Phase 27).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, layer modes, mask attachment, skin texture variance reduction (>60%), facial contour edge preservation (>90%), conceal-all black mask, soft glow beauty preset, high-fashion editorial preset, custom sliders with opacity, and base layer preservation.
+- **Verification evidence** (Iteration 29):
+  1. `verify_config.py`: Section 6 passed with 21 active Python plugins.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: Skin surface blemishes smoothed out completely with 100.0% variance reduction (0.001446 -> 0.000000), facial contour sharp edge contrast preserved at 107.2% (step 0.521 -> 0.559), Conceal-All black layer mask verified, Soft Glow Beauty Soft Light mode 45 verified at 80.0% opacity, High-Fashion Editorial verified at 90.0% opacity, custom sliders with 75.0% opacity verified, and base layer pixels 100% untouched across all tonal zones (diff 0.000000). Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 29).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

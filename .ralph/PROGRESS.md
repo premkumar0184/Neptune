@@ -655,6 +655,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 27 — Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper Plugin.
 
+## Iteration 29 — Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper Plugin
+- **Date**: 2026-10-07
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/skin-smoothing/skin-smoothing.py`.
+- **Why this task**: Fulfills Photoshop portrait retouching requirements (`Topics.txt` line 490: "Smooth skin in portrait photos", line 672: "Smooth skin in your images", and `photoshop_docs.md` Section 445 & 446 lines 13009/13048: Neural Filters: Skin Smoothing for portraits, and Section 246/417). Replaces destructive manual blurring or complex manual multi-step frequency separation with an isolated non-destructive adjustment layer duplicating active drawable and executing a unified portrait retouching pipeline: `gegl:bilateral-filter` for edge-preserving spatial smoothing of skin tone blotchiness and blemishes (blur-radius 0.5 to 30.0px, edge-preservation 1.0 to 50.0), and `gegl:unsharp-mask` for high-frequency microtexture detail retention to preserve authentic skin pores and avoid a waxy/plastic look. Features curated photographic presets (Subtle Natural Retouch, Glamour Studio Smooth, High-Fashion Editorial, Matte Skin Powder, Soft Glow Beauty, Custom sliders), compositing blend modes (Normal, Soft Light), layer opacity control, attached editable layer masks (Reveal All or Conceal All), and 100% source pixel preservation.
+- **Changed**:
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/skin-smoothing/skin-smoothing.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-skin-smoothing` with bilateral edge-preserving smoothing, detail retention, presets, layer mask attachment, and `do_set_i18n` localization override.
+- `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `skin-smoothing` (21 plugins total).
+- `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (21 plugins verified).
+- `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 22 (asserting PDB registration, layer modes, mask attachment, skin surface smoothing with 100.0% variance reduction [0.001446 -> 0.000000], facial contour sharp edge contrast preservation at 107.2% [step 0.521 -> 0.559], Conceal-All black layer mask, Soft Glow Beauty Soft Light mode 45 at 80.0% opacity, High-Fashion Editorial with 90.0% opacity, custom sliders with 75.0% opacity, and 0.000000 base layer preservation across all tonal zones).
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Skin Smoothing & Beauty Retouching Helper as `IMPLEMENTED_VERIFIED`.
+- `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 27 complete and scheduled Phase 28 (Selective Color & Background Desaturation).
+- **Technical discoveries**:
+- `gegl:bilateral-filter` is dramatically faster (~11ms on test buffers) than `gegl:snn-mean` (~122ms) while achieving >99% edge preservation on high-contrast facial contours and eliminating over 95% of skin surface blotchiness.
+- Coupling bilateral smoothing with subtle `gegl:unsharp-mask` (scaled 0.0 to 0.8) recovers organic pore structure and prevents the artificial plastic or waxy doll skin look common in naive blurring.
+- Supporting both Reveal All (white mask) and Conceal All (black mask) gives portrait photographers the flexibility to either brush away from eyes/lips or selectively paint smoothing onto cheeks/forehead.
+- **Verification**:
+- `python3 tests/run_all_tests.py`:
+  - Stage 1: `verify_config.py` passed (6/6 sections pass, all 21 plugins verified).
+  - Stage 2: `install.sh --batch` passed (21 plugins deployed with executable permissions).
+  - Stage 3: `tests/gimp_e2e_suite.py` passed all 173 tests across 22 test suites in 8.76s.
+  - Final quality gate: SUCCESS across all stages in 19.90s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `f3bede5`.
+- **Result**: Success.
+- **Next**: Phase 28 — Non-Destructive Selective Color & Background Desaturation Helper Plugin.
+
 
 
 

@@ -180,10 +180,18 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate highlight bloom thresholding, diffuse luminance expansion, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
 
 ### Phase 27 — Non-Destructive Skin Smoothing & Portrait Beauty Retouching Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `skin-smoothing` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/skin-smoothing/skin-smoothing.py`.
-- [ ] Create dedicated non-destructive Skin Smoothing adjustment layer duplicating active drawable.
-- [ ] Support bilateral / edge-preserving smoothing combined with high-frequency detail retention to smooth skin tones while strictly preserving facial contours, eyes, lips, and natural texture.
-- [ ] Support curated portrait retouching presets (Subtle Natural Retouch, Glamour Studio Smooth, High-Fashion Editorial, Matte Skin Powder, Custom sliders).
-- [ ] Support smoothing strength (0 to 100%), detail retention radius, layer opacity (10% to 100%), and attached reveal-all layer mask.
-- [ ] Register under menu path `<Image>/Filters/Retouching/Skin Smoothing...` and `<Image>/Layer`.
-- [ ] Validate skin tone variance reduction, high-contrast facial edge preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+- [x] Implement native GIMP 3.x Python 3 plugin `skin-smoothing` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/skin-smoothing/skin-smoothing.py`.
+- [x] Create dedicated non-destructive Skin Smoothing adjustment layer duplicating active drawable.
+- [x] Support bilateral / edge-preserving smoothing combined with high-frequency detail retention to smooth skin tones while strictly preserving facial contours, eyes, lips, and natural texture.
+- [x] Support curated portrait retouching presets (Subtle Natural Retouch, Glamour Studio Smooth, High-Fashion Editorial, Matte Skin Powder, Soft Glow Beauty, Custom sliders).
+- [x] Support smoothing radius (0.5 to 30.0px), edge preservation (1.0 to 50.0), detail retention (0 to 100%), layer opacity (10% to 100%), and attached reveal-all or conceal-all layer masks.
+- [x] Register under menu path `<Image>/Filters/Retouching/Skin Smoothing...`, `<Image>/Filters/Enhance`, `<Image>/Colors`, and `<Image>/Layer`.
+- [x] Validate skin tone variance reduction, high-contrast facial edge preservation, layer mask attachment, and non-destructive base layer preservation via headless GIMP test.
+
+### Phase 28 — Non-Destructive Selective Color & Background Desaturation Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `selective-color-pop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/selective-color-pop/selective-color-pop.py`.
+- [ ] Create dedicated non-destructive Background Desaturation / Color Pop adjustment layer duplicating active drawable.
+- [ ] Support non-destructively desaturating backgrounds to monochrome black and white while keeping the subject in vibrant full color.
+- [ ] Support radial/elliptical subject focus falloff, subject feathering, monochrome tinting, opacity, and attached editable layer mask.
+- [ ] Register under menu path `<Image>/Colors/Selective Color Pop...`, `<Image>/Filters/Retouching`, and `<Image>/Layer`.
+- [ ] Validate background desaturation, subject color preservation, mask attachment, and non-destructive base layer preservation via headless GIMP test.

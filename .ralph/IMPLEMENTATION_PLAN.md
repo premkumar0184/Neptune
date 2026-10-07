@@ -375,12 +375,22 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate seamless edge continuity, kaleidoscope symmetry, multi-tile preview dimensions, layer mask attachment, base layer pixel preservation, and headless GIMP test suite.
 
 ### Phase 52 — Non-Destructive Selection & Layer Stroke Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `stroke-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`.
-- [ ] Create dedicated Non-Destructive Stroke Layer helper simulating Photoshop `Edit > Stroke...` and Layer Style Stroke effect.
-- [ ] Support stroke position geometries: `inside`, `center`, and `outside` relative to active selection boundary or layer alpha boundary.
-- [ ] Support stroke width (1 to 100px), stroke color (R, G, B, A), layer blend modes (Normal, Multiply, Screen, Overlay, Soft Light), layer opacity, and dedicated stroke layer generation preserving base layers (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Edit/Stroke Selection (Non-Destructive)...`, `<Image>/Layer/Stroke Layer...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate stroke width, positioning (inside/center/outside), color fidelity, blend mode assignment, non-destructive layer preservation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `stroke-layer` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`.
+- [x] Create dedicated Non-Destructive Stroke Layer helper simulating Photoshop `Edit > Stroke...` and Layer Style Stroke effect.
+- [x] Support stroke position geometries: `inside`, `center`, and `outside` relative to active selection boundary or layer alpha boundary.
+- [x] Support stroke width (1 to 100px), stroke color (Foreground, Black, White, Custom RGB), layer blend modes (Normal, Multiply, Screen, Overlay, Soft Light), layer opacity, and dedicated stroke layer generation preserving base layers (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Edit/Stroke Selection (Non-Destructive)...`, `<Image>/Layer/Stroke Layer...`, and `<Image>/Filters/Retouching`.
+- [x] Validate stroke width, positioning (inside/center/outside), color fidelity, blend mode assignment, non-destructive layer preservation, and headless GIMP test suite.
+
+### Phase 53 — Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `solid-color-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`.
+- [ ] Create dedicated Solid Color Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Solid Color...` and `Edit > Fill...` (Contents: Color).
+- [ ] Support color sources: Foreground Color, Background Color, 50% Neutral Gray (#808080), Solid Black (#000000), Solid White (#ffffff), and Custom RGB sliders.
+- [ ] Support fill scopes: Full canvas document fill or active selection confinement.
+- [ ] Support blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color), opacity (0-100%), and editable layer masks (Reveal-All, Conceal-All, Active Selection), preserving underlying base artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Solid Color...`, `<Image>/Edit/Fill with Solid Color...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate color accuracy across all presets, selection mask confinement, blend mode assignment, opacity scaling, non-destructive base layer preservation, and headless GIMP test suite.
+
 
 
 

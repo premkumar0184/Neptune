@@ -117,6 +117,7 @@ def test_pdb_registration():
         ("python-fu-seamless-pattern", "Seamless Pattern Generator Helper"),
         ("python-fu-pattern-preview", "Pattern Tile Preview Helper"),
         ("python-fu-pattern-fill", "Fill with Pattern Tile Helper"),
+        ("python-fu-stroke-layer", "Selection & Layer Stroke Helper"),
     ]
 
 
@@ -8276,6 +8277,330 @@ def test_seamless_pattern():
 
 
 # ==============================================================================
+# TEST 47: Non-Destructive Selection & Layer Stroke Helper Plugin (Phase 52)
+# ==============================================================================
+def test_stroke_layer():
+    print("\n--- Test Suite 47: Non-Destructive Selection & Layer Stroke Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-stroke-layer")
+    if proc is None:
+        record_fail("SL-01", "Procedure lookup", "Procedure python-fu-stroke-layer not found in PDB")
+        return
+
+    # SL-01: Procedure arguments verification
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "position", "width", "color-source", "custom-r", "custom-g", "custom-b",
+        "blend-mode", "opacity", "output-mode", "mask-type", "preserve-transparency"
+    ]
+    missing = [a for a in expected_args if a not in args]
+    if missing:
+        record_fail("SL-01", "Procedure argument signatures", f"Missing arguments: {missing} (found: {args})")
+        return
+    record_pass("SL-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({args})")
+
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        base = Gimp.Layer.new(img, "Base", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        img.set_selected_layers([base])
+
+        # Fill base with solid blue
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.0, 1.0)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        orig_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 30, 45, 75, 90) for y in (10, 25, 30, 45, 75, 90)]
+
+        # Rectangular selection from (20, 20) with size 40x40 (x: 20..59, y: 20..59)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+
+        # SL-02 & SL-03: Inside stroke geometry (PDB SUCCESS and Inside positioning)
+        cfg_in = proc.create_config()
+        cfg_in.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_in.set_property("image", img)
+        cfg_in.set_property("position", "inside")
+        cfg_in.set_property("width", 4)
+        cfg_in.set_property("color-source", "custom")
+        cfg_in.set_property("custom-r", 1.0)
+        cfg_in.set_property("custom-g", 0.0)
+        cfg_in.set_property("custom-b", 0.0)
+        cfg_in.set_property("output-mode", "new-layer")
+        cfg_in.set_property("mask-type", "none")
+        res_in = proc.run(cfg_in)
+        if res_in.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SL-02", "Inside stroke execution status", f"Expected SUCCESS (3), got {res_in.index(0)}")
+            return
+        record_pass("SL-02", "Execution status", "SUCCESS")
+
+        in_layer = img.get_layers()[0]
+        # (22, 30): inside the 4px inside stroke band [20..23] -> Red alpha 1.0
+        # (35, 35): interior of selection beyond stroke -> Transparent alpha 0.0
+        # (10, 10): outside selection -> Transparent alpha 0.0
+        p_in_stroke = in_layer.get_pixel(22, 30).get_rgba()
+        p_in_center = in_layer.get_pixel(35, 35).get_rgba()
+        p_in_out = in_layer.get_pixel(10, 10).get_rgba()
+
+        if p_in_stroke.alpha < 0.99 or p_in_stroke.red < 0.99 or p_in_center.alpha > 0.01 or p_in_out.alpha > 0.01:
+            record_fail("SL-03", "Inside stroke geometry", f"Stroke px={p_in_stroke.alpha}, center px={p_in_center.alpha}, outside px={p_in_out.alpha}")
+            return
+        record_pass("SL-03", "Inside stroke geometric placement", f"Stroke confined strictly inside boundary (stroke alpha={p_in_stroke.alpha:.2f}, center alpha={p_in_center.alpha:.2f}, outside alpha={p_in_out.alpha:.2f})")
+        img.remove_layer(in_layer)
+
+        # SL-04: Outside stroke geometry
+        cfg_out = proc.create_config()
+        cfg_out.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_out.set_property("image", img)
+        cfg_out.set_property("position", "outside")
+        cfg_out.set_property("width", 4)
+        cfg_out.set_property("color-source", "custom")
+        cfg_out.set_property("custom-r", 0.0)
+        cfg_out.set_property("custom-g", 1.0)
+        cfg_out.set_property("custom-b", 0.0)
+        cfg_out.set_property("output-mode", "new-layer")
+        cfg_out.set_property("mask-type", "none")
+        proc.run(cfg_out)
+
+        out_layer = img.get_layers()[0]
+        # (18, 30): in outside stroke band [16..19] -> Green alpha 1.0
+        # (25, 30): inside original selection -> Transparent alpha 0.0
+        # (10, 30): beyond outside stroke band -> Transparent alpha 0.0
+        p_out_stroke = out_layer.get_pixel(18, 30).get_rgba()
+        p_out_in = out_layer.get_pixel(25, 30).get_rgba()
+        p_out_out = out_layer.get_pixel(10, 30).get_rgba()
+
+        if p_out_stroke.alpha < 0.99 or p_out_stroke.green < 0.99 or p_out_in.alpha > 0.01 or p_out_out.alpha > 0.01:
+            record_fail("SL-04", "Outside stroke geometry", f"Stroke px={p_out_stroke.alpha}, inside px={p_out_in.alpha}, outside px={p_out_out.alpha}")
+            return
+        record_pass("SL-04", "Outside stroke geometric placement", f"Stroke confined strictly outside boundary (stroke alpha={p_out_stroke.alpha:.2f}, interior alpha={p_out_in.alpha:.2f}, exterior alpha={p_out_out.alpha:.2f})")
+        img.remove_layer(out_layer)
+
+        # SL-05: Center stroke geometry
+        cfg_ctr = proc.create_config()
+        cfg_ctr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ctr.set_property("image", img)
+        cfg_ctr.set_property("position", "center")
+        cfg_ctr.set_property("width", 6)
+        cfg_ctr.set_property("color-source", "custom")
+        cfg_ctr.set_property("custom-r", 0.0)
+        cfg_ctr.set_property("custom-g", 0.0)
+        cfg_ctr.set_property("custom-b", 1.0)
+        cfg_ctr.set_property("output-mode", "new-layer")
+        cfg_ctr.set_property("mask-type", "none")
+        proc.run(cfg_ctr)
+
+        ctr_layer = img.get_layers()[0]
+        # Boundary at x=20. Width 6: w_out=3, w_in=3 -> band spans [17..22]
+        # (18, 30): outer half of center stroke -> Blue alpha 1.0
+        # (21, 30): inner half of center stroke -> Blue alpha 1.0
+        # (25, 30): inside box beyond stroke -> Transparent alpha 0.0
+        # (14, 30): outside box beyond stroke -> Transparent alpha 0.0
+        p_ctr_outer = ctr_layer.get_pixel(18, 30).get_rgba()
+        p_ctr_inner = ctr_layer.get_pixel(21, 30).get_rgba()
+        p_ctr_in = ctr_layer.get_pixel(25, 30).get_rgba()
+        p_ctr_out = ctr_layer.get_pixel(14, 30).get_rgba()
+
+        if p_ctr_outer.alpha < 0.99 or p_ctr_inner.alpha < 0.99 or p_ctr_in.alpha > 0.01 or p_ctr_out.alpha > 0.01:
+            record_fail("SL-05", "Center stroke geometry", f"Outer px={p_ctr_outer.alpha}, inner px={p_ctr_inner.alpha}, in px={p_ctr_in.alpha}, out px={p_ctr_out.alpha}")
+            return
+        record_pass("SL-05", "Center stroke symmetric placement", f"Stroke spans boundary edge symmetrically (outer alpha={p_ctr_outer.alpha:.2f}, inner alpha={p_ctr_inner.alpha:.2f}, interior alpha={p_ctr_in.alpha:.2f})")
+        img.remove_layer(ctr_layer)
+
+        # SL-06: Stroke width scaling (width 8px)
+        cfg_w8 = proc.create_config()
+        cfg_w8.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_w8.set_property("image", img)
+        cfg_w8.set_property("position", "inside")
+        cfg_w8.set_property("width", 8)
+        cfg_w8.set_property("color-source", "black")
+        cfg_w8.set_property("output-mode", "new-layer")
+        cfg_w8.set_property("mask-type", "none")
+        proc.run(cfg_w8)
+
+        w8_layer = img.get_layers()[0]
+        # Width 8px inside band: [20..27]
+        p_w8_stroke = w8_layer.get_pixel(26, 30).get_rgba()
+        p_w8_center = w8_layer.get_pixel(32, 30).get_rgba()
+        if p_w8_stroke.alpha < 0.99 or p_w8_center.alpha > 0.01:
+            record_fail("SL-06", "Stroke width scaling", f"Expected 8px band, px at 26={p_w8_stroke.alpha}, px at 32={p_w8_center.alpha}")
+            return
+        record_pass("SL-06", "Stroke width scaling verification", f"8px width band verified (alpha at x=26: {p_w8_stroke.alpha:.2f}, center alpha: {p_w8_center.alpha:.2f})")
+        img.remove_layer(w8_layer)
+
+        # SL-07: Custom RGB color application
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("position", "inside")
+        cfg_col.set_property("width", 4)
+        cfg_col.set_property("color-source", "custom")
+        cfg_col.set_property("custom-r", 0.0)
+        cfg_col.set_property("custom-g", 1.0)
+        cfg_col.set_property("custom-b", 0.0)
+        cfg_col.set_property("output-mode", "new-layer")
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+
+        col_layer = img.get_layers()[0]
+        p_col = col_layer.get_pixel(22, 30).get_rgba()
+        if abs(p_col.red - 0.0) > 0.01 or abs(p_col.green - 1.0) > 0.01 or abs(p_col.blue - 0.0) > 0.01:
+            record_fail("SL-07", "Custom RGB color", f"Expected pure green [0, 1, 0], got [{p_col.red:.3f}, {p_col.green:.3f}, {p_col.blue:.3f}]")
+            return
+        record_pass("SL-07", "Custom RGB color fidelity", f"Exact RGB values verified ([R={p_col.red:.3f}, G={p_col.green:.3f}, B={p_col.blue:.3f}])")
+        img.remove_layer(col_layer)
+
+        # SL-08: Foreground color default application
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.8, 0.4, 0.2)"))
+        cfg_fg = proc.create_config()
+        cfg_fg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fg.set_property("image", img)
+        cfg_fg.set_property("position", "inside")
+        cfg_fg.set_property("width", 4)
+        cfg_fg.set_property("color-source", "foreground")
+        cfg_fg.set_property("output-mode", "new-layer")
+        cfg_fg.set_property("mask-type", "none")
+        proc.run(cfg_fg)
+
+        fg_layer = img.get_layers()[0]
+        p_fg = fg_layer.get_pixel(22, 30).get_rgba()
+        if abs(p_fg.red - 0.8) > 0.02 or abs(p_fg.green - 0.4) > 0.02 or abs(p_fg.blue - 0.2) > 0.02:
+            record_fail("SL-08", "Foreground color default", f"Expected [0.8, 0.4, 0.2], got [{p_fg.red:.3f}, {p_fg.green:.3f}, {p_fg.blue:.3f}]")
+            return
+        record_pass("SL-08", "Toolbox foreground color default", f"Foreground color extracted and applied ([R={p_fg.red:.3f}, G={p_fg.green:.3f}, B={p_fg.blue:.3f}])")
+        img.remove_layer(fg_layer)
+
+        # SL-09: Blend modes and opacity
+        for bname, expected_mode in [("multiply", Gimp.LayerMode.MULTIPLY), ("screen", Gimp.LayerMode.SCREEN), ("overlay", Gimp.LayerMode.OVERLAY), ("soft-light", Gimp.LayerMode.SOFTLIGHT)]:
+            cfg_b = proc.create_config()
+            cfg_b.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_b.set_property("image", img)
+            cfg_b.set_property("position", "inside")
+            cfg_b.set_property("width", 4)
+            cfg_b.set_property("color-source", "black")
+            cfg_b.set_property("blend-mode", bname)
+            cfg_b.set_property("opacity", 75.0)
+            cfg_b.set_property("output-mode", "new-layer")
+            cfg_b.set_property("mask-type", "none")
+            proc.run(cfg_b)
+
+            b_layer = img.get_layers()[0]
+            if b_layer.get_mode() != expected_mode or abs(b_layer.get_opacity() - 75.0) > 0.01:
+                record_fail("SL-09", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(b_layer.get_mode())}, opacity {b_layer.get_opacity()}%")
+                return
+            img.remove_layer(b_layer)
+        record_pass("SL-09", "Blend modes & opacity validation", "Multiply, Screen, Overlay, Soft Light & 75% opacity validated")
+
+        # SL-10: Layer alpha fallback when selection is empty
+        Gimp.Selection.none(img)
+        # Create an object layer with 30x30 square from (35, 35) to (65, 65)
+        obj_layer = Gimp.Layer.new(img, "ObjectLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(obj_layer, None, 0)
+        img.set_selected_layers([obj_layer])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 35, 35, 30, 30)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+        obj_layer.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        cfg_alpha = proc.create_config()
+        cfg_alpha.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_alpha.set_property("image", img)
+        cfg_alpha.set_property("position", "outside")
+        cfg_alpha.set_property("width", 4)
+        cfg_alpha.set_property("color-source", "white")
+        cfg_alpha.set_property("output-mode", "new-layer")
+        cfg_alpha.set_property("mask-type", "none")
+        proc.run(cfg_alpha)
+
+        alpha_stroke = img.get_layers()[0]
+        # (32, 50): in outside stroke band along left edge of object (35 - 3 = 32)
+        p_alpha_st = alpha_stroke.get_pixel(32, 50).get_rgba()
+        if p_alpha_st.alpha < 0.99 or p_alpha_st.red < 0.99:
+            record_fail("SL-10", "Layer alpha fallback", f"Expected white stroke at (32, 50), got alpha={p_alpha_st.alpha}, red={p_alpha_st.red}")
+            return
+        record_pass("SL-10", "Layer alpha boundary fallback", f"Empty selection correctly falls back to layer alpha boundary (stroke alpha={p_alpha_st.alpha:.2f})")
+        img.remove_layer(alpha_stroke)
+        img.remove_layer(obj_layer)
+        img.set_selected_layers([base])
+
+        # SL-11: Conceal-All black layer mask
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_blk = proc.create_config()
+        cfg_blk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blk.set_property("image", img)
+        cfg_blk.set_property("position", "inside")
+        cfg_blk.set_property("width", 4)
+        cfg_blk.set_property("color-source", "black")
+        cfg_blk.set_property("output-mode", "new-layer")
+        cfg_blk.set_property("mask-type", "conceal-all")
+        proc.run(cfg_blk)
+
+        blk_layer = img.get_layers()[0]
+        if blk_layer.get_mask() is None:
+            record_fail("SL-11", "Conceal-all mask", "Expected attached layer mask, got None")
+            return
+        p_comp_blk = get_composite_pixel(img, 22, 30)
+        p_base_blk = base.get_pixel(22, 30).get_rgba()
+        blk_diff = max(abs(p_comp_blk.red - p_base_blk.red), abs(p_comp_blk.green - p_base_blk.green), abs(p_comp_blk.blue - p_base_blk.blue))
+        if blk_diff > 0.000001:
+            record_fail("SL-11", "Conceal-all composite invariance", f"Composite altered by {blk_diff:.6f} > 0")
+            return
+        record_pass("SL-11", "Conceal-All black layer mask", f"Black mask attached for selective brush painting (composite diff {blk_diff:.6f})")
+        img.remove_layer(blk_layer)
+
+        # SL-12: Reveal-All white layer mask attachment
+        cfg_rev = proc.create_config()
+        cfg_rev.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rev.set_property("image", img)
+        cfg_rev.set_property("position", "inside")
+        cfg_rev.set_property("width", 4)
+        cfg_rev.set_property("color-source", "white")
+        cfg_rev.set_property("output-mode", "new-layer")
+        cfg_rev.set_property("mask-type", "reveal-all")
+        proc.run(cfg_rev)
+
+        rev_layer = img.get_layers()[0]
+        if rev_layer.get_mask() is None:
+            record_fail("SL-12", "Reveal-all mask", "Expected attached layer mask, got None")
+            return
+        record_pass("SL-12", "Reveal-All white layer mask", "White editable mask attached")
+        img.remove_layer(rev_layer)
+
+        # SL-13: Active selection mask confinement
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", img)
+        cfg_sel.set_property("position", "inside")
+        cfg_sel.set_property("width", 4)
+        cfg_sel.set_property("color-source", "white")
+        cfg_sel.set_property("output-mode", "new-layer")
+        cfg_sel.set_property("mask-type", "selection")
+        proc.run(cfg_sel)
+
+        sel_layer = img.get_layers()[0]
+        if sel_layer.get_mask() is None:
+            record_fail("SL-13", "Selection mask", "Expected attached selection mask, got None")
+            return
+        record_pass("SL-13", "Active selection mask attachment", "Selection mask attached to stroke layer")
+        img.remove_layer(sel_layer)
+        Gimp.Selection.none(img)
+
+        # SL-14: Base layer pixel preservation
+        after_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 30, 45, 75, 90) for y in (10, 25, 30, 45, 75, 90)]
+        max_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_samples, after_samples)
+        )
+        if max_diff > 0.000001:
+            record_fail("SL-14", "Base layer preservation", f"Base pixels altered by {max_diff:.6f} > 0")
+            return
+        record_pass("SL-14", "Base layer pixel preservation", f"Original source pixels 100% untouched across all operations (diff {max_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SL-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -8331,6 +8656,7 @@ def run_all_tests():
     test_guide_layout()
     test_frame_animation()
     test_seamless_pattern()
+    test_stroke_layer()
 
 
 

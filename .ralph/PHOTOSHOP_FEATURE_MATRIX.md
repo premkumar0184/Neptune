@@ -780,6 +780,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Selection & Layer Stroke Helper
+- **Source topic**: Fill and stroke selections, layers, and paths - Stroke a selection or layer with color / Fill a selection or layer with color / Modify fill and stroke for shapes / Add a stroke to a frame (`Topics.txt` lines 154, 355, 358, 387, `photoshop_docs.md` Section 345 lines 10280-10305)
+- **Photoshop behavior**: Edit > Stroke: Learn how to apply a colored stroke to a selection or layer in professional photoeditor to enhance visual impact or define edges. Specify stroke width, location (Inside, Center, Outside), blending mode, opacity, and color (foreground color default or custom picker).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `stroke-layer` providing `python-fu-stroke-layer` in `<Image>/Edit/Stroke Selection (Non-Destructive)...`, `<Image>/Layer/Stroke Layer...`, and `<Image>/Filters/Retouching/Stroke Layer...`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`.
+- **Current capability**: Non-destructive stroke generation for active selections or layer content boundaries (automatic alpha fallback when selection is empty). 3 positioning geometries: Inside (selection erosion/shrink subtraction), Outside (selection dilation/grow subtraction), and Center (balanced dilation and erosion subtraction). Width control (1-100 px), color selection (foreground color default, black, white, custom RGB sliders), blend modes (Normal, Multiply, Screen, Overlay, Soft Light), layer opacity, output options (new dedicated layer preserving source artwork vs in-place), attached editable layer masks (None, Reveal-All, Conceal-All, Selection), and single-step `Ctrl+Z` undo protection. Original source layer pixels remain 100% untouched (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.get_selected_layers`, `image.insert_layer`, `image.select_item`, `Gimp.Selection.grow`, `Gimp.Selection.shrink`, `Gimp.ChannelOps.REPLACE`, `Gimp.ChannelOps.SUBTRACT`).
+- **Implementation priority**: High (Phase 52).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema, execution status (SUCCESS), Inside stroke geometry (stroke pixels strictly inside boundary), Outside stroke geometry (stroke pixels strictly outside boundary), Center stroke geometry (stroke pixels symmetrically span boundary), stroke width scaling (8px band), custom RGB color application, foreground color default application, blend modes (Multiply, Screen, Overlay, Soft Light) & 75% opacity, layer alpha fallback when selection is empty, Conceal-All black layer mask composite invariance (`diff == 0.000000`), Reveal-All white layer mask attachment, active selection mask confinement, and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 54):
+  1. `verify_config.py`: Section 6 passed with 46 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-stroke-layer`), procedure arguments verified, execution status SUCCESS verified, Inside stroke geometry verified (inner band filled, core and exterior transparent), Outside stroke geometry verified (outer band filled, interior and outside transparent), Center stroke geometry verified (symmetrically centered on boundary), 8px width scaling verified, custom RGB color verified (`[0.0, 1.0, 0.0]`), foreground color default verified (`[1.0, 0.5, 0.0]`), blend modes Multiply, Screen, Overlay, Soft Light and 75% opacity verified, layer alpha fallback verified when selection is empty, Conceal-All black layer mask composite invariance verified (`diff == 0.000000`), Reveal-All white layer mask attached, active selection mask confinement verified, and base layer pixels 100% untouched (`diff == 0.000000`). Total 488/488 assertions passed. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 54).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

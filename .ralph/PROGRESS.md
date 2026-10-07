@@ -1309,10 +1309,31 @@ This is a concise handoff log, not a transcript of every shell command.
     - Final quality gate: SUCCESS across all stages in 63.94s. Exit code 0.
 - **Commit**: PhotoGIMP sub-repo `61e18ec`.
 - **Result**: Success.
-- **Next**: Phase 52 — Non-Destructive Selection & Layer Stroke Helper Plugin.
-
-
-
-
-
-
+## Iteration 54 — Non-Destructive Selection & Layer Stroke Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Selection & Layer Stroke Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 355: "Stroke a selection or layer with color", line 358: "Fill a selection or layer with color", line 387: "Modify fill and stroke for shapes", line 154: "Add a stroke to a frame", and `photoshop_docs.md` Section 345 lines 10280-10305: "Edit > Stroke: Learn how to apply a colored stroke to a selection or layer in professional photoeditor to enhance visual impact or define edges"). In Adobe Photoshop, stroking a selection or layer with defined line width, boundary positioning (Inside, Center, Outside), blending mode, opacity, and color is an essential graphic design, illustration, and photo retouching operation. Stock GIMP provides only `gimp-drawable-edit-stroke-selection`, which destructively draws on the active layer, cannot position strokes explicitly inside or outside or centered with respect to geometric bounds, fails when no selection is active instead of stroking the active layer boundary, and lacks blend modes, opacity, and layer mask integration. Implementing `stroke-layer.py` brings complete Photoshop parity to Linux photo editing with `python-fu-stroke-layer`: Inside, Center, and Outside positioning geometries, 1-100px width scaling, color selection (foreground color default, black, white, custom RGB), dedicated stroke layer preserving source artwork (`diff == 0.000000`) or in-place, professional blend modes (Normal, Multiply, Screen, Overlay, Soft Light), automatic alpha fallback when selection is empty, attached editable layer masks (None, Reveal-All, Conceal-All, Selection), and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-layer/stroke-layer.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-stroke-layer` with Inside/Outside/Center geometric band calculations, width scaling, color picking, blend modes, opacity, layer alpha fallback, layer masks, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `stroke-layer` (46 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (46 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 47: `test_stroke_layer` (asserting SL-01 through SL-14: PDB registration, procedure argument schema, SUCCESS status, Inside stroke geometry [inner band filled, core and exterior transparent], Outside stroke geometry [outer band filled, interior and outside transparent], Center stroke geometry [symmetrically centered on boundary], 8px width scaling, custom RGB color `[0.0, 1.0, 0.0]`, foreground color default `[1.0, 0.5, 0.0]`, blend modes Multiply, Screen, Overlay, Soft Light & 75% opacity, layer alpha fallback when selection is empty, Conceal-All black layer mask composite invariance `diff == 0.000000`, Reveal-All white layer mask attachment, active selection mask confinement, and original source pixel preservation `diff == 0.000000`). Total tests increased to 488 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Selection & Layer Stroke Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 52 complete and scheduled Phase 53 (Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin).
+- **Technical discoveries**:
+  - Geometric stroke bands can be synthesized cleanly in GIMP 3.x using selection channels and channel arithmetic:
+    - Inside: Save selection $S$ as channel `chan_orig`. Call `Gimp.Selection.shrink(image, width)`. Save as `chan_inner`. Select `chan_orig` and subtract `chan_inner`.
+    - Outside: Call `Gimp.Selection.grow(image, width)`. Save as `chan_outer`. Select `chan_outer` and subtract `chan_orig`.
+    - Center: Grow $S$ by $\lceil W/2 \rceil$ to obtain `chan_outer`. Shrink $S$ by $\lfloor W/2 \rfloor$ to obtain `chan_inner`. Select `chan_outer` and subtract `chan_inner`.
+  - Layer alpha fallback: Calling `image.select_item(Gimp.ChannelOps.REPLACE, active_layer)` when `Gimp.Selection.is_empty(image)` is true converts the layer's non-transparent pixels into an active selection, matching Photoshop's layer stroking behavior.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 46 plugins verified).
+    - Stage 2: `install.sh --batch` passed (46 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 488 tests across 47 test suites in 49.68s.
+    - Final quality gate: SUCCESS across all stages in 64.79s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `dc15362`.
+- **Result**: Success.
+- **Next**: Phase 53 — Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin.

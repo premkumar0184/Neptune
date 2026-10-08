@@ -1466,9 +1466,37 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (51 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 567 tests across 52 test suites in 63.74s.
     - Final quality gate: SUCCESS across all stages in 88.95s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `1652b59`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `1652b59`. Outer repo `60877fd`.
 - **Result**: Success.
 - **Next**: Phase 58 — Non-Destructive Outer Glow Layer Style Helper Plugin.
+
+## Iteration 60 — Non-Destructive Outer Glow Layer Style Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Outer Glow Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Outer Glow effect parameters: Blend Mode, Color, Opacity, Noise, Technique, Spread, Size, Range..."). In Adobe Photoshop, Outer Glow is an essential non-destructive layer effect widely used to produce rim lighting, neon signage halos, and specular backlights. Stock GIMP lacks a dedicated Outer Glow layer style dialog, lacks Photoshop's 5 core glow blend modes (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), lacks Spread alpha matte expansion, lacks Size halo radius falloff, lacks Range contour falloff modulation ($A' = A^{50/\text{range}}$), lacks Technique selection (`softer` vs `precise`), lacks Layer Knocks Out Glow silhouette clearance, lacks film grain texture noise injection, and lacks dedicated glow layer positioning immediately beneath the parent layer, leaving parent artwork 100% untouched (`diff == 0.000000`). Implementing `outer-glow.py` brings complete Photoshop parity to Linux photo editing with `python-fu-outer-glow`: omnidirectional radial radiance, spread expansion, size softness falloff, range contour curve, technique choice, silhouette knockout clipping, film grain noise injection, 8 curated presets, 5 blend modes, opacity control, and editable layer mask options.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-outer-glow` with omnidirectional radial radiance, spread dilation, Gaussian blur softness falloff, power-curve contour range shaping via GeglBuffer float array, technique selection, silhouette knockout clearing, film grain noise injection, curated presets, custom glow color, blend modes, opacity, and layer mask options.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `outer-glow` (52 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (52 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 53: `test_outer_glow` (asserting OG-01 through OG-15: PDB registration, procedure argument schema across 16 properties, SUCCESS status, omnidirectional radial radiance [top=0.165, bot=0.145, left=0.165, right=0.145, diff=0.0196], distance falloff [near a=0.306 > far a=0.075], spread expansion control [spread expands solid core alpha 0.855 >= 0.75], size halo radius control [size 30px a=0.176 > size 5px a=0.000], silhouette knockout clipping [knockout a=0.000, solid a=0.961], custom glow RGB color fidelity [[R=0.000, G=1.000, B=1.000]], curated presets [neon-cyan, golden-radiance, ethereal-white, magical-magenta, radioactive-green, subtle-soft], dedicated glow layer stack placement beneath parent layer, blend modes Screen, Normal, Lighten, Color Dodge, Linear Dodge / Addition & 75% opacity validated, range contour falloff modulation [range 80% a=0.384 > range 20% a=0.024], conceal-all black layer mask attachment, glow noise grain texture variance [0.002411 > 0.0001], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 583 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Outer Glow Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 58 complete and scheduled Phase 59 (Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin).
+- **Technical discoveries**:
+  - In Photoshop Outer Glow, unlike Drop Shadow (which translates along a directional light vector $\Delta x, \Delta y$), the glow radiates omnidirectionally in all directions with equal radial symmetry ($|\Delta x| = |\Delta y|$).
+  - Contour Range control functions as a power curve / gamma on alpha: with $\gamma = 50 / \text{range}$, higher range values maintain glow intensity significantly further into the periphery before tapering off.
+  - Setting `do_set_i18n(self, procname): return False` on the Gimp.PlugIn instance disables GIMP 3.x catalog localization lookup warnings cleanly.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 52 plugins verified).
+    - Stage 2: `install.sh --batch` passed (52 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 583 tests across 53 test suites in 77.64s.
+    - Final quality gate: SUCCESS across all stages in 92.92s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `9780a03`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 59 — Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin.
+
 
 
 

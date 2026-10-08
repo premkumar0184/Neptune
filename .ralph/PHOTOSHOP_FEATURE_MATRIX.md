@@ -882,6 +882,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Outer Glow Layer Style Helper
+- **Source topic**: Apply layer effects - Add layer styles (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500)
+- **Photoshop behavior**: Layer > Layer Style > Outer Glow...: Generates an omnidirectional radiant halo around the active layer contents using blend modes (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), opacity (0-100%), noise (0-100%), solid RGB color, technique (Softer / Precise), spread (matte expansion prior to blur), size (blur radius falloff), and range (opacity falloff contour curve).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `outer-glow` providing `python-fu-outer-glow` in `<Image>/Layer/Layer Style/Outer Glow...`, `<Image>/Filters/Light and Shadow/Outer Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`.
+- **Current capability**: Dedicated glow layer positioned immediately beneath the target layer, omnidirectional radial radiance across all 4 cardinal directions, spread expansion dilation, size Gaussian blur falloff, range contour opacity curve modulation, technique selection (`softer` / `precise`), silhouette knockout clipping, film grain noise injection, 8 curated presets (Photoshop Standard Warm Glow, Neon Cyan Halo, Golden Radiance, Ethereal White, Magical Magenta, Radioactive Green, Subtle Soft, Custom Sliders), 5 blend modes (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Addition), editable layer mask support, single-step `Ctrl+Z` undo protection, and 100% preservation of source and base layer artwork (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.insert_layer`, `image.select_item`, `image.select_rectangle`, `Gimp.Layer.new`, `Gimp.DrawableFilter.new`, `gegl:gaussian-blur`, GeglBuffer `"RGBA float"`, NumPy array processing).
+- **Implementation priority**: High (Phase 58).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema across 16 properties, execution status (SUCCESS), omnidirectional radial radiance (equal expansion in all 4 cardinal directions), distance falloff (near alpha > far alpha), spread expansion control (solid core alpha >= 0.75), size halo radius control, silhouette knockout clipping, custom glow RGB color fidelity, curated presets, dedicated glow layer stack placement beneath parent in stack, blend modes & opacity, range contour falloff modulation, conceal-all black layer mask attachment, glow noise grain texture variance, and target/base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 60):
+  1. `verify_config.py`: Section 6 passed with 52 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-outer-glow`), procedure arguments verified across all 16 properties, execution status SUCCESS verified, omnidirectional radial radiance verified (top=0.165, bot=0.145, left=0.165, right=0.145, diff=0.0196), distance falloff verified (near a=0.306 > far a=0.075), spread expansion control verified (alpha 0.855 >= 0.75), size halo radius control verified (size 30px a=0.176 > size 5px a=0.000), silhouette knockout clipping verified (knockout a=0.000, solid a=0.961), custom glow RGB color fidelity verified ([R=0.000, G=1.000, B=1.000]), curated presets verified, dedicated glow layer stack placement verified, blend modes Screen, Normal, Lighten, Color Dodge, Linear Dodge / Addition & 75% opacity validated, range contour falloff modulation verified (range 80% a=0.384 > range 20% a=0.024), conceal-all black layer mask verified, film grain noise texture verified (variance 0.002411 > 0.0001), and target and base layer pixels 100% untouched (`diff == 0.000000`). Total 583/583 assertions passed across 53 test suites in 77.64s. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 60).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

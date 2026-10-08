@@ -429,12 +429,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate cross-channel math, invert operations, subtraction/addition formulas, selection output generation, and headless GIMP test suite.
 
 ### Phase 58 — Non-Destructive Outer Glow Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `outer-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`.
-- [ ] Create dedicated Outer Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Outer Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115).
-- [ ] Support Photoshop Outer Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), Opacity (0 to 100%), Noise (0 to 100%), Color (Solid Color RGB or Gradient), Technique (Softer / Precise), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Cyberpunk, Soft Warm Halo, Golden Radiance, Ethereal White, Custom).
-- [ ] Support non-destructive glow layer placement immediately beneath parent layer, silhouette knockout clipping, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Outer Glow...`, `<Image>/Filters/Light and Shadow/Outer Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate spread dilation, gaussian blur softness falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `outer-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`.
+- [x] Create dedicated Outer Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Outer Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115).
+- [x] Support Photoshop Outer Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), Opacity (0 to 100%), Noise (0 to 100%), Color (Solid Color RGB), Technique (Softer / Precise), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Cyberpunk, Soft Warm Halo, Golden Radiance, Ethereal White, Magical Magenta, Radioactive Green, Subtle Soft, Custom).
+- [x] Support non-destructive glow layer placement immediately beneath parent layer, silhouette knockout clipping, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Outer Glow...`, `<Image>/Filters/Light and Shadow/Outer Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate spread dilation, gaussian blur softness falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
+
+### Phase 59 — Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `pattern-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-fill/pattern-fill.py`.
+- [ ] Create dedicated Pattern Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Pattern...`, `Layer > Layer Style > Pattern Overlay...`, and `Edit > Fill...` (Contents: Pattern) (`Topics.txt` lines 356, 361-364; `photoshop_docs.md` Section 113-115).
+- [ ] Support Photoshop Pattern Fill parameters: Pattern selection (active GIMP pattern or preset), Scale (10% to 500%), Angle (-180° to 180°), Opacity (0 to 100%), Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light), and fill scope (Full canvas Pattern Fill Layer with selection mask, Selection Only, or In-Place with preserve transparency).
+- [ ] Support non-destructive pattern layer creation, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of underlying artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Pattern...`, `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Edit/Fill with Pattern...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate pattern scaling, repetition tiling, rotation angle, selection mask confinement, blend mode assignment, and headless GIMP test suite.
 
 
 

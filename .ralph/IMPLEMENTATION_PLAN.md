@@ -413,12 +413,12 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate EV stop scaling, shadow offset response, gamma midtone power curve, preset fidelity, blend modes, layer mask generation, and non-destructive base layer preservation via headless GIMP test suite.
 
 ### Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `drop-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`.
-- [ ] Create dedicated Drop Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Drop Shadow...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-114 lines 3433-3500).
-- [ ] Support Photoshop Layer Style Drop Shadow parameters: Angle (-180° to 180°), Distance (0 to 200px), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Linear Burn), Noise / Graininess (0 to 100%), and Layer Knocks Out Drop Shadow toggle.
-- [ ] Support non-destructive shadow layer positioning directly beneath target layer, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Drop Shadow...`, `<Image>/Filters/Light and Shadow/Drop Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate angle offset trigonometry, distance translation, spread expansion, size gaussian falloff, knockout clipping, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `drop-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`.
+- [x] Create dedicated Drop Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Drop Shadow...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-114 lines 3433-3500).
+- [x] Support Photoshop Layer Style Drop Shadow parameters: Angle (-180° to 180°), Distance (0 to 200px), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Linear Burn), Noise / Graininess (0 to 100%), and Layer Knocks Out Drop Shadow toggle.
+- [x] Support non-destructive shadow layer positioning directly beneath target layer, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Drop Shadow...`, `<Image>/Filters/Light and Shadow/Drop Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate angle offset trigonometry, distance translation, spread expansion, size gaussian falloff, knockout clipping, and headless GIMP test suite.
 
 ### Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `calculations` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.

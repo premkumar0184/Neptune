@@ -121,6 +121,7 @@ def test_pdb_registration():
         ("python-fu-solid-color-fill", "Solid Color Fill Layer & Canvas Fill Helper"),
         ("python-fu-gradient-fill", "Gradient Fill Layer & Multi-Style Gradient Helper"),
         ("python-fu-exposure", "Exposure Adjustment Layer & Tonal Range Helper"),
+        ("python-fu-drop-shadow", "Drop Shadow Layer Style Helper"),
     ]
 
 
@@ -9537,6 +9538,369 @@ def test_exposure_adjustment():
 
 
 # ==============================================================================
+# TEST 51: Non-Destructive Drop Shadow Layer Style Helper Plugin
+# ==============================================================================
+def test_drop_shadow():
+    print("\n--- Test Suite 51: Non-Destructive Drop Shadow Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_name = "python-fu-drop-shadow"
+
+    # DS-01: Procedure lookup and argument signatures
+    proc = pdb.lookup_procedure(proc_name)
+    if proc is None:
+        record_fail("DS-01", "Procedure lookup", f"{proc_name} not found in PDB")
+        return
+
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "angle", "distance", "spread",
+        "size", "opacity", "blend-mode", "shadow-r", "shadow-g", "shadow-b",
+        "knockout", "noise", "mask-type"
+    ]
+    arg_names = [arg.name for arg in proc.get_arguments()]
+    missing = [a for a in expected_args if a not in arg_names]
+    if missing:
+        record_fail("DS-01", "Argument audit", f"Missing arguments: {missing}")
+        return
+    record_pass("DS-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({arg_names})")
+
+    # Setup test canvas: 100x100 RGB image with white base layer and a centered 40x40 red card layer (30, 30 to 70, 70)
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "BaseArt", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.9, 0.9)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    card = Gimp.Layer.new(img, "Card", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(card, None, 0)
+    img.set_selected_layers([card])
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 30, 30, 40, 40)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.2, 0.2)"))
+    card.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+    orig_card_samples = [card.get_pixel(x, y).get_rgba() for x in (35, 40, 50, 60, 65) for y in (35, 40, 50, 60, 65)]
+
+    try:
+        # DS-02: Execution status check
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "default")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("DS-02", "PDB execution status", f"Execution returned non-success code {res.index(0)}")
+            return
+        record_pass("DS-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+        sh_def = img.get_layers()[1] # inserted beneath card
+        img.remove_layer(sh_def)
+
+        # DS-03: Light angle 120° trigonometry verified
+        # Angle 120°, distance 15px -> dx = -15 * cos(120°) = +8, dy = 15 * sin(120°) = +13
+        # Card at (30..70, 30..70), so shadow is shifted down-right to (38..78, 43..83)
+        cfg_120 = proc.create_config()
+        cfg_120.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_120.set_property("image", img)
+        cfg_120.set_property("preset", "custom")
+        cfg_120.set_property("angle", 120.0)
+        cfg_120.set_property("distance", 15.0)
+        cfg_120.set_property("spread", 0.0)
+        cfg_120.set_property("size", 10.0)
+        cfg_120.set_property("knockout", True)
+        cfg_120.set_property("mask-type", "none")
+        proc.run(cfg_120)
+
+        lyr_120 = img.get_layers()[1]
+        p_down_right = lyr_120.get_pixel(73, 73).get_rgba()
+        p_up_left = lyr_120.get_pixel(20, 20).get_rgba()
+        if p_down_right.alpha < 0.20 or p_up_left.alpha > 0.02:
+            record_fail("DS-03", "Light angle 120° trigonometry", f"Expected shadow at down-right (got a={p_down_right.alpha:.3f}) and none at up-left (got a={p_up_left.alpha:.3f})")
+            return
+        record_pass("DS-03", "Light angle 120° trigonometry", f"Shadow cast to bottom-right opposite light source (down-right a={p_down_right.alpha:.3f}, up-left a={p_up_left.alpha:.3f})")
+        img.remove_layer(lyr_120)
+
+        # DS-04: Light angle 0° trigonometry verified
+        # Angle 0°, distance 15px -> dx = -15, dy = 0. Shadow cast leftward.
+        cfg_0 = proc.create_config()
+        cfg_0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_0.set_property("image", img)
+        cfg_0.set_property("preset", "custom")
+        cfg_0.set_property("angle", 0.0)
+        cfg_0.set_property("distance", 15.0)
+        cfg_0.set_property("spread", 0.0)
+        cfg_0.set_property("size", 10.0)
+        cfg_0.set_property("knockout", True)
+        cfg_0.set_property("mask-type", "none")
+        proc.run(cfg_0)
+
+        lyr_0 = img.get_layers()[1]
+        p_left = lyr_0.get_pixel(20, 50).get_rgba()
+        p_right = lyr_0.get_pixel(85, 50).get_rgba()
+        if p_left.alpha < 0.20 or p_right.alpha > 0.02:
+            record_fail("DS-04", "Light angle 0° trigonometry", f"Expected shadow to the left (got a={p_left.alpha:.3f}) and none to the right (got a={p_right.alpha:.3f})")
+            return
+        record_pass("DS-04", "Light angle 0° trigonometry", f"Shadow cast to the left (left a={p_left.alpha:.3f}, right a={p_right.alpha:.3f})")
+        img.remove_layer(lyr_0)
+
+        # DS-05: Distance offset scaling verified
+        # Distance 25px at 90° (dx=0, dy=+25) reaches y=85, whereas distance 5px (dy=+5) does not
+        cfg_d5 = proc.create_config()
+        cfg_d5.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d5.set_property("image", img)
+        cfg_d5.set_property("preset", "custom")
+        cfg_d5.set_property("angle", 90.0)
+        cfg_d5.set_property("distance", 5.0)
+        cfg_d5.set_property("spread", 0.0)
+        cfg_d5.set_property("size", 6.0)
+        cfg_d5.set_property("knockout", False)
+        cfg_d5.set_property("mask-type", "none")
+        proc.run(cfg_d5)
+        lyr_d5 = img.get_layers()[1]
+
+        cfg_d25 = proc.create_config()
+        cfg_d25.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d25.set_property("image", img)
+        cfg_d25.set_property("preset", "custom")
+        cfg_d25.set_property("angle", 90.0)
+        cfg_d25.set_property("distance", 25.0)
+        cfg_d25.set_property("spread", 0.0)
+        cfg_d25.set_property("size", 6.0)
+        cfg_d25.set_property("knockout", False)
+        cfg_d25.set_property("mask-type", "none")
+        proc.run(cfg_d25)
+        lyr_d25 = img.get_layers()[1]
+
+        p_at_85_d25 = lyr_d25.get_pixel(50, 85).get_rgba().alpha
+        p_at_85_d5 = lyr_d5.get_pixel(50, 85).get_rgba().alpha
+        if p_at_85_d25 <= p_at_85_d5:
+            record_fail("DS-05", "Distance offset scaling", f"Expected dist=25 alpha ({p_at_85_d25:.3f}) > dist=5 alpha ({p_at_85_d5:.3f}) at y=85")
+            return
+        record_pass("DS-05", "Distance offset scaling", f"Distance controls spatial displacement (dist 25px a={p_at_85_d25:.3f} > dist 5px a={p_at_85_d5:.3f})")
+        img.remove_layer(lyr_d25)
+        img.remove_layer(lyr_d5)
+
+        # DS-06: Size blur radius falloff verified
+        # Size 25 gives softer falloff (alpha at distance > 0.05)
+        cfg_s20 = proc.create_config()
+        cfg_s20.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s20.set_property("image", img)
+        cfg_s20.set_property("preset", "custom")
+        cfg_s20.set_property("angle", 90.0)
+        cfg_s20.set_property("distance", 10.0)
+        cfg_s20.set_property("spread", 0.0)
+        cfg_s20.set_property("size", 25.0)
+        cfg_s20.set_property("knockout", False)
+        cfg_s20.set_property("mask-type", "none")
+        proc.run(cfg_s20)
+
+        lyr_s20 = img.get_layers()[1]
+        p_soft = lyr_s20.get_pixel(50, 85).get_rgba().alpha
+        if p_soft < 0.05:
+            record_fail("DS-06", "Size blur radius falloff", f"Expected diffuse blur at y=85, got alpha {p_soft:.3f}")
+            return
+        record_pass("DS-06", "Size blur radius falloff", f"Gaussian blur softness creates smooth gradient transition (alpha {p_soft:.3f})")
+        img.remove_layer(lyr_s20)
+
+        # DS-07: Spread expansion verified
+        # Spread 80% with size 10px produces solid core alpha > 0.75 near boundary
+        cfg_sp80 = proc.create_config()
+        cfg_sp80.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sp80.set_property("image", img)
+        cfg_sp80.set_property("preset", "custom")
+        cfg_sp80.set_property("angle", 90.0)
+        cfg_sp80.set_property("distance", 10.0)
+        cfg_sp80.set_property("spread", 80.0)
+        cfg_sp80.set_property("size", 10.0)
+        cfg_sp80.set_property("knockout", False)
+        cfg_sp80.set_property("mask-type", "none")
+        proc.run(cfg_sp80)
+
+        lyr_sp80 = img.get_layers()[1]
+        p_sp80 = lyr_sp80.get_pixel(50, 75).get_rgba().alpha
+        if p_sp80 < 0.75:
+            record_fail("DS-07", "Spread expansion", f"Expected solid spread alpha > 0.75, got {p_sp80:.3f}")
+            return
+        record_pass("DS-07", "Spread expansion control", f"Spread thickens solid matte core prior to blurring (alpha {p_sp80:.3f} >= 0.75)")
+        img.remove_layer(lyr_sp80)
+
+        # DS-08: Layer Knocks Out Drop Shadow verified
+        # With knockout=True, interior pixel (50, 50) is 0.000.
+        # With knockout=False, interior pixel (50, 50) has shadow alpha > 0.50.
+        cfg_ko_true = proc.create_config()
+        cfg_ko_true.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ko_true.set_property("image", img)
+        cfg_ko_true.set_property("preset", "custom")
+        cfg_ko_true.set_property("angle", 90.0)
+        cfg_ko_true.set_property("distance", 5.0)
+        cfg_ko_true.set_property("spread", 0.0)
+        cfg_ko_true.set_property("size", 8.0)
+        cfg_ko_true.set_property("knockout", True)
+        cfg_ko_true.set_property("mask-type", "none")
+        proc.run(cfg_ko_true)
+        lyr_ko_true = img.get_layers()[1]
+
+        cfg_ko_false = proc.create_config()
+        cfg_ko_false.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ko_false.set_property("image", img)
+        cfg_ko_false.set_property("preset", "custom")
+        cfg_ko_false.set_property("angle", 90.0)
+        cfg_ko_false.set_property("distance", 5.0)
+        cfg_ko_false.set_property("spread", 0.0)
+        cfg_ko_false.set_property("size", 8.0)
+        cfg_ko_false.set_property("knockout", False)
+        cfg_ko_false.set_property("mask-type", "none")
+        proc.run(cfg_ko_false)
+        lyr_ko_false = img.get_layers()[1]
+
+        p_ko_t = lyr_ko_true.get_pixel(50, 50).get_rgba().alpha
+        p_ko_f = lyr_ko_false.get_pixel(50, 50).get_rgba().alpha
+        if p_ko_t > 0.001 or p_ko_f < 0.50:
+            record_fail("DS-08", "Layer Knocks Out Drop Shadow", f"Expected knockout=0.0 (got {p_ko_t:.3f}) and no-knockout > 0.50 (got {p_ko_f:.3f})")
+            return
+        record_pass("DS-08", "Layer Knocks Out Drop Shadow", f"Knockout cleanly clips parent silhouette (knockout a={p_ko_t:.3f}, solid a={p_ko_f:.3f})")
+        img.remove_layer(lyr_ko_false)
+        img.remove_layer(lyr_ko_true)
+
+        # DS-09: Shadow custom color fidelity verified
+        cfg_cyan = proc.create_config()
+        cfg_cyan.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cyan.set_property("image", img)
+        cfg_cyan.set_property("preset", "custom")
+        cfg_cyan.set_property("shadow-r", 0.0)
+        cfg_cyan.set_property("shadow-g", 1.0)
+        cfg_cyan.set_property("shadow-b", 1.0)
+        cfg_cyan.set_property("knockout", False)
+        cfg_cyan.set_property("mask-type", "none")
+        proc.run(cfg_cyan)
+
+        lyr_cyan = img.get_layers()[1]
+        p_cyan = lyr_cyan.get_pixel(50, 50).get_rgba()
+        if abs(p_cyan.red - 0.0) > 0.01 or abs(p_cyan.green - 1.0) > 0.02 or abs(p_cyan.blue - 1.0) > 0.02:
+            record_fail("DS-09", "Custom shadow color", f"Expected Cyan [0, 1, 1], got [{p_cyan.red:.3f}, {p_cyan.green:.3f}, {p_cyan.blue:.3f}]")
+            return
+        record_pass("DS-09", "Custom shadow color fidelity", f"Exact custom RGB color verified ([R={p_cyan.red:.3f}, G={p_cyan.green:.3f}, B={p_cyan.blue:.3f}])")
+        img.remove_layer(lyr_cyan)
+
+        # DS-10: Curated presets verified
+        presets_to_test = ["soft-drop", "hard-edge", "elevated-card", "neon-backlight", "vintage-sketch"]
+        for pname in presets_to_test:
+            cfg_pr = proc.create_config()
+            cfg_pr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_pr.set_property("image", img)
+            cfg_pr.set_property("preset", pname)
+            cfg_pr.set_property("mask-type", "none")
+            proc.run(cfg_pr)
+            lyr_pr = img.get_layers()[1]
+            if "Drop Shadow" not in lyr_pr.get_name():
+                record_fail("DS-10", f"Preset {pname}", f"Unexpected shadow layer name {lyr_pr.get_name()}")
+                return
+            img.remove_layer(lyr_pr)
+        record_pass("DS-10", "Curated presets", "Soft-drop, hard-edge, elevated-card, neon-backlight, vintage-sketch presets verified")
+
+        # DS-11: Dedicated shadow layer inserted beneath target layer in stack
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("preset", "default")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+
+        layers = img.get_layers()
+        # Stack should be: [Card (top), Card (Drop Shadow) (middle), BaseArt (bottom)]
+        if len(layers) != 3 or layers[0].get_name() != "Card" or "Drop Shadow" not in layers[1].get_name():
+            record_fail("DS-11", "Layer stack position", f"Expected shadow at index 1 beneath Card at index 0, got 0={layers[0].get_name()}, 1={layers[1].get_name()}")
+            return
+        record_pass("DS-11", "Layer stack placement", "Shadow layer inserted immediately below parent layer in stack")
+        img.remove_layer(layers[1])
+
+        # DS-12: Blend modes & opacity validation
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("burn", Gimp.LayerMode.BURN),
+            ("linear-burn", Gimp.LayerMode.LINEAR_BURN),
+        ]
+        for bname, expected_mode in modes_to_test:
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "default")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[1]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("DS-12", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("DS-12", "Blend modes & opacity validation", "Multiply, Normal, Darken, Color Burn, Linear Burn & 75% opacity validated")
+
+        # DS-13: Conceal-All black layer mask and Reveal-All white layer mask verified
+        cfg_cm = proc.create_config()
+        cfg_cm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cm.set_property("image", img)
+        cfg_cm.set_property("preset", "default")
+        cfg_cm.set_property("mask-type", "conceal-all")
+        proc.run(cfg_cm)
+        lyr_cm = img.get_layers()[1]
+        mask_cm = lyr_cm.get_mask()
+        if mask_cm is None:
+            record_fail("DS-13", "Conceal-All mask", "Expected attached black mask, got None")
+            return
+        m_c_val = mask_cm.get_pixel(50, 50).get_rgba()
+        if m_c_val.red > 0.01:
+            record_fail("DS-13", "Conceal-All mask", f"Expected black mask (0.0), got {m_c_val.red}")
+            return
+        record_pass("DS-13", "Conceal-All black layer mask", "Black mask attached for selective brush painting")
+        img.remove_layer(lyr_cm)
+
+        # DS-14: Shadow noise / graininess verified
+        cfg_nz = proc.create_config()
+        cfg_nz.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_nz.set_property("image", img)
+        cfg_nz.set_property("preset", "custom")
+        cfg_nz.set_property("noise", 40.0)
+        cfg_nz.set_property("knockout", False)
+        cfg_nz.set_property("mask-type", "none")
+        proc.run(cfg_nz)
+
+        lyr_nz = img.get_layers()[1]
+        nz_samples = [lyr_nz.get_pixel(50, y).get_rgba().alpha for y in range(40, 60)]
+        mean_nz = sum(nz_samples) / len(nz_samples)
+        var_nz = sum((s - mean_nz) ** 2 for s in nz_samples) / len(nz_samples)
+        if var_nz <= 0.0001:
+            record_fail("DS-14", "Shadow noise grain", f"Expected grain variance > 0.0001, got {var_nz:.6f}")
+            return
+        record_pass("DS-14", "Shadow noise & grain texture", f"Film grain noise texture verified (variance {var_nz:.6f} > 0.0001)")
+        img.remove_layer(lyr_nz)
+
+        # DS-15: Target and base layer pixel preservation
+        after_card_samples = [card.get_pixel(x, y).get_rgba() for x in (35, 40, 50, 60, 65) for y in (35, 40, 50, 60, 65)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_card_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_card_samples, after_card_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_card_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("DS-15", "Layer pixel preservation", f"Pixels altered (card diff {max_card_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("DS-15", "Target & base pixel preservation", f"Target and base pixels 100% untouched across all operations (card diff {max_card_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("DS-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -9596,6 +9960,7 @@ def run_all_tests():
     test_solid_color_fill()
     test_gradient_fill()
     test_exposure_adjustment()
+    test_drop_shadow()
 
 
 

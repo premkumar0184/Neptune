@@ -1415,6 +1415,33 @@ This is a concise handoff log, not a transcript of every shell command.
     - Final quality gate: SUCCESS across all stages in 93.62s. Exit code 0.
 - **Commit**: PhotoGIMP sub-repo `efbc264`.
 - **Result**: Success.
-- **Next**: Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin.
+## Iteration 58 — Non-Destructive Drop Shadow Layer Style Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Drop Shadow Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", "Add drop shadows to text", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Drop Shadow effect parameters: Blend Mode, Color, Opacity, Angle, Distance, Spread, Size, Noise, Layer Knocks Out Drop Shadow... Layer styles are non-destructive effects linked to layer contents..."). In Adobe Photoshop, Drop Shadow is the most universally utilized Layer Style effect. Stock GIMP provides only the destructive filter `gegl:drop-shadow`, which operates directly on the active layer or generates an unlinked raster layer without Photoshop's dedicated layer style architecture (dedicated shadow layer placed immediately beneath the target layer, leaving target and base layers 100% untouched `diff == 0.000000`), lacks light angle trigonometry ($\Delta x = -\text{distance} \cdot \cos(\theta), \Delta y = \text{distance} \cdot \sin(\theta)$ where 120° light from top-left casts shadow down-right), lacks Spread parameter (expanding the solid alpha matte prior to blurring), lacks Layer Knocks Out Drop Shadow silhouette clipping (preventing dark shadow from bleeding through semi-transparent parent pixels), lacks shadow film grain noise, lacks curated style presets, and lacks integrated blend modes, opacity, and layer mask options. Implementing `drop-shadow.py` brings complete Photoshop parity to Linux photo editing with `python-fu-drop-shadow`: geometric controls (Angle, Distance, Spread, Size, Knockout, Noise), 7 curated presets (Photoshop Standard Default, Soft Ambient, Hard Edge Graphic, Elevated UI Card, Neon Cyan Backlight, Vintage Grain Sketch, Custom Sliders), custom shadow RGB color selection, 5 professional blend modes (Multiply, Normal, Darken, Color Burn, Linear Burn), opacity control (0-100%), editable layer mask integration (Auto selection mask, None, Reveal-All, Conceal-All, Active Selection), and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-drop-shadow` with Photoshop light angle trigonometry, spread alpha dilation, Gaussian blur softness falloff, Layer Knocks Out Drop Shadow silhouette subtraction via GEGL float buffer clipping, film grain noise injection, curated presets, custom shadow color, blend modes, opacity, and layer mask options.
+- `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `drop-shadow` (50 plugins total).
+- `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (50 plugins verified).
+- `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 51: `test_drop_shadow` (asserting DS-01 through DS-15: PDB registration, procedure argument schema across 16 properties, SUCCESS status, Light angle 120° trigonometry [down-right a=0.725, up-left a=0.000], Light angle 0° trigonometry [left a=0.851, right a=0.000], Distance offset scaling [dist 25px a=0.996 > dist 5px a=0.004], Size blur radius falloff [diffuse alpha 0.298], Spread expansion control [spread expands solid core alpha 1.000 >= 0.75], Layer Knocks Out Drop Shadow silhouette clipping [knockout a=0.000, solid a=0.996], Custom shadow RGB color fidelity [[R=0.000, G=1.000, B=1.000]], Curated presets [Soft-drop, Hard-edge, Elevated-card, Neon-backlight, Vintage-sketch], Dedicated shadow layer stack placement beneath parent layer, Blend modes Multiply, Normal, Darken, Color Burn, Linear Burn & 75% opacity validated, Conceal-All black layer mask attachment, Shadow noise grain texture variance [0.010749 > 0.0001], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 550 passing.
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Drop Shadow Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+- `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 56 complete and scheduled Phase 57 (Channel Calculations & Two-Source Blending Helper Plugin).
+- **Technical discoveries**:
+- In Adobe Photoshop, shadow direction is opposite to light angle $\theta$: $\Delta x = -\text{distance} \cdot \cos(\theta)$, $\Delta y = \text{distance} \cdot \sin(\theta)$ with $\theta \in [-180^\circ, 180^\circ]$ in Cartesian coordinates. Light at 120° (upper-left) produces positive $\Delta x$ and $\Delta y$ (shadow cast downward and rightward).
+- In GIMP 3.x, Color Burn blend mode is represented by `Gimp.LayerMode.BURN` (rather than `COLOR_BURN`).
+- For "Layer Knocks Out Drop Shadow", sampling the target layer alpha in GEGL float buffer and multiplying the shadow layer alpha by $(1.0 - \text{parent\_alpha})$ cleanly cuts out the parent silhouette, preventing semi-transparent parent pixels from becoming muddy or darkened by the shadow underneath.
+- When presets are defined with default values identical to slider defaults, preset resolution should only apply preset-override values if `preset not in ("default", "custom")`, allowing manual slider adjustments (such as blend mode or opacity) to function transparently without requiring explicit preset switching.
+- **Verification**:
+- `python3 tests/run_all_tests.py`:
+  - Stage 1: `verify_config.py` passed (6/6 sections pass, all 50 plugins verified).
+  - Stage 2: `install.sh --batch` passed (50 plugins deployed with executable permissions).
+  - Stage 3: `tests/gimp_e2e_suite.py` passed all 550 tests across 51 test suites in 75.53s.
+  - Final quality gate: SUCCESS across all stages in 102.63s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5b054dc`.
+- **Result**: Success.
+- **Next**: Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin.
+
 
 

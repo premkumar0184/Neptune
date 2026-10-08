@@ -437,12 +437,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate spread dilation, gaussian blur softness falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
 
 ### Phase 59 — Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `pattern-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-fill/pattern-fill.py`.
-- [ ] Create dedicated Pattern Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Pattern...`, `Layer > Layer Style > Pattern Overlay...`, and `Edit > Fill...` (Contents: Pattern) (`Topics.txt` lines 356, 361-364; `photoshop_docs.md` Section 113-115).
-- [ ] Support Photoshop Pattern Fill parameters: Pattern selection (active GIMP pattern or preset), Scale (10% to 500%), Angle (-180° to 180°), Opacity (0 to 100%), Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light), and fill scope (Full canvas Pattern Fill Layer with selection mask, Selection Only, or In-Place with preserve transparency).
-- [ ] Support non-destructive pattern layer creation, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of underlying artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Pattern...`, `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Edit/Fill with Pattern...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate pattern scaling, repetition tiling, rotation angle, selection mask confinement, blend mode assignment, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `pattern-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-fill/pattern-fill.py`.
+- [x] Create dedicated Pattern Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Pattern...`, `Layer > Layer Style > Pattern Overlay...`, and `Edit > Fill...` (Contents: Pattern) (`Topics.txt` lines 356, 361-364; `photoshop_docs.md` Section 113-115).
+- [x] Support Photoshop Pattern Fill parameters: Pattern selection (checkerboard, diagonal stripes, grid mesh, polka dots, halftone dots, carbon fiber, active GIMP pattern), Scale (10% to 500%), Angle (-180° to 180°), Color 1 and Color 2 RGB palette swatches, Opacity (0 to 100%), Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), and fill scope (Full canvas Pattern Fill Layer with selection mask, Selection Only, or In-Place with preserve transparency).
+- [x] Support non-destructive pattern layer creation, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of underlying artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/New Fill Layer/Pattern...`, `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Edit/Fill with Pattern...`, and `<Image>/Filters/Retouching`.
+- [x] Validate pattern scaling, repetition tiling, rotation angle, selection mask confinement, blend mode assignment, and headless GIMP test suite.
+
+### Phase 60 — Non-Destructive Inner Glow Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `inner-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-glow/inner-glow.py`.
+- [ ] Create dedicated Inner Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [ ] Support Photoshop Inner Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), Opacity (0 to 100%), Noise (0 to 100%), Glow Color (Solid Color RGB), Technique (Softer / Precise), Source (Edge / Center), Choke (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Edge Radiance, Candlelight Warmth, Soft Edge Inset, Center Spotlight, Cyberpunk Core, Custom Sliders).
+- [ ] Support non-destructive glow layer placement clipped to parent layer contents, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Inner Glow...`, `<Image>/Filters/Light and Shadow/Inner Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate edge/center radiance, choke contraction, blur size falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
 
 
 

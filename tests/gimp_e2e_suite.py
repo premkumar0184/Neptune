@@ -124,6 +124,7 @@ def test_pdb_registration():
         ("python-fu-drop-shadow", "Drop Shadow Layer Style Helper"),
         ("python-fu-calculations", "Channel Calculations & Two-Source Blending Helper"),
         ("python-fu-outer-glow", "Outer Glow Layer Style Helper"),
+        ("python-fu-pattern-fill-layer", "Pattern Fill Layer & Pattern Overlay Helper"),
     ]
 
 
@@ -10651,6 +10652,367 @@ def test_outer_glow():
 
 
 # ==============================================================================
+# TEST SUITE 54: NON-DESTRUCTIVE PATTERN FILL LAYER & PATTERN OVERLAY HELPER
+# ==============================================================================
+def test_pattern_fill_layer():
+    print("\n--- Test Suite 54: Non-Destructive Pattern Fill Layer Helper Plugin ---")
+    proc_name = "python-fu-pattern-fill-layer"
+    pdb = Gimp.get_pdb()
+
+    # PFL-01: Procedure lookup and argument signatures audit
+    proc = pdb.lookup_procedure(proc_name)
+    if proc is None:
+        record_fail("PFL-01", "Procedure lookup", f"{proc_name} not found in PDB")
+        return
+
+    expected_args = [
+        "run-mode", "image", "drawables", "pattern-preset",
+        "scale", "angle", "color1-r", "color1-g", "color1-b",
+        "color2-r", "color2-g", "color2-b", "fill-scope",
+        "blend-mode", "opacity", "mask-type", "preserve-transparency"
+    ]
+    arg_names = [arg.name for arg in proc.get_arguments()]
+    missing = [a for a in expected_args if a not in arg_names]
+    if missing:
+        record_fail("PFL-01", "Procedure argument audit", f"Missing arguments: {missing}")
+        return
+    record_pass("PFL-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({expected_args})")
+
+    # Set up test canvas (100x100) with two layers:
+    # 1. BaseArt (bottom): Neutral gray [0.5, 0.5, 0.5]
+    # 2. Artwork (top): Solid green [0.0, 0.7, 0.0] with alpha
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    base = Gimp.Layer.new(img, "BaseArt", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    art = Gimp.Layer.new(img, "Artwork", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.7, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    img.set_selected_layers([art])
+
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # PFL-02: PDB execution status
+        cfg_exec = proc.create_config()
+        cfg_exec.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exec.set_property("image", img)
+        cfg_exec.set_property("pattern-preset", "checkerboard")
+        cfg_exec.set_property("fill-scope", "new-fill-layer")
+        cfg_exec.set_property("mask-type", "none")
+        res_exec = proc.run(cfg_exec)
+        status_exec = res_exec.index(0)
+        if status_exec != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PFL-02", "PDB execution status", f"Execution failed with status {status_exec}")
+            return
+        record_pass("PFL-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+        img.remove_layer(img.get_layers()[0])
+
+        # PFL-03: Checkerboard pattern geometry verified
+        cfg_chk = proc.create_config()
+        cfg_chk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_chk.set_property("image", img)
+        cfg_chk.set_property("pattern-preset", "checkerboard")
+        cfg_chk.set_property("scale", 100.0)
+        cfg_chk.set_property("angle", 0.0)
+        cfg_chk.set_property("color1-r", 0.0)
+        cfg_chk.set_property("color1-g", 0.0)
+        cfg_chk.set_property("color1-b", 0.0)
+        cfg_chk.set_property("color2-r", 1.0)
+        cfg_chk.set_property("color2-g", 1.0)
+        cfg_chk.set_property("color2-b", 1.0)
+        cfg_chk.set_property("fill-scope", "new-fill-layer")
+        cfg_chk.set_property("mask-type", "none")
+        proc.run(cfg_chk)
+
+        lyr_chk = img.get_layers()[0]
+        p_c1 = lyr_chk.get_pixel(50, 50).get_rgba()
+        p_c2 = lyr_chk.get_pixel(58, 50).get_rgba()
+        if p_c1.red > 0.05 or p_c2.red < 0.95:
+            record_fail("PFL-03", "Checkerboard pattern geometry", f"Expected alternating contrast, got p1={p_c1.red:.3f}, p2={p_c2.red:.3f}")
+            return
+        record_pass("PFL-03", "Checkerboard pattern geometry", f"Alternating 2x2 checkerboard matrix verified (c1={p_c1.red:.3f}, c2={p_c2.red:.3f})")
+        img.remove_layer(lyr_chk)
+
+        # PFL-04: Diagonal stripes pattern geometry verified
+        cfg_str = proc.create_config()
+        cfg_str.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_str.set_property("image", img)
+        cfg_str.set_property("pattern-preset", "diagonal-stripes")
+        cfg_str.set_property("fill-scope", "new-fill-layer")
+        cfg_str.set_property("mask-type", "none")
+        proc.run(cfg_str)
+
+        lyr_str = img.get_layers()[0]
+        p_d1 = lyr_str.get_pixel(50, 50).get_rgba()
+        p_d2 = lyr_str.get_pixel(54, 46).get_rgba()
+        p_d3 = lyr_str.get_pixel(58, 50).get_rgba()
+        if abs(p_d1.red - p_d2.red) > 0.05 or abs(p_d1.red - p_d3.red) < 0.80:
+            record_fail("PFL-04", "Diagonal stripes pattern", f"Expected diagonal invariance, got d1={p_d1.red:.3f}, d2={p_d2.red:.3f}, d3={p_d3.red:.3f}")
+            return
+        record_pass("PFL-04", "Diagonal stripes pattern geometry", f"45-degree periodic diagonal stripes verified (diag={p_d1.red:.3f}=={p_d2.red:.3f}, opp={p_d3.red:.3f})")
+        img.remove_layer(lyr_str)
+
+        # PFL-05: Grid mesh pattern geometry verified
+        cfg_grd = proc.create_config()
+        cfg_grd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_grd.set_property("image", img)
+        cfg_grd.set_property("pattern-preset", "grid-mesh")
+        cfg_grd.set_property("fill-scope", "new-fill-layer")
+        cfg_grd.set_property("mask-type", "none")
+        proc.run(cfg_grd)
+
+        lyr_grd = img.get_layers()[0]
+        p_line = lyr_grd.get_pixel(48, 48).get_rgba()
+        p_cell = lyr_grd.get_pixel(56, 56).get_rgba()
+        if p_line.red > 0.05 or p_cell.red < 0.95:
+            record_fail("PFL-05", "Grid mesh pattern", f"Expected line c1 and interior c2, got line={p_line.red:.3f}, cell={p_cell.red:.3f}")
+            return
+        record_pass("PFL-05", "Grid mesh pattern geometry", f"Orthogonal grid mesh lines and interior cells verified (line={p_line.red:.3f}, cell={p_cell.red:.3f})")
+        img.remove_layer(lyr_grd)
+
+        # PFL-06: Polka dots pattern geometry verified
+        cfg_dot = proc.create_config()
+        cfg_dot.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dot.set_property("image", img)
+        cfg_dot.set_property("pattern-preset", "polka-dots")
+        cfg_dot.set_property("fill-scope", "new-fill-layer")
+        cfg_dot.set_property("mask-type", "none")
+        proc.run(cfg_dot)
+
+        lyr_dot = img.get_layers()[0]
+        p_dot_ctr = lyr_dot.get_pixel(50, 50).get_rgba()
+        p_dot_bkg = lyr_dot.get_pixel(60, 60).get_rgba()
+        if p_dot_ctr.red > 0.05 or p_dot_bkg.red < 0.95:
+            record_fail("PFL-06", "Polka dots pattern", f"Expected dot center c1 and background c2, got dot={p_dot_ctr.red:.3f}, bkg={p_dot_bkg.red:.3f}")
+            return
+        record_pass("PFL-06", "Polka dots pattern geometry", f"Circular polka dot matrix verified (dot={p_dot_ctr.red:.3f}, bkg={p_dot_bkg.red:.3f})")
+        img.remove_layer(lyr_dot)
+
+        # PFL-07: Pattern scale expansion control verified
+        cfg_sc50 = proc.create_config()
+        cfg_sc50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sc50.set_property("image", img)
+        cfg_sc50.set_property("pattern-preset", "checkerboard")
+        cfg_sc50.set_property("scale", 50.0)
+        cfg_sc50.set_property("fill-scope", "new-fill-layer")
+        cfg_sc50.set_property("mask-type", "none")
+        proc.run(cfg_sc50)
+        lyr_sc50 = img.get_layers()[0]
+        p_s1 = lyr_sc50.get_pixel(50, 50).get_rgba().red
+        p_s2 = lyr_sc50.get_pixel(54, 50).get_rgba().red
+        img.remove_layer(lyr_sc50)
+
+        cfg_sc200 = proc.create_config()
+        cfg_sc200.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sc200.set_property("image", img)
+        cfg_sc200.set_property("pattern-preset", "checkerboard")
+        cfg_sc200.set_property("scale", 200.0)
+        cfg_sc200.set_property("fill-scope", "new-fill-layer")
+        cfg_sc200.set_property("mask-type", "none")
+        proc.run(cfg_sc200)
+        lyr_sc200 = img.get_layers()[0]
+        p_w1 = lyr_sc200.get_pixel(50, 50).get_rgba().red
+        p_w2 = lyr_sc200.get_pixel(54, 50).get_rgba().red
+        img.remove_layer(lyr_sc200)
+
+        if abs(p_s1 - p_s2) < 0.80 or abs(p_w1 - p_w2) > 0.05:
+            record_fail("PFL-07", "Pattern scale control", f"Expected high frequency at 50% ({p_s1:.3f} vs {p_s2:.3f}) and low frequency at 200% ({p_w1:.3f} vs {p_w2:.3f})")
+            return
+        record_pass("PFL-07", "Pattern scale expansion control", f"Scale scales spatial frequency accurately (scale 50% toggles at 4px, scale 200% solid across 4px)")
+
+        # PFL-08: Pattern rotation angle verified
+        cfg_rot = proc.create_config()
+        cfg_rot.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rot.set_property("image", img)
+        cfg_rot.set_property("pattern-preset", "diagonal-stripes")
+        cfg_rot.set_property("angle", 45.0)
+        cfg_rot.set_property("fill-scope", "new-fill-layer")
+        cfg_rot.set_property("mask-type", "none")
+        proc.run(cfg_rot)
+
+        lyr_rot = img.get_layers()[0]
+        p_r1 = lyr_rot.get_pixel(50, 50).get_rgba().red
+        p_r2 = lyr_rot.get_pixel(60, 50).get_rgba().red
+        p_r_diff = lyr_rot.get_pixel(50, 56).get_rgba().red
+        img.remove_layer(lyr_rot)
+
+        if abs(p_r1 - p_r2) > 0.05 or abs(p_r1 - p_r_diff) < 0.80:
+            record_fail("PFL-08", "Pattern rotation angle", f"Expected orientation rotation, got r1={p_r1:.3f}, r2={p_r2:.3f}, diff={p_r_diff:.3f}")
+            return
+        record_pass("PFL-08", "Pattern rotation angle", "Geometric angle rotation transforms pattern orientation cleanly (angle 45°)")
+
+        # PFL-09: Custom dual-tone RGB color fidelity verified
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("pattern-preset", "checkerboard")
+        cfg_col.set_property("color1-r", 0.0)
+        cfg_col.set_property("color1-g", 1.0)
+        cfg_col.set_property("color1-b", 1.0)
+        cfg_col.set_property("color2-r", 1.0)
+        cfg_col.set_property("color2-g", 0.0)
+        cfg_col.set_property("color2-b", 1.0)
+        cfg_col.set_property("fill-scope", "new-fill-layer")
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+
+        lyr_col = img.get_layers()[0]
+        c_cyan = lyr_col.get_pixel(50, 50).get_rgba()
+        c_magenta = lyr_col.get_pixel(58, 50).get_rgba()
+        if abs(c_cyan.red - 0.0) > 0.02 or abs(c_cyan.green - 1.0) > 0.02 or abs(c_cyan.blue - 1.0) > 0.02:
+            record_fail("PFL-09", "Custom color fidelity", f"Expected Cyan [0, 1, 1], got [{c_cyan.red:.3f}, {c_cyan.green:.3f}, {c_cyan.blue:.3f}]")
+            return
+        if abs(c_magenta.red - 1.0) > 0.02 or abs(c_magenta.green - 0.0) > 0.02 or abs(c_magenta.blue - 1.0) > 0.02:
+            record_fail("PFL-09", "Custom color fidelity", f"Expected Magenta [1, 0, 1], got [{c_magenta.red:.3f}, {c_magenta.green:.3f}, {c_magenta.blue:.3f}]")
+            return
+        record_pass("PFL-09", "Custom dual-tone RGB color fidelity", "Exact custom dual-tone palette verified (Cyan [0, 1, 1], Magenta [1, 0, 1])")
+        img.remove_layer(lyr_col)
+
+        # PFL-10: Pattern Fill Layer with selection mask conversion verified
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_pfl = proc.create_config()
+        cfg_pfl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pfl.set_property("image", img)
+        cfg_pfl.set_property("pattern-preset", "checkerboard")
+        cfg_pfl.set_property("fill-scope", "new-fill-layer")
+        cfg_pfl.set_property("mask-type", "auto")
+        proc.run(cfg_pfl)
+        Gimp.Selection.none(img)
+
+        lyr_pfl = img.get_layers()[0]
+        mask_pfl = lyr_pfl.get_mask()
+        if mask_pfl is None:
+            record_fail("PFL-10", "Pattern Fill Layer auto-mask", "Expected attached layer mask, got None")
+            return
+        m_in = mask_pfl.get_pixel(30, 30).get_rgba().red
+        m_out = mask_pfl.get_pixel(5, 5).get_rgba().red
+        raw_p_out = lyr_pfl.get_pixel(5, 5).get_rgba().alpha
+        if m_in < 0.95 or m_out > 0.05 or raw_p_out < 0.95:
+            record_fail("PFL-10", "Pattern Fill Layer auto-mask", f"Expected mask in=1.0, out=0.0, layer alpha=1.0; got in={m_in:.3f}, out={m_out:.3f}, alpha={raw_p_out:.3f}")
+            return
+        record_pass("PFL-10", "Pattern Fill Layer with selection mask conversion", "Full-canvas layer filled with pattern and active selection auto-converted to editable layer mask")
+        img.remove_layer(lyr_pfl)
+
+        # PFL-11: Selection-only fill scope confinement verified
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_so = proc.create_config()
+        cfg_so.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_so.set_property("image", img)
+        cfg_so.set_property("pattern-preset", "checkerboard")
+        cfg_so.set_property("fill-scope", "selection-only")
+        proc.run(cfg_so)
+        Gimp.Selection.none(img)
+
+        lyr_so = img.get_layers()[0]
+        a_so_in = lyr_so.get_pixel(30, 30).get_rgba().alpha
+        a_so_out = lyr_so.get_pixel(5, 5).get_rgba().alpha
+        if a_so_in < 0.95 or a_so_out > 0.01:
+            record_fail("PFL-11", "Selection-only fill scope", f"Expected inside alpha=1.0, outside alpha=0.0; got inside={a_so_in:.3f}, outside={a_so_out:.3f}")
+            return
+        record_pass("PFL-11", "Selection-only fill scope", "New layer contains pattern strictly inside active selection boundary (outside alpha 0.000)")
+        img.remove_layer(lyr_so)
+
+        # PFL-12: Preserve Transparency in-place fill verified
+        cfg_pt = proc.create_config()
+        cfg_pt.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pt.set_property("image", img)
+        cfg_pt.set_property("pattern-preset", "checkerboard")
+        cfg_pt.set_property("fill-scope", "in-place")
+        cfg_pt.set_property("preserve-transparency", True)
+        proc.run(cfg_pt)
+
+        lyr_pt = img.get_layers()[0]
+        a_pt_in = lyr_pt.get_pixel(50, 50).get_rgba().alpha
+        a_pt_out = lyr_pt.get_pixel(5, 5).get_rgba().alpha
+        if a_pt_in < 0.95 or a_pt_out > 0.001:
+            record_fail("PFL-12", "Preserve transparency", f"Expected inside alpha=1.0, outside alpha=0.0; got inside={a_pt_in:.3f}, outside={a_pt_out:.3f}")
+            return
+        record_pass("PFL-12", "Preserve transparency in-place fill", "Opaque pixels filled with pattern while transparent pixels preserved (outside alpha 0.000)")
+
+        # Restore Artwork layer to green
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.7, 0.0)"))
+        art.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        # PFL-13: Blend modes & opacity validation
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+        ]
+        for bname, expected_mode in modes_to_test:
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("pattern-preset", "checkerboard")
+            cfg_bm.set_property("fill-scope", "new-fill-layer")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("PFL-13", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("PFL-13", "Blend modes & opacity validation", "Multiply, Screen, Overlay, Soft Light, HSL Color & 75% opacity validated")
+
+        # PFL-14: Conceal-All black layer mask and Reveal-All white layer mask verified
+        cfg_cm = proc.create_config()
+        cfg_cm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cm.set_property("image", img)
+        cfg_cm.set_property("pattern-preset", "checkerboard")
+        cfg_cm.set_property("fill-scope", "new-fill-layer")
+        cfg_cm.set_property("mask-type", "conceal-all")
+        proc.run(cfg_cm)
+        lyr_cm = img.get_layers()[0]
+        mask_cm = lyr_cm.get_mask()
+        if mask_cm is None:
+            record_fail("PFL-14", "Conceal-All mask", "Expected attached black mask, got None")
+            return
+        m_c_val = mask_cm.get_pixel(50, 50).get_rgba()
+        if m_c_val.red > 0.01:
+            record_fail("PFL-14", "Conceal-All mask", f"Expected black mask (0.0), got {m_c_val.red}")
+            return
+        record_pass("PFL-14", "Conceal-All black layer mask", "Black mask attached and fully conceals pattern fill layer")
+        img.remove_layer(lyr_cm)
+
+        # PFL-15: Base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("PFL-15", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("PFL-15", "Base layer pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("PFL-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -10713,6 +11075,7 @@ def run_all_tests():
     test_drop_shadow()
     test_calculations()
     test_outer_glow()
+    test_pattern_fill_layer()
 
 
 

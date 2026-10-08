@@ -1493,9 +1493,37 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (52 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 583 tests across 53 test suites in 77.64s.
     - Final quality gate: SUCCESS across all stages in 92.92s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `9780a03`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `9780a03`. Outer repo `0a3780c`.
 - **Result**: Success.
 - **Next**: Phase 59 — Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin.
+
+## Iteration 61 — Non-Destructive Pattern Fill Layer & Pattern Overlay Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Pattern Fill Layer & Pattern Overlay Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-fill/pattern-fill.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 356, 361-364: "Use Content-Aware, Pattern, or History fills", "Create and fill with patterns", "Pattern Preview best practices", "Manage patterns in the Patterns panel", and `photoshop_docs.md` Section 98 lines 3045-3050 & Section 113-115 lines 3433-3500: "Fill layers come in three varieties: Solid Color, Gradient, Pattern - Fills the layer with a repeating pattern from the photoeditor pattern libraries... Pattern Overlay: Blend Mode, Opacity, Pattern, Scale, Link with Layer..."). In Adobe Photoshop, Pattern Fill Layers (`Layer > New Fill Layer > Pattern...`) form the third pillar of Photoshop's non-destructive fill architecture alongside Solid Color and Gradient fill layers. Stock GIMP provides only an interactive bucket fill tool in Pattern mode, which is destructive and lacks Photoshop's dedicated fill layer workflow: lacks arbitrary pattern scaling (10% to 500%), lacks arbitrary rotation angle (-180° to 180°), lacks curated geometric and graphic pattern presets, lacks customizable dual-tone RGB palette colors, lacks versatile fill scopes (Full-canvas Pattern Fill Layer with selection mask conversion, Selection-Only confinement, In-Place filling with Preserve Transparency), lacks blend modes and opacity, and lacks single-step `Ctrl+Z` undo protection. Implementing `pattern-fill.py` brings complete Photoshop parity to Linux photo editing with `python-fu-pattern-fill-layer`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-fill/pattern-fill.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-pattern-fill-layer` with geometric patterns (checkerboard, diagonal stripes, grid mesh, polka dots, halftone dots, carbon fiber), active GIMP pattern support, arbitrary scaling (10% to 500%), arbitrary rotation angle (-180° to 180°), custom dual-tone RGB palette (Color 1 and Color 2), versatile fill scopes (New Fill Layer, Selection-Only, In-Place), Preserve Transparency alpha locking, Photoshop blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity slider (0-100%), and editable layer masks (Auto, None, Reveal-All, Conceal-All, Selection).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `pattern-fill` (53 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (53 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 54: `test_pattern_fill_layer` (asserting PFL-01 through PFL-15: PDB registration, procedure argument schema across 17 properties, SUCCESS status, Checkerboard alternating contrast [c1=0.000, c2=1.000], Diagonal stripes geometry [diag=0.000==0.000, opp=1.000], Grid mesh geometry [line=0.000, cell=1.000], Polka dots geometry [dot=0.000, bkg=1.000], Pattern scale expansion control [50% toggles at 4px, 200% solid across 4px], Pattern rotation angle [angle 45° transforms orientation], Custom dual-tone RGB color fidelity [Cyan [0, 1, 1], Magenta [1, 0, 1]], Pattern Fill Layer with selection mask conversion, Selection-only fill scope confinement [outside alpha 0.000], Preserve transparency in-place fill [outside alpha 0.000], Blend modes Multiply, Screen, Overlay, Soft Light, HSL Color & 75% opacity validated, Conceal-All black layer mask attachment, and source artwork 100% untouched across all operations [art diff 0.000000, base diff 0.000000]). Total tests increased to 599 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Pattern Fill Layer & Pattern Overlay Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 59 complete and scheduled Phase 60 (Non-Destructive Inner Glow Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In 16x16 grid mesh generator, line pixels occur when `xs < 2` or `ys < 2` (indices 0 and 1 modulo 16). Sampling coordinate `(48, 48)` has `48 % 16 = 0 < 2`, correctly selecting the line color `c1` (`red = 0.000`), while `(56, 56)` has `56 % 16 = 8 >= 2`, correctly selecting cell interior `c2` (`red = 1.000`).
+  - Active selection in GIMP 3.x is converted into an attached layer mask using `image.select_item(Gimp.ChannelOps.REPLACE, sel_channel)` followed by `fill_layer.create_mask(Gimp.AddMaskType.SELECTION)`.
+  - Rotation transformation using 2D inverse matrix mapping $(u, v) = R_{-\theta} (x - x_c, y - y_c) / \text{scale} + (x_c, y_c)$ provides rotation and continuous scaling without edge artifacts or distortion.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 53 plugins verified).
+    - Stage 2: `install.sh --batch` passed (53 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 599 tests across 54 test suites in 91.63s.
+    - Final quality gate: SUCCESS across all stages in 121.11s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `9839189`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 60 — Non-Destructive Inner Glow Layer Style Helper Plugin.
+
 
 
 

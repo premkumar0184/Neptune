@@ -392,13 +392,33 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate color accuracy across all presets, selection mask confinement, blend mode assignment, opacity scaling, non-destructive base layer preservation, and headless GIMP test suite.
 
 ### Phase 54 — Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-fill/gradient-fill.py`.
-- [ ] Create dedicated Gradient Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Gradient...` and Gradient tool fill workflows (`Topics.txt` lines 101, 342, 343; `photoshop_docs.md` Section 336-337).
-- [ ] Support gradient types / styles: Linear, Radial, Angle (conical), Reflected (symmetric bilateral linear), and Diamond (shaped).
-- [ ] Support gradient color presets (Foreground to Background, Foreground to Transparent, Black to White, Neutral Vintage Warm, Sunset Horizon, Cyberpunk Neon, Metallic Silver) and custom start/end colors.
-- [ ] Support gradient controls: Angle (-180° to 180°), Scale (10% to 200%), Reverse gradient toggle, Dither toggle, blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity (0-100%), and attached editable layer masks (Reveal-All, Conceal-All, Active Selection).
-- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Gradient...`, `<Image>/Edit/Fill with Gradient...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate gradient style geometry, angle rotation, scale expansion, color transition accuracy, reverse toggle, blend modes, layer mask attachment, and non-destructive base layer preservation via headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `gradient-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-fill/gradient-fill.py`.
+- [x] Create dedicated Gradient Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Gradient...` and Gradient tool fill workflows (`Topics.txt` lines 101, 342, 343; `photoshop_docs.md` Section 336-337).
+- [x] Support gradient types / styles: Linear, Radial, Angle (conical asymmetric 360° sweep), Reflected (symmetric bilateral linear), and Diamond (shaped).
+- [x] Support gradient color presets (Foreground to Background, Foreground to Transparent, Black to White, Neutral Vintage Warm, Sunset Horizon, Cyberpunk Neon, Metallic Silver) and custom start/end colors.
+- [x] Support gradient controls: Angle (-180° to 180°), Scale (10% to 200%), Reverse gradient toggle, Dither toggle, blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity (0-100%), and attached editable layer masks (Reveal-All, Conceal-All, Active Selection).
+- [x] Register under menu path `<Image>/Layer/New Fill Layer/Gradient...`, `<Image>/Edit/Fill with Gradient...`, and `<Image>/Filters/Retouching`.
+- [x] Validate gradient style geometry, angle rotation, scale expansion, color transition accuracy, reverse toggle, blend modes, layer mask attachment, and non-destructive base layer preservation via headless GIMP test suite.
+
+### Phase 55 — Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `exposure` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`.
+- [ ] Create dedicated Exposure adjustment layer simulating Photoshop `Layer > New Adjustment Layer > Exposure...` and `Image > Adjustments > Exposure...` (`Topics.txt` lines 93-96, 347; `photoshop_docs.md` Section 338 lines 9935-9985).
+- [ ] Support Photoshop three-parameter exposure tone equation: $I' = ((I \cdot 2^{\text{exposure}}) + \text{offset})^{1 / \text{gamma}}$ in linear RGB color space:
+  - `exposure`: -5.0 to +5.0 EV stops (default 0.0, highlight scaling).
+  - `offset`: -0.5 to +0.5 (default 0.0, shadow/black point additive adjustment).
+  - `gamma`: 0.01 to 9.99 (default 1.0, midtone power curve correction).
+- [ ] Support curated photographic exposure presets (Default / Reset, +1 Stop Overexposure, +2 Stops Overexposure, -1 Stop Underexposure, -2 Stops Underexposure, Shadow Boost / Lift, Highlight Recovery, High Dynamic Compression, Custom sliders).
+- [ ] Support non-destructive layer workflow: duplicates active drawable into dedicated adjustment layer, applies exposure transformation, attaches editable layer mask (Auto, None, Reveal-All, Conceal-All, Active Selection), blend modes (Normal, Luminosity, Multiply, Screen, Overlay, Soft Light), and opacity.
+- [ ] Register under menu path `<Image>/Layer/New Adjustment Layer/Exposure...`, `<Image>/Image/Adjustments/Exposure...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate EV stop scaling, shadow offset response, gamma midtone power curve, preset fidelity, blend modes, layer mask generation, and non-destructive base layer preservation via headless GIMP test suite.
+
+### Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `drop-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`.
+- [ ] Create dedicated Drop Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Drop Shadow...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-114 lines 3433-3500).
+- [ ] Support Photoshop Layer Style Drop Shadow parameters: Angle (-180° to 180°), Distance (0 to 200px), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Linear Burn), Noise / Graininess (0 to 100%), and Layer Knocks Out Drop Shadow toggle.
+- [ ] Support non-destructive shadow layer positioning directly beneath target layer, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Drop Shadow...`, `<Image>/Filters/Light and Shadow/Drop Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate angle offset trigonometry, distance translation, spread expansion, size gaussian falloff, knockout clipping, and headless GIMP test suite.
 
 
 

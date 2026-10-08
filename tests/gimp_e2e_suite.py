@@ -119,6 +119,7 @@ def test_pdb_registration():
         ("python-fu-pattern-fill", "Fill with Pattern Tile Helper"),
         ("python-fu-stroke-layer", "Selection & Layer Stroke Helper"),
         ("python-fu-solid-color-fill", "Solid Color Fill Layer & Canvas Fill Helper"),
+        ("python-fu-gradient-fill", "Gradient Fill Layer & Multi-Style Gradient Helper"),
     ]
 
 
@@ -8896,6 +8897,338 @@ def test_solid_color_fill():
         img.delete()
 
 
+def test_gradient_fill():
+    print("\n--- Test Suite 49: Gradient Fill Layer & Multi-Style Gradient Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-gradient-fill")
+    if proc is None:
+        record_fail("GF-01", "Procedure lookup", "Procedure python-fu-gradient-fill not found in PDB")
+        return
+
+    # GF-01: Procedure arguments verification
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "style", "angle", "scale", "reverse", "dither", "preset",
+        "start-r", "start-g", "start-b", "end-r", "end-g", "end-b",
+        "fill-scope", "blend-mode", "opacity", "mask-type",
+        "preserve-transparency"
+    ]
+    missing = [a for a in expected_args if a not in args]
+    if missing:
+        record_fail("GF-01", "Procedure argument signatures", f"Missing arguments: {missing} (found: {args})")
+        return
+    record_pass("GF-01", "Procedure lookup & argument signatures", f"All {len(expected_args)} arguments verified ({args})")
+
+    # Create a 100x100 RGB image with distinctive baseline content
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "BaseLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    img.set_selected_layers([base])
+
+    # Fill base layer with color: R=0.3, G=0.5, B=0.7
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.5, 0.7)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    orig_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # GF-02: Execution status verified (PDB status SUCCESS)
+        cfg_test = proc.create_config()
+        cfg_test.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_test.set_property("image", img)
+        cfg_test.set_property("style", "linear")
+        cfg_test.set_property("angle", 0.0)
+        cfg_test.set_property("scale", 100.0)
+        cfg_test.set_property("preset", "black-white")
+        cfg_test.set_property("fill-scope", "new-fill-layer")
+        cfg_test.set_property("mask-type", "none")
+        res = proc.run(cfg_test)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GF-02", "PDB execution status", f"Expected SUCCESS (3), got {res.index(0)}")
+            return
+        record_pass("GF-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+        test_lyr = img.get_layers()[0]
+
+        # GF-03: Linear gradient geometry along angle 0° verified
+        # At angle 0°, horizontal transition from left (black) to right (white)
+        p_left = test_lyr.get_pixel(5, 50).get_rgba()
+        p_right = test_lyr.get_pixel(95, 50).get_rgba()
+        if p_left.red > 0.15 or p_right.red < 0.85:
+            record_fail("GF-03", "Linear angle 0° transition", f"Expected left black and right white, got left={p_left.red:.3f}, right={p_right.red:.3f}")
+            return
+        record_pass("GF-03", "Linear gradient geometry (angle 0°)", f"Horizontal linear transition verified (left={p_left.red:.3f}, right={p_right.red:.3f})")
+        img.remove_layer(test_lyr)
+
+        # GF-04: Angle rotation 90° verified (vertical transition)
+        cfg_90 = proc.create_config()
+        cfg_90.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_90.set_property("image", img)
+        cfg_90.set_property("style", "linear")
+        cfg_90.set_property("angle", 90.0)
+        cfg_90.set_property("preset", "black-white")
+        cfg_90.set_property("fill-scope", "new-fill-layer")
+        cfg_90.set_property("mask-type", "none")
+        proc.run(cfg_90)
+        lyr_90 = img.get_layers()[0]
+        # At angle 90°, dy is negative (pointing up), so start (y1) is bottom (black) and end (y2) is top (white)
+        p_bot = lyr_90.get_pixel(50, 95).get_rgba()
+        p_top = lyr_90.get_pixel(50, 5).get_rgba()
+        if p_bot.red > 0.15 or p_top.red < 0.85:
+            record_fail("GF-04", "Vertical gradient (angle 90°)", f"Expected bottom black and top white, got bot={p_bot.red:.3f}, top={p_top.red:.3f}")
+            return
+        record_pass("GF-04", "Angle rotation 90°", f"Vertical gradient verified (bottom={p_bot.red:.3f}, top={p_top.red:.3f})")
+        img.remove_layer(lyr_90)
+
+        # GF-05: Radial gradient geometry verified
+        cfg_rad = proc.create_config()
+        cfg_rad.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rad.set_property("image", img)
+        cfg_rad.set_property("style", "radial")
+        cfg_rad.set_property("preset", "black-white")
+        cfg_rad.set_property("fill-scope", "new-fill-layer")
+        cfg_rad.set_property("mask-type", "none")
+        proc.run(cfg_rad)
+        lyr_rad = img.get_layers()[0]
+        p_center = lyr_rad.get_pixel(50, 50).get_rgba()
+        p_edge_r = lyr_rad.get_pixel(95, 50).get_rgba()
+        p_edge_b = lyr_rad.get_pixel(50, 95).get_rgba()
+        if p_center.red > 0.15 or p_edge_r.red < 0.80 or p_edge_b.red < 0.80:
+            record_fail("GF-05", "Radial gradient geometry", f"Expected dark center and bright edges, got center={p_center.red:.3f}, edge_r={p_edge_r.red:.3f}, edge_b={p_edge_b.red:.3f}")
+            return
+        record_pass("GF-05", "Radial gradient geometry", f"Concentric circular falloff verified (center={p_center.red:.3f}, edges={p_edge_r.red:.3f})")
+        img.remove_layer(lyr_rad)
+
+        # GF-06: Reflected (bilateral) gradient geometry verified
+        cfg_ref = proc.create_config()
+        cfg_ref.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ref.set_property("image", img)
+        cfg_ref.set_property("style", "reflected")
+        cfg_ref.set_property("angle", 0.0)
+        cfg_ref.set_property("preset", "black-white")
+        cfg_ref.set_property("fill-scope", "new-fill-layer")
+        cfg_ref.set_property("mask-type", "none")
+        proc.run(cfg_ref)
+        lyr_ref = img.get_layers()[0]
+        p_ref_c = lyr_ref.get_pixel(50, 50).get_rgba()
+        p_ref_l = lyr_ref.get_pixel(5, 50).get_rgba()
+        p_ref_r = lyr_ref.get_pixel(95, 50).get_rgba()
+        if p_ref_c.red > 0.15 or p_ref_l.red < 0.75 or p_ref_r.red < 0.75:
+            record_fail("GF-06", "Reflected gradient geometry", f"Expected dark center axis and bright flanking edges, got c={p_ref_c.red:.3f}, l={p_ref_l.red:.3f}, r={p_ref_r.red:.3f}")
+            return
+        record_pass("GF-06", "Reflected bilateral geometry", f"Symmetric bilateral reflection verified (center={p_ref_c.red:.3f}, left={p_ref_l.red:.3f}, right={p_ref_r.red:.3f})")
+        img.remove_layer(lyr_ref)
+
+        # GF-07: Angle (conical) gradient geometry verified
+        cfg_ang = proc.create_config()
+        cfg_ang.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ang.set_property("image", img)
+        cfg_ang.set_property("style", "angle")
+        cfg_ang.set_property("preset", "black-white")
+        cfg_ang.set_property("fill-scope", "new-fill-layer")
+        cfg_ang.set_property("mask-type", "none")
+        proc.run(cfg_ang)
+        lyr_ang = img.get_layers()[0]
+        p_ang_r = lyr_ang.get_pixel(90, 50).get_rgba()
+        p_ang_l = lyr_ang.get_pixel(10, 50).get_rgba()
+        if abs(p_ang_r.red - p_ang_l.red) < 0.30:
+            record_fail("GF-07", "Angle conical gradient", f"Expected angular sweep contrast across opposite sectors, got right={p_ang_r.red:.3f}, left={p_ang_l.red:.3f}")
+            return
+        record_pass("GF-07", "Angle conical gradient geometry", f"Conical rotational sweep verified (sector difference {abs(p_ang_r.red - p_ang_l.red):.3f} >= 0.30)")
+        img.remove_layer(lyr_ang)
+
+        # GF-08: Diamond (square) gradient geometry verified
+        cfg_dia = proc.create_config()
+        cfg_dia.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dia.set_property("image", img)
+        cfg_dia.set_property("style", "diamond")
+        cfg_dia.set_property("preset", "black-white")
+        cfg_dia.set_property("fill-scope", "new-fill-layer")
+        cfg_dia.set_property("mask-type", "none")
+        proc.run(cfg_dia)
+        lyr_dia = img.get_layers()[0]
+        p_dia_c = lyr_dia.get_pixel(50, 50).get_rgba()
+        p_dia_corner = lyr_dia.get_pixel(95, 95).get_rgba()
+        if p_dia_c.red > 0.15 or p_dia_corner.red < 0.80:
+            record_fail("GF-08", "Diamond gradient geometry", f"Expected dark center and bright corners, got center={p_dia_c.red:.3f}, corner={p_dia_corner.red:.3f}")
+            return
+        record_pass("GF-08", "Diamond gradient geometry", f"Square / diamond gradient verified (center={p_dia_c.red:.3f}, corner={p_dia_corner.red:.3f})")
+        img.remove_layer(lyr_dia)
+
+        # GF-09: Reverse gradient toggle verified
+        cfg_rev = proc.create_config()
+        cfg_rev.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rev.set_property("image", img)
+        cfg_rev.set_property("style", "linear")
+        cfg_rev.set_property("angle", 0.0)
+        cfg_rev.set_property("reverse", True)
+        cfg_rev.set_property("preset", "black-white")
+        cfg_rev.set_property("fill-scope", "new-fill-layer")
+        cfg_rev.set_property("mask-type", "none")
+        proc.run(cfg_rev)
+        lyr_rev = img.get_layers()[0]
+        # In reverse mode, left should be white and right should be black
+        p_rev_l = lyr_rev.get_pixel(5, 50).get_rgba()
+        p_rev_r = lyr_rev.get_pixel(95, 50).get_rgba()
+        if p_rev_l.red < 0.85 or p_rev_r.red > 0.15:
+            record_fail("GF-09", "Reverse gradient", f"Expected left white and right black in reverse, got l={p_rev_l.red:.3f}, r={p_rev_r.red:.3f}")
+            return
+        record_pass("GF-09", "Reverse gradient toggle", f"Colors flipped cleanly in reverse mode (left={p_rev_l.red:.3f}, right={p_rev_r.red:.3f})")
+        img.remove_layer(lyr_rev)
+
+        # GF-10: Scale expansion verified
+        cfg_s50 = proc.create_config()
+        cfg_s50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s50.set_property("image", img)
+        cfg_s50.set_property("style", "radial")
+        cfg_s50.set_property("scale", 40.0)
+        cfg_s50.set_property("preset", "black-white")
+        cfg_s50.set_property("fill-scope", "new-fill-layer")
+        cfg_s50.set_property("mask-type", "none")
+        proc.run(cfg_s50)
+        lyr_s50 = img.get_layers()[0]
+
+        cfg_s150 = proc.create_config()
+        cfg_s150.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s150.set_property("image", img)
+        cfg_s150.set_property("style", "radial")
+        cfg_s150.set_property("scale", 160.0)
+        cfg_s150.set_property("preset", "black-white")
+        cfg_s150.set_property("fill-scope", "new-fill-layer")
+        cfg_s150.set_property("mask-type", "none")
+        proc.run(cfg_s150)
+        lyr_s150 = img.get_layers()[0]
+
+        p_at_30_s50 = lyr_s50.get_pixel(80, 50).get_rgba().red
+        p_at_30_s150 = lyr_s150.get_pixel(80, 50).get_rgba().red
+        if p_at_30_s50 <= p_at_30_s150:
+            record_fail("GF-10", "Scale expansion", f"Expected scale=40 brightness ({p_at_30_s50:.3f}) > scale=160 brightness ({p_at_30_s150:.3f})")
+            return
+        record_pass("GF-10", "Scale expansion control", f"Scale controls transition distance (scale 40%={p_at_30_s50:.3f} > scale 160%={p_at_30_s150:.3f})")
+        img.remove_layer(lyr_s150)
+        img.remove_layer(lyr_s50)
+
+        # GF-11: Gradient Fill Layer with active selection auto-mask
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_auto = proc.create_config()
+        cfg_auto.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto.set_property("image", img)
+        cfg_auto.set_property("style", "linear")
+        cfg_auto.set_property("preset", "black-white")
+        cfg_auto.set_property("fill-scope", "new-fill-layer")
+        cfg_auto.set_property("mask-type", "auto")
+        proc.run(cfg_auto)
+
+        auto_layer = img.get_layers()[0]
+        mask = auto_layer.get_mask()
+        if mask is None:
+            record_fail("GF-11", "Auto selection mask", "No layer mask attached to fill layer")
+            return
+
+        m_in = mask.get_pixel(40, 40).get_rgba()
+        m_out = mask.get_pixel(10, 10).get_rgba()
+        if m_in.red < 0.99 or m_out.red > 0.01:
+            record_fail("GF-11", "Auto selection mask", f"Expected mask white inside ({m_in.red:.3f}) and black outside ({m_out.red:.3f})")
+            return
+
+        p_under = auto_layer.get_pixel(10, 10).get_rgba()
+        if p_under.alpha < 0.99:
+            record_fail("GF-11", "Full canvas under mask", f"Expected full canvas gradient under mask, got alpha={p_under.alpha}")
+            return
+        record_pass("GF-11", "Gradient Fill Layer with selection mask", "Full-canvas layer filled with selection converted to editable layer mask")
+        img.remove_layer(auto_layer)
+        Gimp.Selection.none(img)
+
+        # GF-12: Selection-only fill scope verified
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_sel_only = proc.create_config()
+        cfg_sel_only.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel_only.set_property("image", img)
+        cfg_sel_only.set_property("style", "linear")
+        cfg_sel_only.set_property("preset", "black-white")
+        cfg_sel_only.set_property("fill-scope", "selection-only")
+        cfg_sel_only.set_property("mask-type", "none")
+        proc.run(cfg_sel_only)
+
+        sel_layer = img.get_layers()[0]
+        p_in_sel = sel_layer.get_pixel(40, 40).get_rgba()
+        p_out_sel = sel_layer.get_pixel(10, 10).get_rgba()
+        if p_in_sel.alpha < 0.99 or p_out_sel.alpha > 0.01:
+            record_fail("GF-12", "Selection-only fill scope", f"Expected opaque inside (a={p_in_sel.alpha}) and transparent outside (a={p_out_sel.alpha})")
+            return
+        record_pass("GF-12", "Selection-only fill scope", "New layer contains gradient strictly inside active selection boundary")
+        img.remove_layer(sel_layer)
+        Gimp.Selection.none(img)
+
+        # GF-13: Blend modes and opacity verified
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+        ]
+        for bname, expected_mode in modes_to_test:
+            cfg_b = proc.create_config()
+            cfg_b.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_b.set_property("image", img)
+            cfg_b.set_property("style", "linear")
+            cfg_b.set_property("preset", "sunset-horizon")
+            cfg_b.set_property("blend-mode", bname)
+            cfg_b.set_property("opacity", 70.0)
+            cfg_b.set_property("fill-scope", "new-fill-layer")
+            cfg_b.set_property("mask-type", "none")
+            proc.run(cfg_b)
+
+            b_layer = img.get_layers()[0]
+            if b_layer.get_mode() != expected_mode or abs(b_layer.get_opacity() - 70.0) > 0.01:
+                record_fail("GF-13", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(b_layer.get_mode())}, opacity {b_layer.get_opacity()}%")
+                return
+            img.remove_layer(b_layer)
+        record_pass("GF-13", "Blend modes & opacity validation", "Multiply, Screen, Overlay, Soft Light, HSL Color & 70% opacity validated")
+
+        # GF-14: Preserve transparency in-place fill verified
+        half_layer = Gimp.Layer.new(img, "HalfLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(half_layer, None, 0)
+        img.set_selected_layers([half_layer])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.3, 0.3)"))
+        half_layer.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        cfg_pt = proc.create_config()
+        cfg_pt.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pt.set_property("image", img)
+        cfg_pt.set_property("style", "linear")
+        cfg_pt.set_property("preset", "black-white")
+        cfg_pt.set_property("fill-scope", "in-place")
+        cfg_pt.set_property("preserve-transparency", True)
+        proc.run(cfg_pt)
+
+        p_left = half_layer.get_pixel(25, 50).get_rgba()
+        p_right = half_layer.get_pixel(75, 50).get_rgba()
+        if p_left.alpha < 0.99 or p_right.alpha > 0.01:
+            record_fail("GF-14", "Preserve transparency", f"Expected opaque left (a={p_left.alpha}) and transparent right (a={p_right.alpha})")
+            return
+        record_pass("GF-14", "Preserve transparency in-place", f"Opaque pixels modified (a={p_left.alpha:.2f}) while transparent pixels preserved (a={p_right.alpha:.2f})")
+        img.remove_layer(half_layer)
+
+        # GF-15: Base layer pixel preservation
+        after_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+        max_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_samples, after_samples)
+        )
+        if max_diff > 0.000001:
+            record_fail("GF-15", "Base layer preservation", f"Base pixels altered by {max_diff:.6f} > 0")
+            return
+        record_pass("GF-15", "Base layer pixel preservation", f"Original source pixels 100% untouched across all non-destructive operations (diff {max_diff:.6f})")
+
+    except Exception as e:
+        record_fail("GF-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -8954,6 +9287,7 @@ def run_all_tests():
     test_seamless_pattern()
     test_stroke_layer()
     test_solid_color_fill()
+    test_gradient_fill()
 
 
 

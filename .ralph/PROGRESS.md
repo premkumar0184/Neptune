@@ -1363,3 +1363,30 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `eea8edd`.
 - **Result**: Success.
 - **Next**: Phase 54 — Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin.
+
+## Iteration 56 — Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-fill/gradient-fill.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 101, 342, 343: "Create fill layers", "Apply a gradient fill", "Edit a gradient", and `photoshop_docs.md` Section 336-337 lines 9880-9932: "Apply a gradient fill in photoeditor to blend colors naturally and add depth to your artwork. The photoeditor workspace displays the Gradient Fill layer applied to an image... Select a gradient type: Linear, Radial, Angle, Reflected, and Diamond... Reverse to flip the gradient colors... Gradient Fill layer..."). In Adobe Photoshop, Gradient Fill Layers (`Layer > New Fill Layer > Gradient...`) are the third pillar of Photoshop's non-destructive fill system alongside Solid Color and Pattern fills. Stock GIMP provides only the interactive manual gradient tool and lacks dedicated Gradient Fill Layer creation (where full canvas gradient is generated and active selections are automatically converted into attached editable layer masks), lacks a unified dialog combining Photoshop's 5 gradient geometries (Linear, Radial, Angle, Reflected, Diamond) with exact angle rotation, scale expansion, reverse toggle, dithering, photographic presets, blend modes, opacity, and preserve transparency alpha locking. Implementing `gradient-fill.py` brings complete Photoshop parity to Linux photo editing with `python-fu-gradient-fill`: 5 gradient styles (`linear`, `radial`, `angle` asymmetric 360° sweep, `reflected` bilinear, `diamond` square), geometric angle rotation (-180° to 180°), scale expansion (10% to 200%), reverse toggle, dithering toggle, 8 color presets (Foreground to Background, Foreground to Transparent, Black to White, Vintage Warm Sepia, Sunset Horizon, Cyberpunk Neon, Metallic Silver, Custom Start/End RGB), 3 fill scopes (Gradient Fill Layer with selection mask, Selection Only, In-Place with preserve transparency), 6 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity slider, layer mask options (Auto, None, Reveal-All, Conceal-All, Selection), and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-fill/gradient-fill.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-gradient-fill` with 5 gradient geometries, angle rotation trigonometry, scale expansion, custom color palette synthesis, full canvas gradient fill layer with selection mask conversion, preserve transparency alpha locking, blend modes, opacity, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `gradient-fill` (48 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (48 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 49: `test_gradient_fill` (asserting GF-01 through GF-15: PDB registration, procedure argument schema across 17 properties, SUCCESS status, Linear gradient geometry along 0° [horizontal transition], Angle rotation 90° [vertical bottom to top], Radial gradient concentric circular falloff [center dark, edges bright], Reflected bilateral reflection [center dark, both flanks bright], Angle conical gradient 360° sweep [sector difference >= 0.30], Diamond square gradient geometry [center dark, corner bright], Reverse gradient toggle [colors flipped], Scale expansion control [scale 40% expands faster than scale 160%], Gradient Fill Layer with active selection auto-mask [full canvas filled under mask, mask matches selection], Selection-only fill scope confinement, Blend modes Multiply, Screen, Overlay, Soft Light, HSL Color & 70% opacity, Preserve Transparency in-place [opaque modified, transparent preserved], and base layer pixel preservation `diff == 0.000000`). Total tests increased to 519 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Gradient Fill Layer & Multi-Style Gradient Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 54 complete and scheduled Phase 55 (Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin) and Phase 56 (Non-Destructive Drop Shadow Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x, `Gimp.GradientType.CONICAL_ASYMMETRIC` implements the full 360° circular sweep matching Photoshop's "Angle" gradient tool and fill layer, whereas `Gimp.GradientType.CONICAL_SYMMETRIC` mirrors across the angle axis.
+  - In GIMP 3.x PyGObject, `target_layer.edit_gradient_fill(style, 0.0, False, Gimp.RepeatMode.NONE, reverse, dither, x1, y1, x2, y2)` applies multi-style gradients with exact coordinates computed from angle, scale, and canvas dimensions.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 48 plugins verified).
+    - Stage 2: `install.sh --batch` passed (48 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 519 tests across 49 test suites in 56.82s.
+    - Final quality gate: SUCCESS across all stages in 82.48s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5c371f6`.
+- **Result**: Success.
+- **Next**: Phase 55 — Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin.
+

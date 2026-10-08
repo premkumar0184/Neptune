@@ -1524,8 +1524,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 60 — Non-Destructive Inner Glow Layer Style Helper Plugin.
 
-
-
-
-
-
+## Iteration 62 — Non-Destructive Inner Glow Layer Style Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Inner Glow Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-glow/inner-glow.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Inner Glow: Blend Mode, Opacity, Noise, Color/Gradient, Technique (Softer/Precise), Source (Center/Edge), Choke, Size, Contour, Range..."). In Adobe Photoshop, Inner Glow represents the companion layer style to Outer Glow and Drop Shadow. Stock GIMP lacks a dedicated Inner Glow layer style dialog, lacks Photoshop's dual radiance source modes (Edge vs Center), lacks Choke boundary contraction prior to blurring, lacks Size blur radius falloff, lacks Range contour curve modulation ($A' = A^{50/\text{range}}$), lacks Technique selection (`softer` vs `precise`), lacks film grain noise texture injection, and lacks dedicated glow layer positioning clipped strictly inside the target layer's silhouette, leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `inner-glow.py` brings complete Photoshop parity to Linux photo editing with `python-fu-inner-glow`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-glow/inner-glow.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-inner-glow` with dual radiance sources (inward from edge boundaries, outward from interior core), Choke boundary contraction, Size Gaussian blur falloff, Range contour curve modulation, Technique selection (`softer` / `precise`), film grain noise injection, 7 curated presets, 7 blend modes, opacity control, and editable layer mask options.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `inner-glow` (54 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (54 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 55: `test_inner_glow` (asserting IG-01 through IG-15: PDB registration, procedure argument schema across 16 properties, SUCCESS status, Edge source inward radiance [edge alpha 0.769 > center alpha 0.000], Center source outward radiance [center alpha 0.882 > edge alpha 0.188], strict silhouette clipping [max outside alpha 0.000000], Choke boundary contraction [choke 50% alpha 1.000 > choke 0% 0.408], Size halo radius [size 25px alpha 0.455 > size 5px alpha 0.000], Technique selection [softer 0.298 > precise 0.125], custom glow RGB color fidelity [[R=0.000, G=1.000, B=1.000]], curated presets [neon-cyan, candlelight, center-spotlight, cyberpunk-core, subtle-rim], dedicated glow layer stack placement immediately above parent layer, blend modes Screen, Normal, Lighten, Dodge, Addition, Overlay, Multiply & 75% opacity validated, Range contour falloff modulation [range 80% a=0.631 > range 20% a=0.157], conceal-all black layer mask and noise texture variance [variance 0.029945 > 0.0001], and target and base layer pixels 100% untouched `diff == 0.000000`). Total tests increased to 614 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Inner Glow Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 60 complete and scheduled Phase 61 (Non-Destructive Inner Shadow Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x Python plugins, calling `procedure.set_menu_label(...)` before `procedure.add_menu_path(...)` is strictly required; omitting it triggers a GIMP library assertion failure `assertion 'priv->menu_label != NULL' failed`.
+  - For Edge source inner glow, inverting the target layer's selection, expanding it by Choke, and applying Gaussian blur creates an inward radiance field that, when multiplied by the target layer's alpha matte, cleanly confines the glow strictly inside the layer boundaries.
+  - In contrast, for Center source inner glow, shrinking the target layer's selection creates an interior core which blurs outwards towards the boundaries.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 54 plugins verified).
+    - Stage 2: `install.sh --batch` passed (54 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 614 tests across 55 test suites in 91.36s.
+    - Final quality gate: SUCCESS across all stages in 122.58s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo and Outer repo committed.
+- **Result**: Success.
+- **Next**: Phase 61 — Non-Destructive Inner Shadow Layer Style Helper Plugin.

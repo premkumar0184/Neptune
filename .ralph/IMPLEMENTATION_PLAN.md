@@ -445,12 +445,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate pattern scaling, repetition tiling, rotation angle, selection mask confinement, blend mode assignment, and headless GIMP test suite.
 
 ### Phase 60 — Non-Destructive Inner Glow Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `inner-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-glow/inner-glow.py`.
-- [ ] Create dedicated Inner Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
-- [ ] Support Photoshop Inner Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), Opacity (0 to 100%), Noise (0 to 100%), Glow Color (Solid Color RGB), Technique (Softer / Precise), Source (Edge / Center), Choke (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Edge Radiance, Candlelight Warmth, Soft Edge Inset, Center Spotlight, Cyberpunk Core, Custom Sliders).
-- [ ] Support non-destructive glow layer placement clipped to parent layer contents, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Inner Glow...`, `<Image>/Filters/Light and Shadow/Inner Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate edge/center radiance, choke contraction, blur size falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `inner-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-glow/inner-glow.py`.
+- [x] Create dedicated Inner Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [x] Support Photoshop Inner Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add, Overlay, Multiply), Opacity (0 to 100%), Noise (0 to 100%), Glow Color (Solid Color RGB), Technique (Softer / Precise), Source (Edge / Center), Choke (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Edge Radiance, Candlelight Warmth, Center Spotlight, Cyberpunk Core, Subtle Rim Inset, Custom Sliders).
+- [x] Support non-destructive glow layer placement clipped to parent layer contents, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Inner Glow...`, `<Image>/Filters/Light and Shadow/Inner Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate edge/center radiance, choke contraction, blur size falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
+
+### Phase 61 — Non-Destructive Inner Shadow Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `inner-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-shadow/inner-shadow.py`.
+- [ ] Create dedicated Inner Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Shadow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [ ] Support Photoshop Inner Shadow parameters: Angle (-180° to 180° with directional light trigonometry), Distance (0 to 200px), Choke (0 to 100% boundary contraction prior to blur), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn), Noise / Graininess (0 to 100%), and curated presets (Standard Inset, Deep Carved Inset, Subtle Bevel Inset, Soft Ambient Inset, Hard Edge Cutout, Custom Sliders).
+- [ ] Support non-destructive shadow layer placement clipped strictly inside parent layer silhouette, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Inner Shadow...`, `<Image>/Filters/Light and Shadow/Inner Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate angle offset trigonometry, distance translation, choke contraction, size gaussian falloff, silhouette clipping, noise injection, and headless GIMP test suite.
 
 
 

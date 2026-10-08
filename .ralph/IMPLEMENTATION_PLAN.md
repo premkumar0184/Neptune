@@ -421,12 +421,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate angle offset trigonometry, distance translation, spread expansion, size gaussian falloff, knockout clipping, and headless GIMP test suite.
 
 ### Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `calculations` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.
-- [ ] Create dedicated Calculations dialog simulating Photoshop `Image > Calculations...` (`Topics.txt` line 350; `photoshop_docs.md` Section 340).
-- [ ] Support two-source channel blending: Source 1 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Source 2 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Blending Mode (Multiply, Screen, Overlay, Soft Light, Difference, Subtract, Add), Opacity (0 to 100%), and Mask option.
-- [ ] Support output destinations: New Document, New Channel, or Selection.
-- [ ] Register under menu path `<Image>/Image/Calculations...` and `<Image>/Filters/Retouching`.
-- [ ] Validate cross-channel math, invert operations, subtraction/addition formulas, selection output generation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `calculations` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.
+- [x] Create dedicated Calculations dialog simulating Photoshop `Image > Calculations...` (`Topics.txt` line 350; `photoshop_docs.md` Section 340).
+- [x] Support two-source channel blending: Source 1 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Source 2 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Blending Mode (Multiply, Screen, Overlay, Soft Light, Hard Light, Normal, Darken, Lighten, Difference, Subtract, Add), Scale and Offset calibration, Opacity (0 to 100%), and Mask option.
+- [x] Support output destinations: New Document, New Channel, New Layer, or Selection.
+- [x] Register under menu path `<Image>/Image/Calculations...`, `<Image>/Select/Calculations...`, and `<Image>/Filters/Retouching`.
+- [x] Validate cross-channel math, invert operations, subtraction/addition formulas, selection output generation, and headless GIMP test suite.
+
+### Phase 58 — Non-Destructive Outer Glow Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `outer-glow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/outer-glow/outer-glow.py`.
+- [ ] Create dedicated Outer Glow Layer Style helper simulating Photoshop `Layer > Layer Style > Outer Glow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115).
+- [ ] Support Photoshop Outer Glow parameters: Blend Mode (Screen, Normal, Lighten, Color Dodge, Linear Dodge / Add), Opacity (0 to 100%), Noise (0 to 100%), Color (Solid Color RGB or Gradient), Technique (Softer / Precise), Spread (0 to 100%), Size / Blur Radius (0 to 200px), Range contour falloff (1% to 100%), and curated style presets (Neon Cyberpunk, Soft Warm Halo, Golden Radiance, Ethereal White, Custom).
+- [ ] Support non-destructive glow layer placement immediately beneath parent layer, silhouette knockout clipping, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Outer Glow...`, `<Image>/Filters/Light and Shadow/Outer Glow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate spread dilation, gaussian blur softness falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
 
 
 

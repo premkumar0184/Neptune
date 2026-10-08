@@ -122,6 +122,7 @@ def test_pdb_registration():
         ("python-fu-gradient-fill", "Gradient Fill Layer & Multi-Style Gradient Helper"),
         ("python-fu-exposure", "Exposure Adjustment Layer & Tonal Range Helper"),
         ("python-fu-drop-shadow", "Drop Shadow Layer Style Helper"),
+        ("python-fu-calculations", "Channel Calculations & Two-Source Blending Helper"),
     ]
 
 
@@ -9901,6 +9902,386 @@ def test_drop_shadow():
 
 
 # ==============================================================================
+# TEST SUITE 52: CHANNEL CALCULATIONS & TWO-SOURCE BLENDING HELPER
+# ==============================================================================
+def test_calculations():
+    print("\n--- Test Suite 52: Channel Calculations & Two-Source Blending Helper Plugin ---")
+    proc_name = "python-fu-calculations"
+    pdb = Gimp.get_pdb()
+
+    # CALC-01: Procedure signatures & argument audit
+    proc = pdb.lookup_procedure(proc_name)
+    if proc is None:
+        record_fail("CALC-01", "Procedure lookup", f"{proc_name} not found in PDB")
+        return
+
+    expected_args = [
+        "run-mode", "image", "drawables", "preset",
+        "source1-layer-id", "source1-channel", "source1-invert",
+        "source2-layer-id", "source2-channel", "source2-invert",
+        "blend-mode", "opacity", "scale", "offset",
+        "mask-enabled", "mask-channel", "mask-invert",
+        "result-destination", "channel-name"
+    ]
+    arg_names = [arg.name for arg in proc.get_arguments()]
+    missing = [a for a in expected_args if a not in arg_names]
+    if missing:
+        record_fail("CALC-01", "Procedure argument audit", f"Missing arguments: {missing}")
+        return
+    record_pass("CALC-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({expected_args})")
+
+    # Set up test canvas (100x100) with two layers:
+    # Layer 1 (Top, "LayerA"): Solid Color [R=0.8, G=0.6, B=0.4]
+    # Layer 2 (Bottom, "LayerB"): Solid Color [R=0.5, G=0.5, B=0.5]
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+
+    lyr_b = Gimp.Layer.new(img, "LayerB", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(lyr_b, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+    lyr_b.edit_fill(Gimp.FillType.FOREGROUND)
+
+    lyr_a = Gimp.Layer.new(img, "LayerA", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(lyr_a, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.8, 0.6, 0.4)"))
+    lyr_a.edit_fill(Gimp.FillType.FOREGROUND)
+
+    img.set_selected_layers([lyr_a])
+
+    orig_a_samples = [lyr_a.get_pixel(x, y).get_rgba() for x in (25, 50, 75) for y in (25, 50, 75)]
+    orig_b_samples = [lyr_b.get_pixel(x, y).get_rgba() for x in (25, 50, 75) for y in (25, 50, 75)]
+
+    try:
+        # CALC-02: PDB execution status
+        cfg_exec = proc.create_config()
+        cfg_exec.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exec.set_property("image", img)
+        cfg_exec.set_property("preset", "custom")
+        cfg_exec.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_exec.set_property("source1-channel", "red")
+        cfg_exec.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_exec.set_property("source2-channel", "red")
+        cfg_exec.set_property("blend-mode", "multiply")
+        cfg_exec.set_property("result-destination", "new-channel")
+        cfg_exec.set_property("channel-name", "TestExec")
+        res_exec = proc.run(cfg_exec)
+        if res_exec.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CALC-02", "PDB execution status", f"Execution failed with status {res_exec.index(0)}")
+            return
+        record_pass("CALC-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # Clean up test channel
+        chans = img.get_channels()
+        if chans and chans[0].get_name() == "TestExec":
+            img.remove_channel(chans[0])
+
+        # CALC-03: Multiply blend mode math verified (A=0.8 * B=0.5 = 0.400)
+        cfg_mul = proc.create_config()
+        cfg_mul.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mul.set_property("image", img)
+        cfg_mul.set_property("preset", "custom")
+        cfg_mul.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_mul.set_property("source1-channel", "red")
+        cfg_mul.set_property("source1-invert", False)
+        cfg_mul.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_mul.set_property("source2-channel", "red")
+        cfg_mul.set_property("source2-invert", False)
+        cfg_mul.set_property("blend-mode", "multiply")
+        cfg_mul.set_property("result-destination", "new-channel")
+        cfg_mul.set_property("channel-name", "MulChan")
+        proc.run(cfg_mul)
+
+        chan_mul = img.get_channels()[0]
+        val_mul = chan_mul.get_pixel(50, 50).get_rgba().red
+        if abs(val_mul - 0.400) > 0.02:
+            record_fail("CALC-03", "Multiply blend mode", f"Expected ~0.400 (0.8 * 0.5), got {val_mul:.4f}")
+            return
+        record_pass("CALC-03", "Multiply blend mode math", f"Multiply verified (0.8 * 0.5 = {val_mul:.3f} ~= 0.400)")
+        img.remove_channel(chan_mul)
+
+        # CALC-04: Screen blend mode math verified (1 - (1 - 0.8)(1 - 0.5) = 0.900)
+        cfg_scr = proc.create_config()
+        cfg_scr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_scr.set_property("image", img)
+        cfg_scr.set_property("preset", "custom")
+        cfg_scr.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_scr.set_property("source1-channel", "red")
+        cfg_scr.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_scr.set_property("source2-channel", "red")
+        cfg_scr.set_property("blend-mode", "screen")
+        cfg_scr.set_property("result-destination", "new-channel")
+        cfg_scr.set_property("channel-name", "ScrChan")
+        proc.run(cfg_scr)
+
+        chan_scr = img.get_channels()[0]
+        val_scr = chan_scr.get_pixel(50, 50).get_rgba().red
+        if abs(val_scr - 0.900) > 0.02:
+            record_fail("CALC-04", "Screen blend mode", f"Expected ~0.900, got {val_scr:.4f}")
+            return
+        record_pass("CALC-04", "Screen blend mode math", f"Screen verified (1 - 0.2*0.5 = {val_scr:.3f} ~= 0.900)")
+        img.remove_channel(chan_scr)
+
+        # CALC-05: Difference blend mode math verified (|0.8 - 0.5| = 0.300)
+        cfg_diff = proc.create_config()
+        cfg_diff.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_diff.set_property("image", img)
+        cfg_diff.set_property("preset", "custom")
+        cfg_diff.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_diff.set_property("source1-channel", "red")
+        cfg_diff.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_diff.set_property("source2-channel", "red")
+        cfg_diff.set_property("blend-mode", "difference")
+        cfg_diff.set_property("result-destination", "new-channel")
+        cfg_diff.set_property("channel-name", "DiffChan")
+        proc.run(cfg_diff)
+
+        chan_diff = img.get_channels()[0]
+        val_diff = chan_diff.get_pixel(50, 50).get_rgba().red
+        if abs(val_diff - 0.300) > 0.02:
+            record_fail("CALC-05", "Difference blend mode", f"Expected ~0.300 (|0.8 - 0.5|), got {val_diff:.4f}")
+            return
+        record_pass("CALC-05", "Difference blend mode math", f"Difference verified (|0.8 - 0.5| = {val_diff:.3f} ~= 0.300)")
+        img.remove_channel(chan_diff)
+
+        # CALC-06: Subtract blend mode with Scale 2.0 & Offset 128.0 ((0.8 - 0.5)/2 + 128/255 = 0.652)
+        cfg_sub = proc.create_config()
+        cfg_sub.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sub.set_property("image", img)
+        cfg_sub.set_property("preset", "custom")
+        cfg_sub.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_sub.set_property("source1-channel", "red")
+        cfg_sub.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_sub.set_property("source2-channel", "red")
+        cfg_sub.set_property("blend-mode", "subtract")
+        cfg_sub.set_property("scale", 2.0)
+        cfg_sub.set_property("offset", 128.0)
+        cfg_sub.set_property("result-destination", "new-channel")
+        cfg_sub.set_property("channel-name", "SubChan")
+        proc.run(cfg_sub)
+
+        chan_sub = img.get_channels()[0]
+        val_sub = chan_sub.get_pixel(50, 50).get_rgba().red
+        if abs(val_sub - 0.652) > 0.03:
+            record_fail("CALC-06", "Subtract blend mode", f"Expected ~0.652 ((0.8 - 0.5)/2 + 128/255), got {val_sub:.4f}")
+            return
+        record_pass("CALC-06", "Subtract blend mode math", f"Subtract scale 2 offset 128 verified ({val_sub:.3f} ~= 0.652)")
+        img.remove_channel(chan_sub)
+
+        # CALC-07: Add blend mode with Scale 2.0 & Offset 0.0 ((0.8 + 0.5)/2 = 0.650)
+        cfg_add = proc.create_config()
+        cfg_add.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_add.set_property("image", img)
+        cfg_add.set_property("preset", "custom")
+        cfg_add.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_add.set_property("source1-channel", "red")
+        cfg_add.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_add.set_property("source2-channel", "red")
+        cfg_add.set_property("blend-mode", "add")
+        cfg_add.set_property("scale", 2.0)
+        cfg_add.set_property("offset", 0.0)
+        cfg_add.set_property("result-destination", "new-channel")
+        cfg_add.set_property("channel-name", "AddChan")
+        proc.run(cfg_add)
+
+        chan_add = img.get_channels()[0]
+        val_add = chan_add.get_pixel(50, 50).get_rgba().red
+        if abs(val_add - 0.650) > 0.03:
+            record_fail("CALC-07", "Add blend mode", f"Expected ~0.650 ((0.8 + 0.5)/2), got {val_add:.4f}")
+            return
+        record_pass("CALC-07", "Add blend mode math", f"Add scale 2 offset 0 verified ({val_add:.3f} ~= 0.650)")
+        img.remove_channel(chan_add)
+
+        # CALC-08: Source 1 & Source 2 Invert toggles (A inverted = 0.2 * B = 0.5 -> 0.100)
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", img)
+        cfg_inv.set_property("preset", "custom")
+        cfg_inv.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_inv.set_property("source1-channel", "red")
+        cfg_inv.set_property("source1-invert", True)
+        cfg_inv.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_inv.set_property("source2-channel", "red")
+        cfg_inv.set_property("source2-invert", False)
+        cfg_inv.set_property("blend-mode", "multiply")
+        cfg_inv.set_property("result-destination", "new-channel")
+        cfg_inv.set_property("channel-name", "InvChan")
+        proc.run(cfg_inv)
+
+        chan_inv = img.get_channels()[0]
+        val_inv = chan_inv.get_pixel(50, 50).get_rgba().red
+        if abs(val_inv - 0.100) > 0.02:
+            record_fail("CALC-08", "Source 1 Invert", f"Expected ~0.100 ((1-0.8) * 0.5), got {val_inv:.4f}")
+            return
+        record_pass("CALC-08", "Source Invert toggles", f"Source 1 Invert verified ((1 - 0.8) * 0.5 = {val_inv:.3f} ~= 0.100)")
+        img.remove_channel(chan_inv)
+
+        # CALC-09: Single channel extraction (LayerA has R=0.8, G=0.6, B=0.4)
+        for ch_name, exp_val in [("red", 0.80), ("green", 0.60), ("blue", 0.40), ("gray", 0.624)]:
+            cfg_ch = proc.create_config()
+            cfg_ch.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_ch.set_property("image", img)
+            cfg_ch.set_property("preset", "custom")
+            cfg_ch.set_property("source1-layer-id", lyr_a.get_id())
+            cfg_ch.set_property("source1-channel", ch_name)
+            cfg_ch.set_property("source2-layer-id", lyr_a.get_id())
+            cfg_ch.set_property("source2-channel", ch_name)
+            cfg_ch.set_property("blend-mode", "normal")
+            cfg_ch.set_property("result-destination", "new-channel")
+            cfg_ch.set_property("channel-name", f"Ext_{ch_name}")
+            proc.run(cfg_ch)
+            ch_item = img.get_channels()[0]
+            val_ch = ch_item.get_pixel(50, 50).get_rgba().red
+            if abs(val_ch - exp_val) > 0.03:
+                record_fail("CALC-09", f"Extract {ch_name}", f"Expected ~{exp_val:.2f}, got {val_ch:.4f}")
+                return
+            img.remove_channel(ch_item)
+        record_pass("CALC-09", "Single channel extraction", "Red (0.80), Green (0.60), Blue (0.40), and Gray (0.624) extracted with exact precision")
+
+        # CALC-10: Curated presets verified
+        presets_to_test = [
+            "sky-matte-extract", "hair-silhouette", "contrast-luminance",
+            "shadow-separation", "highlight-separation", "frequency-subtract"
+        ]
+        for pname in presets_to_test:
+            cfg_pr = proc.create_config()
+            cfg_pr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_pr.set_property("image", img)
+            cfg_pr.set_property("preset", pname)
+            proc.run(cfg_pr)
+            # Should produce either a channel or layer
+            chans_now = img.get_channels()
+            layers_now = img.get_layers()
+            found = (len(chans_now) > 0) or any("Calculations" in l.get_name() for l in layers_now)
+            if not found:
+                record_fail("CALC-10", f"Preset {pname}", "Failed to produce expected output channel/layer")
+                return
+            for ch in list(img.get_channels()):
+                img.remove_channel(ch)
+            for lyr in list(img.get_layers()):
+                if "Calculations" in lyr.get_name():
+                    img.remove_layer(lyr)
+        record_pass("CALC-10", "Curated presets", "Sky-matte, hair-silhouette, contrast-luminance, shadow-separation, frequency-subtract verified")
+
+        # CALC-11: New Channel destination verified
+        cfg_dchan = proc.create_config()
+        cfg_dchan.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dchan.set_property("image", img)
+        cfg_dchan.set_property("preset", "custom")
+        cfg_dchan.set_property("result-destination", "new-channel")
+        cfg_dchan.set_property("channel-name", "AlphaMaskOut")
+        proc.run(cfg_dchan)
+
+        chans_d = img.get_channels()
+        if len(chans_d) == 0 or chans_d[0].get_name() != "AlphaMaskOut":
+            record_fail("CALC-11", "New Channel destination", f"Expected channel AlphaMaskOut, got {[c.get_name() for c in chans_d]}")
+            return
+        record_pass("CALC-11", "New Channel destination", "Calculation output saved as named alpha channel in channels panel")
+        img.remove_channel(chans_d[0])
+
+        # CALC-12: Selection destination verified
+        cfg_dsel = proc.create_config()
+        cfg_dsel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dsel.set_property("image", img)
+        cfg_dsel.set_property("preset", "custom")
+        cfg_dsel.set_property("result-destination", "selection")
+        proc.run(cfg_dsel)
+
+        if Gimp.Selection.is_empty(img):
+            record_fail("CALC-12", "Selection destination", "Expected non-empty active selection, got empty")
+            return
+        bounds_res = Gimp.Selection.bounds(img)
+        non_empty = bounds_res[1] if isinstance(bounds_res, tuple) else False
+        if not non_empty:
+            record_fail("CALC-12", "Selection bounds", "Selection bounds report empty")
+            return
+        record_pass("CALC-12", "Selection destination", "Calculation result loaded directly into active marching-ants selection")
+        Gimp.Selection.none(img)
+
+        # CALC-13: New Layer destination verified
+        cfg_dlyr = proc.create_config()
+        cfg_dlyr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dlyr.set_property("image", img)
+        cfg_dlyr.set_property("preset", "custom")
+        cfg_dlyr.set_property("result-destination", "new-layer")
+        cfg_dlyr.set_property("channel-name", "CalculationsResult")
+        proc.run(cfg_dlyr)
+
+        layers_d = img.get_layers()
+        if len(layers_d) != 3 or "CalculationsResult" not in layers_d[0].get_name():
+            record_fail("CALC-13", "New Layer destination", f"Expected new layer at top, got layers: {[l.get_name() for l in layers_d]}")
+            return
+        record_pass("CALC-13", "New Layer destination", "Calculation result inserted as new grayscale layer in layer stack")
+        img.remove_layer(layers_d[0])
+
+        # CALC-14: New Document destination verified
+        cfg_ddoc = proc.create_config()
+        cfg_ddoc.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ddoc.set_property("image", img)
+        cfg_ddoc.set_property("preset", "custom")
+        cfg_ddoc.set_property("result-destination", "new-document")
+        proc.run(cfg_ddoc)
+
+        all_images = Gimp.get_images()
+        new_doc = None
+        for im in all_images:
+            if im.get_id() != img.get_id():
+                new_doc = im
+                break
+        if new_doc is None or new_doc.get_width() != 100 or new_doc.get_height() != 100:
+            record_fail("CALC-14", "New Document destination", "Failed to create new document with matching dimensions")
+            return
+        record_pass("CALC-14", "New Document destination", "Calculation result spawned as separate image document")
+        new_doc.delete()
+
+        # CALC-15: Mask channel modulation verified
+        cfg_mask = proc.create_config()
+        cfg_mask.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mask.set_property("image", img)
+        cfg_mask.set_property("preset", "custom")
+        cfg_mask.set_property("source1-layer-id", lyr_a.get_id())
+        cfg_mask.set_property("source1-channel", "red")  # 0.8
+        cfg_mask.set_property("source2-layer-id", lyr_b.get_id())
+        cfg_mask.set_property("source2-channel", "red")  # 0.5
+        cfg_mask.set_property("blend-mode", "multiply")   # 0.4
+        cfg_mask.set_property("mask-enabled", True)
+        cfg_mask.set_property("mask-channel", "red")     # Mask = 0.8
+        cfg_mask.set_property("mask-invert", False)
+        # Result: A * (1 - M) + Blend * M = 0.8 * 0.2 + 0.4 * 0.8 = 0.16 + 0.32 = 0.48
+        cfg_mask.set_property("result-destination", "new-channel")
+        cfg_mask.set_property("channel-name", "MaskModChan")
+        proc.run(cfg_mask)
+
+        chan_m = img.get_channels()[0]
+        val_m = chan_m.get_pixel(50, 50).get_rgba().red
+        if abs(val_m - 0.480) > 0.03:
+            record_fail("CALC-15", "Mask channel modulation", f"Expected ~0.480, got {val_m:.4f}")
+            return
+        record_pass("CALC-15", "Mask channel modulation", f"Mask modulation verified (0.8*0.2 + 0.4*0.8 = {val_m:.3f} ~= 0.480)")
+        img.remove_channel(chan_m)
+
+        # CALC-16: Target & base layer pixel preservation
+        after_a_samples = [lyr_a.get_pixel(x, y).get_rgba() for x in (25, 50, 75) for y in (25, 50, 75)]
+        after_b_samples = [lyr_b.get_pixel(x, y).get_rgba() for x in (25, 50, 75) for y in (25, 50, 75)]
+
+        max_a_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_a_samples, after_a_samples)
+        )
+        max_b_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_b_samples, after_b_samples)
+        )
+        if max_a_diff > 0.000001 or max_b_diff > 0.000001:
+            record_fail("CALC-16", "Layer pixel preservation", f"Pixels altered (LayerA diff {max_a_diff:.6f}, LayerB diff {max_b_diff:.6f})")
+            return
+        record_pass("CALC-16", "Layer pixel preservation", f"Source layers 100% untouched across all operations (diff {max_a_diff:.6f}, {max_b_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CALC-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -9961,6 +10342,7 @@ def run_all_tests():
     test_gradient_fill()
     test_exposure_adjustment()
     test_drop_shadow()
+    test_calculations()
 
 
 

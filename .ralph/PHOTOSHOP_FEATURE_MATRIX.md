@@ -865,6 +865,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Channel Calculations & Two-Source Blending Helper
+- **Source topic**: HDR and channel manipulation - Blend channels with Apply Image and Calculations (`Topics.txt` line 350; `photoshop_docs.md` Section 340 lines 10050-10100)
+- **Photoshop behavior**: Image > Calculations...: Blends two single channels from the same or different layers using any of Photoshop's 11 blend modes, independent Invert toggles, Scale and Offset calibration (for Add and Subtract), Opacity control, and an optional Mask channel. Outputs result to New Channel, Selection, New Layer, or New Document.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `calculations` providing `python-fu-calculations` in `<Image>/Image/Calculations...`, `<Image>/Select/Calculations...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.
+- **Current capability**: Two-source channel extraction (Gray/Luminance Rec. 709, Red, Green, Blue, Alpha) across any layers in document with independent Invert toggles, 11 Photoshop blend modes (Multiply, Screen, Overlay, Soft Light, Hard Light, Normal, Darken, Lighten, Difference, Subtract, Add), Scale (1.0 to 2.0) and Offset (-255 to +255) calibration, opacity slider (0-100%), optional mask channel with invert toggle, 4 output destinations (New Channel inserted into image channels list, Selection loaded into active marching-ants selection, New Layer inserted into layer stack, New Document spawned as separate image), 8 curated presets (Sky Matte Extract, Hair Silhouette, Tonal Contrast, Shadow Separation, Highlight Separation, Frequency Subtract, Frequency Add, Custom Math), single-step `Ctrl+Z` undo protection, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.insert_channel`, `image.select_item`, `image.insert_layer`, `Gimp.Channel.new`, `Gimp.Layer.new`, `Gimp.Image.new`, GeglBuffer `"RGBA float"`, `"RGB float"`, `"Y float"`, NumPy array processing).
+- **Implementation priority**: High (Phase 57).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema across 19 properties, execution status (SUCCESS), Multiply blend mode math ($A \cdot B = 0.8 \cdot 0.5 \approx 0.400$), Screen blend mode math ($1 - (1-A)(1-B) = 0.900$), Difference blend mode math ($|A - B| = 0.300$), Subtract blend mode with Scale 2.0 & Offset 128.0 ($((A - B)/2) + 128/255 \approx 0.652$), Add blend mode with Scale 2.0 & Offset 0.0 ($((A + B)/2) \approx 0.650$), Source Invert toggles ($(1 - 0.8) \cdot 0.5 \approx 0.100$), Single channel extraction precision (Red 0.80, Green 0.60, Blue 0.40, Gray 0.624), Curated presets (Sky-matte, hair-silhouette, contrast-luminance, shadow-separation, frequency-subtract), New Channel destination (alpha channel created in channels list), Selection destination (active selection generated), New Layer destination (layer inserted in stack), New Document destination (separate image document created), Mask channel modulation ($A(1-M) + Blend \cdot M \approx 0.480$), and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 59):
+  1. `verify_config.py`: Section 6 passed with 51 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-calculations`), procedure arguments verified across all 19 properties, execution status SUCCESS verified, Multiply verified (0.8 * 0.5 = 0.402 ~= 0.400), Screen verified (1 - 0.2*0.5 = 0.896 ~= 0.900), Difference verified (|0.8 - 0.5| = 0.296 ~= 0.300), Subtract verified (0.651 ~= 0.652), Add verified (0.651 ~= 0.650), Source Invert verified ((1 - 0.8) * 0.5 = 0.100 ~= 0.100), Single channel extraction verified (Red 0.80, Green 0.60, Blue 0.40, Gray 0.624), Curated presets verified, New Channel destination verified, Selection destination verified, New Layer destination verified, New Document destination verified, Mask channel modulation verified (0.479 ~= 0.480), and source layer pixels 100% untouched (`diff == 0.000000`). Total 567/567 assertions passed across 52 test suites. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 59).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

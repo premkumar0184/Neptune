@@ -1443,5 +1443,33 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin.
 
+## Iteration 59 — Channel Calculations & Two-Source Blending Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Channel Calculations & Two-Source Blending Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 350: "Blend channels with Apply Image and Calculations", and `photoshop_docs.md` Section 340 lines 10050-10100: "Apply Image works with single and composite channels, while Calculations operates exclusively on single channels... choose first source image, layer, and channel... Invert... choose second source image, layer, and channel... Invert... blending mode... Opacity... Mask... For Result, specify whether to create a new document, add a new channel, or select the active image"). In Adobe Photoshop, Calculations is one of Photoshop's most revered precision tools for digital artists, retouchers, and print professionals for channel masking, hair extraction, and luminance selections. Stock GIMP provides individual channel menus and channel operations, but lacks a unified two-source channel calculation dialog simulating Photoshop `Image > Calculations...`, lacks arbitrary single-channel selection from two independent sources (Red, Green, Blue, Alpha, Gray/Luminance), lacks independent Invert checkboxes for Source 1 and Source 2, lacks Photoshop's 11 core channel blending modes (Multiply, Screen, Overlay, Soft Light, Hard Light, Normal, Darken, Lighten, Difference, Subtract, Add) with Scale (1.0 to 2.0) and Offset (-255 to +255) calibration, lacks opacity modulation and optional mask channel integration, and lacks Photoshop's 4 versatile destination outputs (New Channel, Selection, New Layer, New Document), and curated presets. Implementing `calculations.py` brings complete Photoshop parity to Linux photo editing with `python-fu-calculations`: dual-source channel extraction, 11 blend modes, scale/offset math, opacity slider, mask channel modulation, 4 output destinations, 8 curated presets, and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-calculations` with dual-source channel extraction, independent invert toggles, 11 blending modes, scale/offset calibration, mask channel modulation, 4 destinations (New Channel, Selection, New Layer, New Document), and 8 curated presets.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `calculations` (51 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (51 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 52: `test_calculations` (asserting CALC-01 through CALC-16: PDB registration, procedure argument schema across 19 properties, SUCCESS status, Multiply blend mode math [0.402 ~= 0.400], Screen blend mode math [0.896 ~= 0.900], Difference blend mode math [0.296 ~= 0.300], Subtract blend mode math with Scale 2.0 & Offset 128 [0.651 ~= 0.652], Add blend mode math with Scale 2.0 & Offset 0 [0.651 ~= 0.650], Source 1 Invert toggle [0.100 ~= 0.100], Single channel extraction [Red 0.80, Green 0.60, Blue 0.40, Gray 0.624], Curated presets [sky-matte, hair-silhouette, contrast-luminance, shadow-separation, frequency-subtract], New Channel destination, Selection destination, New Layer destination, New Document destination, Mask channel modulation [0.479 ~= 0.480], and base layer pixel preservation `diff == 0.000000`). Total tests increased to 567 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Channel Calculations & Two-Source Blending Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 57 complete and scheduled Phase 58 (Non-Destructive Outer Glow Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In Adobe Photoshop Calculations, Luminance extraction uses the standard Rec. 709 luminance weights: $Y = 0.2126 R + 0.7152 G + 0.0722 B$.
+  - In Subtract and Add blend modes, Scale factor divides the difference/sum while Offset shifts the result: $((S_1 - S_2) / \text{scale}) + (\text{offset} / 255)$. This allows high/low frequency channel subtraction and addition identical to Photoshop frequency separation and embossing techniques.
+  - In GIMP 3.x, `image.insert_channel(channel, None, 0)` adds a standalone channel to the image channels list, while `image.select_item(Gimp.ChannelOps.REPLACE, channel)` loads the channel directly into the active marching-ants selection.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 51 plugins verified).
+    - Stage 2: `install.sh --batch` passed (51 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 567 tests across 52 test suites in 63.74s.
+    - Final quality gate: SUCCESS across all stages in 88.95s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `1652b59`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 58 — Non-Destructive Outer Glow Layer Style Helper Plugin.
+
+
 
 

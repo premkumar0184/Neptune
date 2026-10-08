@@ -1,81 +1,95 @@
-# Current Task — Iteration 58
+# Current Task — Iteration 59
 
 ## Task
-**Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin (`python-fu-drop-shadow`)**
+**Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin (`python-fu-calculations`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", "Add drop shadows to text", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Drop Shadow effect parameters: Blend Mode, Color, Opacity, Angle, Distance, Spread, Size, Noise, Layer Knocks Out Drop Shadow... Layer styles are non-destructive effects linked to layer contents..."), Drop Shadow is the most universally used Layer Style effect.
+In Adobe Photoshop (`Topics.txt` line 350: "Blend channels with Apply Image and Calculations", and `photoshop_docs.md` Section 340 lines 10050-10100: "Apply Image works with single and composite channels, while Calculations operates exclusively on single channels... choose first source image, layer, and channel... Invert... choose second source image, layer, and channel... Invert... blending mode... Opacity... Mask... For Result, specify whether to create a new document, add a new channel, or select the active image"), Calculations is one of Photoshop's most revered precision tools for digital artists, retouchers, and print professionals.
 
-Stock GIMP provides only the destructive filter `gegl:drop-shadow`, which:
-1. Lacks Photoshop Layer Style non-destructive architecture (a dedicated shadow layer placed immediately beneath the target layer, leaving the target layer and background 100% untouched `diff == 0.000000`).
-2. Lacks Photoshop's light angle trigonometry ($\theta \in [-180^\circ, 180^\circ]$ where light from angle $\theta$ casts shadow in the opposite direction $\Delta x = -\text{distance} \cdot \cos(\theta)$, $\Delta y = \text{distance} \cdot \sin(\theta)$).
-3. Lacks Spread parameter ($0\%$ to $100\%$, which expands the solid shadow matte before blurring).
-4. Lacks "Layer Knocks Out Drop Shadow" option (cutting out the parent layer silhouette so semi-transparent layers are not muddied by the shadow underneath).
-5. Lacks Noise/film grain in shadow.
-6. Lacks curated presets (Default, Soft Drop, Hard Edge, Elevated Card, Neon Backlight, Vintage Sketch, Custom).
-7. Lacks professional blend modes (Multiply, Normal, Darken, Color Burn, Linear Burn), opacity control, and editable layer mask integration.
+Stock GIMP provides individual channel menus and channel operations, but:
+1. Lacks a unified two-source channel calculation dialog simulating Photoshop `Image > Calculations...`.
+2. Lacks arbitrary single-channel selection from two independent sources (Red, Green, Blue, Alpha, Gray/Luminance).
+3. Lacks independent Invert checkboxes for Source 1 and Source 2.
+4. Lacks Photoshop's 11 core channel blending modes (Multiply, Screen, Overlay, Soft Light, Hard Light, Normal, Darken, Lighten, Difference, Subtract, Add) with Scale (1.0 to 2.0) and Offset (-255 to +255) calibration.
+5. Lacks opacity modulation and optional mask channel integration.
+6. Lacks Photoshop's 4 versatile destination outputs:
+   - `New Channel`: saves the calculation result directly as a named alpha channel in the image channels list (essential for channel masking, hair extraction, and luminance selections).
+   - `Selection`: loads the calculation result directly into the active marching-ants selection on the current canvas.
+   - `New Layer`: inserts a grayscale / blended layer into the current layer stack.
+   - `New Document`: generates a brand new document from the calculated channel.
+7. Lacks curated presets for high-end masking and separation (Sky Matte Extract, Hair Silhouette, Contrast Luminance, Shadow Separation, Highlight Separation, Frequency Subtract, Frequency Add, Custom Math).
 
-Implementing native GIMP 3.x Python 3 plugin `drop-shadow` closes this gap with complete Photoshop parity:
-1. `python-fu-drop-shadow`:
-   - Geometric Controls:
-     - `angle`: Light source angle (-180.0° to 180.0°, default 120.0°).
-     - `distance`: Distance offset (0.0 to 200.0 px, default 10.0 px).
-     - `spread`: Shadow matte expansion percentage (0.0% to 100.0%, default 0.0%).
-     - `size`: Blur radius / softness (0.0 to 200.0 px, default 10.0 px).
-     - `knockout`: Layer Knocks Out Drop Shadow boolean (default True).
-     - `noise`: Film grain noise percentage (0.0% to 100.0%, default 0.0%).
+Implementing native GIMP 3.x Python 3 plugin `calculations` closes this gap with complete Photoshop parity:
+1. `python-fu-calculations`:
+   - Dual-Source Architecture:
+     - `source1-layer-id`: Source 1 layer ID (0 for active layer).
+     - `source1-channel`: Single channel choice (`gray`, `red`, `green`, `blue`, `alpha`).
+     - `source1-invert`: Boolean invert for Source 1.
+     - `source2-layer-id`: Source 2 layer ID (0 for active layer).
+     - `source2-channel`: Single channel choice (`gray`, `red`, `green`, `blue`, `alpha`).
+     - `source2-invert`: Boolean invert for Source 2.
+   - Blending Mathematics:
+     - `blend-mode`: Choice (`multiply`, `screen`, `overlay`, `soft-light`, `hard-light`, `normal`, `darken`, `lighten`, `difference`, `subtract`, `add`).
+     - `opacity`: Blend strength (0.0% to 100.0%, default 100.0%).
+     - `scale`: Factor for Add/Subtract modes (1.0 to 2.0, default 1.0).
+     - `offset`: Value offset for Add/Subtract modes (-255.0 to 255.0, default 0.0).
+   - Mask Options:
+     - `mask-enabled`: Boolean toggle.
+     - `mask-channel`: Mask channel choice (`gray`, `red`, `green`, `blue`, `alpha`).
+     - `mask-invert`: Boolean invert for mask.
+   - Destination Options:
+     - `result-destination`: Choice (`new-channel`, `selection`, `new-layer`, `new-document`).
+     - `channel-name`: Custom name for output channel/layer (default "Calculations").
    - Curated Presets:
-     - `default`: Photoshop Standard (120°, 10px dist, 0% spread, 10px size, 75% opacity, Multiply, Black).
-     - `soft-drop`: Soft ambient shadow (90°, 15px dist, 10% spread, 25px size, 50% opacity, Multiply).
-     - `hard-edge`: Graphic cast shadow (135°, 12px dist, 80% spread, 4px size, 85% opacity, Multiply).
-     - `elevated-card`: UI floating card elevation (90°, 20px dist, 5% spread, 30px size, 40% opacity, Multiply).
-     - `neon-backlight`: Colorful glow / backlight (90°, 0px dist, 20% spread, 25px size, 90% opacity, Custom color).
-     - `vintage-sketch`: Textured sketch shadow with noise (120°, 8px dist, 0% spread, 8px size, 25% noise, 80% opacity).
-     - `custom`: Custom user sliders.
-   - Shadow Color: Custom RGB sliders (default Black #000000).
-   - Blend Modes: Multiply (`Gimp.LayerMode.MULTIPLY`), Normal, Darken, Color Burn, Linear Burn.
-   - Opacity slider (0.0 to 100.0%).
-   - Non-Destructive Layer Architecture:
-     - Dedicated shadow layer positioned immediately beneath the target layer.
-     - Preserves original target layer and base pixels 100% untouched (`diff == 0.000000`).
-   - Layer Mask Integration: None, Reveal-All (white), Conceal-All (black), Active Selection.
-   - Single-Step Undo Protection: Encapsulated within `image.undo_group_start()` and `image.undo_group_end()`.
+     - `sky-matte-extract`: Red & Blue Inverted in Multiply (classic sky/cloud separation).
+     - `hair-silhouette`: Green & Blue Inverted in Screen (fine edge/hair isolation).
+     - `contrast-luminance`: Red & Green in Soft Light (dramatic skin/landscape contrast).
+     - `shadow-separation`: Red Inverted & Blue Inverted in Multiply (deep shadow detail isolation).
+     - `highlight-separation`: Red & Blue in Screen (specular highlight isolation).
+     - `frequency-subtract`: Source 1 Gray & Source 2 Gray in Subtract (Scale 2.0, Offset 128.0).
+     - `frequency-add`: Source 1 Gray & Source 2 Gray Inverted in Add (Scale 2.0, Offset 0.0).
+     - `custom`: Full manual control.
+   - Non-Destructive Operation:
+     - Outputting to Channel, Selection, Layer, or Document leaves source pixels 100% untouched (`diff == 0.000000`).
+   - Single-Step Undo Protection:
+     - Encapsulated within `image.undo_group_start()` and `image.undo_group_end()`.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py` (New plugin implementing `python-fu-drop-shadow`)
-- `PhotoGIMP/scripts/verify_config.py` (Register `drop-shadow` in `REQUIRED_PLUGINS`, updating audit inventory to 50 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py` (New plugin implementing `python-fu-calculations`)
+- `PhotoGIMP/scripts/verify_config.py` (Register `calculations` in `REQUIRED_PLUGINS`, updating audit inventory to 51 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 51: `test_drop_shadow`, assertions DS-01 through DS-15)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Drop Shadow Layer Style entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 56 status)
-- `.ralph/PROGRESS.md` (Log Iteration 58 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 58 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 52: `test_calculations`, assertions CALC-01 through CALC-16)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Calculations entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 57 status)
+- `.ralph/PROGRESS.md` (Log Iteration 59 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 59 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/` created with `drop-shadow.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/` created with `calculations.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
 3. [x] PDB procedure registered in GIMP PDB:
-   - `python-fu-drop-shadow` under `<Image>/Layer/Layer Style/Drop Shadow...`, `<Image>/Filters/Light and Shadow/Drop Shadow (Layer Style)...`, `<Image>/Filters/Retouching`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 51):
-   - DS-01: Procedure lookup and argument signatures verified across all properties.
-   - DS-02: Execution status verified (PDB status SUCCESS).
-   - DS-03: Light angle 120° trigonometry verified (shadow cast downward and rightward).
-   - DS-04: Light angle 0° trigonometry verified (shadow cast leftward).
-   - DS-05: Distance offset scaling verified (shadow center translates with distance).
-   - DS-06: Size blur radius falloff verified (diffuse soft boundary).
-   - DS-07: Spread expansion verified (spread increases solid core alpha radius).
-   - DS-08: Layer Knocks Out Drop Shadow verified (parent layer interior cleared in shadow layer).
-   - DS-09: Shadow custom color fidelity verified (custom RGB values in shadow layer).
-   - DS-10: Curated presets verified (soft-drop, hard-edge, elevated-card, neon-backlight).
-   - DS-11: Dedicated shadow layer inserted beneath target layer in stack.
-   - DS-12: Blend modes (Multiply, Normal, Darken, Color Burn, Linear Burn) & 75% opacity validated.
-   - DS-13: Conceal-All black layer mask and Reveal-All white layer mask verified.
-   - DS-14: Shadow noise / graininess verified (variance > 0 when noise > 0).
-   - DS-15: Target and base layer pixel preservation verified (original pixels 100% untouched with diff == 0.000000).
-5. [x] `verify_config.py` Section 6 passes with all 50 required plugins audited.
+   - `python-fu-calculations` under `<Image>/Image/Calculations...`, `<Image>/Select/Calculations...`, `<Image>/Filters/Retouching`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 52):
+   - CALC-01: Procedure lookup and argument signatures verified across all properties.
+   - CALC-02: Execution status verified (PDB status SUCCESS).
+   - CALC-03: Multiply blend mode math verified ($S_1 \cdot S_2$).
+   - CALC-04: Screen blend mode math verified ($1 - (1 - S_1)(1 - S_2)$).
+   - CALC-05: Difference blend mode math verified ($|S_1 - S_2|$).
+   - CALC-06: Subtract blend mode math with Scale & Offset verified ($((S_1 - S_2) / \text{scale}) + (\text{offset} / 255)$).
+   - CALC-07: Add blend mode math with Scale & Offset verified ($((S_1 + S_2) / \text{scale}) + (\text{offset} / 255)$).
+   - CALC-08: Source 1 & Source 2 Invert toggles verified.
+   - CALC-09: Single channel extraction verified (Red, Green, Blue, Alpha, Gray/Luminance).
+   - CALC-10: Curated presets verified (sky-matte-extract, hair-silhouette, contrast-luminance, shadow-separation, frequency-subtract).
+   - CALC-11: New Channel destination verified (channel added to image channels with correct pixel values).
+   - CALC-12: Selection destination verified (active selection created matching calculation math).
+   - CALC-13: New Layer destination verified (layer created in image stack matching calculation math).
+   - CALC-14: New Document destination verified (new image created with correct dimensions and pixels).
+   - CALC-15: Mask channel modulation verified.
+   - CALC-16: Original image layers and base pixels 100% preserved (`diff == 0.000000`).
+5. [x] `verify_config.py` Section 6 passes with all 51 required plugins audited.
 6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0.
 
 ## Verification Commands
@@ -86,6 +100,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive drop shadow layer style helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 58 - drop shadow layer style helper plugin`
-
+- PhotoGIMP submodule commit: `feat(plugins): implement channel calculations and two-source blending helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 59 - channel calculations helper plugin`

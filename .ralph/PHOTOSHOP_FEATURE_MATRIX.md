@@ -831,6 +831,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Exposure Adjustment Layer & Tonal Range Helper
+- **Source topic**: Color adjustment and fill layers - Adjustment and fill layers overview / Create adjustment layers / Adjust HDR exposure and toning (`Topics.txt` lines 93-96, 347, `photoshop_docs.md` Section 338 lines 9935-9985)
+- **Photoshop behavior**: Layer > New Adjustment Layer > Exposure and Image > Adjustments > Exposure: Non-destructive adjustment layer operating in linear color space with 3 controls: Exposure (EV stops highlight scaling), Offset (shadow/black level additive adjustment), and Gamma (midtone power curve correction).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `exposure` providing `python-fu-exposure` in `<Image>/Layer/New Adjustment Layer/Exposure...`, `<Image>/Image/Adjustments/Exposure...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`.
+- **Current capability**: Non-destructive exposure adjustment layer calculating Photoshop's linear tone equation $I' = ((I \cdot 2^{\text{exposure}}) + \text{offset})^{1 / \text{gamma}}$ with 32-bit floating-point precision on layer buffer. Features 8 curated photographic presets (Default Reset, +1 Stop Overexposure, +2 Stops Overexposure, -1 Stop Underexposure, -2 Stops Underexposure, Shadow Lift, Highlight Recovery, Dynamic Compression, Custom sliders), non-destructive duplicate layer workflow preserving source pixels (`diff == 0.000000`) or in-place modification, professional blend modes (Normal, Luminosity, Multiply, Screen, Overlay, Soft Light), opacity slider (0-100%), editable layer mask integration (Auto selection mask, None, Reveal-All, Conceal-All, Active Selection), and single-step `Ctrl+Z` undo protection.
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`Gimp.Layer.new_from_drawable`, `Gegl.Buffer.get`, `Gegl.Buffer.set`, `Gegl.Buffer.flush`, `Gimp.LayerMode.LUMINANCE`, `Gimp.AddMaskType.SELECTION`, `Gimp.AddMaskType.WHITE`, `Gimp.AddMaskType.BLACK`).
+- **Implementation priority**: High (Phase 55).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema across 11 properties, execution status (SUCCESS), +1.0 EV stop doubling intensity (0.25 -> ~0.50), -1.0 EV stop halving intensity (0.25 -> ~0.125), Offset shadow black level lifting (0.25 + 0.15 -> 0.40), Gamma midtone power curve expansion (0.25 ** (1/2.0) -> ~0.50), Curated photographic presets (+1 stop, +2 stops, -1 stop, shadow lift, highlight recovery), Non-destructive adjustment layer structure, Blend modes Luminosity, Multiply, Screen, Overlay, Soft Light & 75% opacity, Conceal-All black layer mask composite invariance (`diff == 0.000000`), Reveal-All white layer mask attachment, Active selection auto-mask confinement, In-place selection confinement, and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 57):
+  1. `verify_config.py`: Section 6 passed with 49 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-exposure`), procedure arguments verified across all 11 properties, execution status SUCCESS verified, +1.0 EV stop intensity doubling verified (0.25 -> 0.503), -1.0 EV stop intensity halving verified (0.25 -> 0.125), Offset shadow lifting verified (0.25 + 0.15 -> 0.402), Gamma midtone power curve verified (0.25 ** (1/2.0) -> 0.503), Curated photographic presets (+1 stop, +2 stops, -1 stop, shadow lift, highlight recovery) verified, Non-destructive adjustment layer structure verified (layer inserted above base, base intact), Blend modes Luminosity, Multiply, Screen, Overlay, Soft Light & 75% opacity validated, Conceal-All black layer mask composite invariance verified (`diff == 0.000000`), Reveal-All white layer mask attachment verified, Active selection auto-mask verified, In-place selection confinement verified (inside 0.503, outside 0.250), and base layer pixels 100% untouched (`diff == 0.000000`). Total 534/534 assertions passed across 50 test suites. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 57).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

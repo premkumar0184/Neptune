@@ -1390,3 +1390,31 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 55 — Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin.
 
+## Iteration 57 — Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Exposure Adjustment Layer & Tonal Range Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 93-96, 347: "Color adjustment and fill layers", "Adjustment and fill layers overview", "Work with adjustment layers", "Create adjustment layers", "Adjust HDR exposure and toning", and `photoshop_docs.md` Section 338 lines 9935-9985: "Apply Exposure adjustments or HDR Toning to control highlights, shadows, and midtones... Exposure adjustments work non-destructively through adjustment layers, preserving your original image data and allowing you to modify or remove adjustments at any time... Layer>New Adjustment Layer>Exposure. In the Adjustments panel, adjust the Exposure slider to modify the highlight end of the tonal scale with minimal effect on shadows. Adjust the Offset slider to darken shadows and midtones without significantly affecting highlights. Adjust the Gamma slider to modify midtone values using a power function..."). In Adobe Photoshop, Exposure adjustments are a fundamental non-destructive adjustment layer workflow operating in linear color space according to the three-parameter equation $I' = ((I \cdot 2^{\text{exposure}}) + \text{offset})^{1 / \text{gamma}}$. Stock GIMP provides only the destructive interactive exposure tool and lacks dedicated Exposure Adjustment Layer creation, photographic exposure presets (Default Reset, +1 Stop Overexposure, +2 Stops Overexposure, -1 Stop Underexposure, -2 Stops Underexposure, Shadow Lift, Highlight Recovery, Dynamic Compression, Custom sliders), blend modes (Normal, Luminosity, Multiply, Screen, Overlay, Soft Light), opacity scaling, and layer mask integration. Implementing `exposure.py` brings complete Photoshop parity to Linux photo editing with `python-fu-exposure`: 3 core exposure parameters, 8 photographic presets, non-destructive duplicate layer workflow preserving source pixels (`diff == 0.000000`) or in-place modification with selection confinement, 6 blend modes, opacity slider, layer mask options (Auto, None, Reveal-All, Conceal-All, Selection), and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-exposure` calculating Photoshop linear tone equation with 32-bit floating-point GeglBuffer precision, 8 curated presets, non-destructive adjustment layer generation, blend modes, opacity, and layer mask integration.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `exposure` (49 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (49 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 50: `test_exposure_adjustment` (asserting EXP-01 through EXP-14: PDB registration, procedure argument schema across 11 properties, SUCCESS status, +1.0 EV stop doubling intensity [0.25 -> 0.503], -1.0 EV stop halving intensity [0.25 -> 0.125], Offset shadow black point lifting [0.25 + 0.15 -> 0.402], Gamma midtone power curve [0.25 ** (1/2.0) -> 0.503], Curated photographic presets [+1 stop, +2 stops, -1 stop, shadow lift, highlight recovery], Non-destructive adjustment layer structure, Blend modes Luminosity, Multiply, Screen, Overlay, Soft Light & 75% opacity, Conceal-All black layer mask composite invariance `diff == 0.000000`, Reveal-All white layer mask attachment, Active selection auto-mask confinement, In-place selection confinement, and base layer pixel preservation `diff == 0.000000`). Total tests increased to 534 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Exposure Adjustment Layer & Tonal Range Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 55 complete and scheduled Phase 56 (Non-Destructive Drop Shadow Layer Style Helper Plugin) and Phase 57 (Channel Calculations & Two-Source Blending Helper Plugin).
+- **Technical discoveries**:
+  - In GEGL / GIMP 3.x, GeglBuffer with format `"RGBA float"` operates directly in linear color space with 32-bit IEEE float precision per channel, enabling mathematically exact evaluations of Photoshop's linear exposure formula.
+  - Calling `buf.flush()` on the GeglBuffer commits float changes immediately to the layer tile cache before `layer.update()`.
+  - Reading selection mask buffer with `"Y float"` format gives floating-point selection weights (1.0 inside, 0.0 outside) enabling anti-aliased selection blending during in-place adjustments.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 49 plugins verified).
+    - Stage 2: `install.sh --batch` passed (49 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 534 tests across 50 test suites in 67.35s.
+    - Final quality gate: SUCCESS across all stages in 93.62s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `efbc264`.
+- **Result**: Success.
+- **Next**: Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin.
+
+

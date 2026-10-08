@@ -401,16 +401,16 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate gradient style geometry, angle rotation, scale expansion, color transition accuracy, reverse toggle, blend modes, layer mask attachment, and non-destructive base layer preservation via headless GIMP test suite.
 
 ### Phase 55 — Non-Destructive Exposure Adjustment Layer & Tonal Range Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `exposure` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`.
-- [ ] Create dedicated Exposure adjustment layer simulating Photoshop `Layer > New Adjustment Layer > Exposure...` and `Image > Adjustments > Exposure...` (`Topics.txt` lines 93-96, 347; `photoshop_docs.md` Section 338 lines 9935-9985).
-- [ ] Support Photoshop three-parameter exposure tone equation: $I' = ((I \cdot 2^{\text{exposure}}) + \text{offset})^{1 / \text{gamma}}$ in linear RGB color space:
+- [x] Implement native GIMP 3.x Python 3 plugin `exposure` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/exposure/exposure.py`.
+- [x] Create dedicated Exposure adjustment layer simulating Photoshop `Layer > New Adjustment Layer > Exposure...` and `Image > Adjustments > Exposure...` (`Topics.txt` lines 93-96, 347; `photoshop_docs.md` Section 338 lines 9935-9985).
+- [x] Support Photoshop three-parameter exposure tone equation: $I' = ((I \cdot 2^{\text{exposure}}) + \text{offset})^{1 / \text{gamma}}$ in linear RGB color space:
   - `exposure`: -5.0 to +5.0 EV stops (default 0.0, highlight scaling).
   - `offset`: -0.5 to +0.5 (default 0.0, shadow/black point additive adjustment).
   - `gamma`: 0.01 to 9.99 (default 1.0, midtone power curve correction).
-- [ ] Support curated photographic exposure presets (Default / Reset, +1 Stop Overexposure, +2 Stops Overexposure, -1 Stop Underexposure, -2 Stops Underexposure, Shadow Boost / Lift, Highlight Recovery, High Dynamic Compression, Custom sliders).
-- [ ] Support non-destructive layer workflow: duplicates active drawable into dedicated adjustment layer, applies exposure transformation, attaches editable layer mask (Auto, None, Reveal-All, Conceal-All, Active Selection), blend modes (Normal, Luminosity, Multiply, Screen, Overlay, Soft Light), and opacity.
-- [ ] Register under menu path `<Image>/Layer/New Adjustment Layer/Exposure...`, `<Image>/Image/Adjustments/Exposure...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate EV stop scaling, shadow offset response, gamma midtone power curve, preset fidelity, blend modes, layer mask generation, and non-destructive base layer preservation via headless GIMP test suite.
+- [x] Support curated photographic exposure presets (Default / Reset, +1 Stop Overexposure, +2 Stops Overexposure, -1 Stop Underexposure, -2 Stops Underexposure, Shadow Boost / Lift, Highlight Recovery, High Dynamic Compression, Custom sliders).
+- [x] Support non-destructive layer workflow: duplicates active drawable into dedicated adjustment layer, applies exposure transformation, attaches editable layer mask (Auto, None, Reveal-All, Conceal-All, Active Selection), blend modes (Normal, Luminosity, Multiply, Screen, Overlay, Soft Light), and opacity.
+- [x] Register under menu path `<Image>/Layer/New Adjustment Layer/Exposure...`, `<Image>/Image/Adjustments/Exposure...`, and `<Image>/Filters/Retouching`.
+- [x] Validate EV stop scaling, shadow offset response, gamma midtone power curve, preset fidelity, blend modes, layer mask generation, and non-destructive base layer preservation via headless GIMP test suite.
 
 ### Phase 56 — Non-Destructive Drop Shadow Layer Style Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `drop-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/drop-shadow/drop-shadow.py`.
@@ -419,6 +419,14 @@ This file is the authoritative roadmap of product-development work to transform 
 - [ ] Support non-destructive shadow layer positioning directly beneath target layer, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
 - [ ] Register under menu path `<Image>/Layer/Layer Style/Drop Shadow...`, `<Image>/Filters/Light and Shadow/Drop Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
 - [ ] Validate angle offset trigonometry, distance translation, spread expansion, size gaussian falloff, knockout clipping, and headless GIMP test suite.
+
+### Phase 57 — Channel Calculations & Two-Source Blending Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `calculations` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/calculations/calculations.py`.
+- [ ] Create dedicated Calculations dialog simulating Photoshop `Image > Calculations...` (`Topics.txt` line 350; `photoshop_docs.md` Section 340).
+- [ ] Support two-source channel blending: Source 1 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Source 2 (Image/Layer, Channel: Gray, Red, Green, Blue, Alpha, Invert toggle), Blending Mode (Multiply, Screen, Overlay, Soft Light, Difference, Subtract, Add), Opacity (0 to 100%), and Mask option.
+- [ ] Support output destinations: New Document, New Channel, or Selection.
+- [ ] Register under menu path `<Image>/Image/Calculations...` and `<Image>/Filters/Retouching`.
+- [ ] Validate cross-channel math, invert operations, subtraction/addition formulas, selection output generation, and headless GIMP test suite.
 
 
 

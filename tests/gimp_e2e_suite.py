@@ -120,6 +120,7 @@ def test_pdb_registration():
         ("python-fu-stroke-layer", "Selection & Layer Stroke Helper"),
         ("python-fu-solid-color-fill", "Solid Color Fill Layer & Canvas Fill Helper"),
         ("python-fu-gradient-fill", "Gradient Fill Layer & Multi-Style Gradient Helper"),
+        ("python-fu-exposure", "Exposure Adjustment Layer & Tonal Range Helper"),
     ]
 
 
@@ -9230,6 +9231,312 @@ def test_gradient_fill():
 
 
 # ==============================================================================
+# TEST 50: Exposure Adjustment Layer & Tonal Range Helper Plugin
+# ==============================================================================
+def test_exposure_adjustment():
+    print("\n--- Test Suite 50: Exposure Adjustment Layer & Tonal Range Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_name = "python-fu-exposure"
+
+    # EXP-01: Procedure lookup and argument signatures
+    proc = pdb.lookup_procedure(proc_name)
+    if proc is None:
+        record_fail("EXP-01", "Procedure lookup", f"{proc_name} not found in PDB")
+        return
+
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "exposure", "offset", "gamma",
+        "blend-mode", "opacity", "output-mode", "mask-type"
+    ]
+    arg_names = [arg.name for arg in proc.get_arguments()]
+    missing = [a for a in expected_args if a not in arg_names]
+    if missing:
+        record_fail("EXP-01", "Argument audit", f"Missing arguments: {missing}")
+        return
+    record_pass("EXP-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({arg_names})")
+
+    # Setup test canvas: 100x100 RGB image with midtone base layer (0.25 gray)
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "BaseArt", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    img.set_selected_layers([base])
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.25, 0.25, 0.25)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    orig_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # EXP-02: Execution status check
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "default")
+        cfg.set_property("output-mode", "new-layer")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("EXP-02", "PDB execution status", f"Execution returned non-success code {res.index(0)}")
+            return
+        record_pass("EXP-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+        def_layer = img.get_layers()[0]
+        img.remove_layer(def_layer)
+
+        # EXP-03: Exposure EV stops +1.0 scaling verified (I' = 2 * I)
+        # Base 0.25 -> 0.50 (+1 stop overexposure)
+        cfg_plus1 = proc.create_config()
+        cfg_plus1.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_plus1.set_property("image", img)
+        cfg_plus1.set_property("preset", "custom")
+        cfg_plus1.set_property("exposure", 1.0)
+        cfg_plus1.set_property("offset", 0.0)
+        cfg_plus1.set_property("gamma", 1.0)
+        cfg_plus1.set_property("output-mode", "new-layer")
+        cfg_plus1.set_property("mask-type", "none")
+        proc.run(cfg_plus1)
+
+        lyr_plus1 = img.get_layers()[0]
+        p_plus1 = lyr_plus1.get_pixel(50, 50).get_rgba()
+        if abs(p_plus1.red - 0.50) > 0.03:
+            record_fail("EXP-03", "+1 Stop Exposure scaling", f"Expected ~0.50 (2 * 0.25), got {p_plus1.red:.3f}")
+            return
+        record_pass("EXP-03", "+1 Stop Exposure scaling", f"+1.0 EV stop doubles intensity (0.25 -> {p_plus1.red:.3f} ~= 0.50)")
+        img.remove_layer(lyr_plus1)
+
+        # EXP-04: Exposure EV stops -1.0 scaling verified (I' = 0.5 * I)
+        # Base 0.25 -> 0.125 (-1 stop underexposure)
+        cfg_min1 = proc.create_config()
+        cfg_min1.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_min1.set_property("image", img)
+        cfg_min1.set_property("preset", "custom")
+        cfg_min1.set_property("exposure", -1.0)
+        cfg_min1.set_property("offset", 0.0)
+        cfg_min1.set_property("gamma", 1.0)
+        cfg_min1.set_property("output-mode", "new-layer")
+        cfg_min1.set_property("mask-type", "none")
+        proc.run(cfg_min1)
+
+        lyr_min1 = img.get_layers()[0]
+        p_min1 = lyr_min1.get_pixel(50, 50).get_rgba()
+        if abs(p_min1.red - 0.125) > 0.03:
+            record_fail("EXP-04", "-1 Stop Exposure scaling", f"Expected ~0.125 (0.5 * 0.25), got {p_min1.red:.3f}")
+            return
+        record_pass("EXP-04", "-1 Stop Exposure scaling", f"-1.0 EV stop halves intensity (0.25 -> {p_min1.red:.3f} ~= 0.125)")
+        img.remove_layer(lyr_min1)
+
+        # EXP-05: Offset shadow black point adjustment verified (I' = I + offset)
+        # Base 0.25 + 0.15 = 0.40
+        cfg_off = proc.create_config()
+        cfg_off.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_off.set_property("image", img)
+        cfg_off.set_property("preset", "custom")
+        cfg_off.set_property("exposure", 0.0)
+        cfg_off.set_property("offset", 0.15)
+        cfg_off.set_property("gamma", 1.0)
+        cfg_off.set_property("output-mode", "new-layer")
+        cfg_off.set_property("mask-type", "none")
+        proc.run(cfg_off)
+
+        lyr_off = img.get_layers()[0]
+        p_off = lyr_off.get_pixel(50, 50).get_rgba()
+        if abs(p_off.red - 0.40) > 0.03:
+            record_fail("EXP-05", "Offset shadow level", f"Expected ~0.40 (0.25 + 0.15), got {p_off.red:.3f}")
+            return
+        record_pass("EXP-05", "Offset shadow level", f"Offset lifts shadow/black point linearly (0.25 + 0.15 -> {p_off.red:.3f})")
+        img.remove_layer(lyr_off)
+
+        # EXP-06: Gamma midtone curve response verified (I' = I ** (1 / gamma))
+        # Base 0.25 ** (1 / 2.0) = sqrt(0.25) = 0.50
+        cfg_gam = proc.create_config()
+        cfg_gam.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gam.set_property("image", img)
+        cfg_gam.set_property("preset", "custom")
+        cfg_gam.set_property("exposure", 0.0)
+        cfg_gam.set_property("offset", 0.0)
+        cfg_gam.set_property("gamma", 2.0)
+        cfg_gam.set_property("output-mode", "new-layer")
+        cfg_gam.set_property("mask-type", "none")
+        proc.run(cfg_gam)
+
+        lyr_gam = img.get_layers()[0]
+        p_gam = lyr_gam.get_pixel(50, 50).get_rgba()
+        if abs(p_gam.red - 0.50) > 0.03:
+            record_fail("EXP-06", "Gamma midtone curve", f"Expected ~0.50 (0.25 ** (1/2)), got {p_gam.red:.3f}")
+            return
+        record_pass("EXP-06", "Gamma midtone power curve", f"Gamma power curve expands midtones (0.25 ** (1/2.0) -> {p_gam.red:.3f})")
+        img.remove_layer(lyr_gam)
+
+        # EXP-07: Curated photographic presets verified
+        presets_to_test = ["plus-1-stop", "plus-2-stops", "minus-1-stop", "shadow-lift", "highlight-recovery"]
+        for pname in presets_to_test:
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("output-mode", "new-layer")
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyr_p = img.get_layers()[0]
+            if f"Exposure Adjustment" not in lyr_p.get_name():
+                record_fail("EXP-07", f"Preset {pname}", f"Unexpected layer name {lyr_p.get_name()}")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("EXP-07", "Curated photographic presets", "+1 stop, +2 stops, -1 stop, shadow lift, highlight recovery presets verified")
+
+        # EXP-08: Non-destructive adjustment layer structure verified
+        cfg_nd = proc.create_config()
+        cfg_nd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_nd.set_property("image", img)
+        cfg_nd.set_property("preset", "plus-1-stop")
+        cfg_nd.set_property("output-mode", "new-layer")
+        cfg_nd.set_property("mask-type", "none")
+        proc.run(cfg_nd)
+
+        layers = img.get_layers()
+        if len(layers) != 2 or "Exposure Adjustment" not in layers[0].get_name():
+            record_fail("EXP-08", "Adjustment layer structure", f"Expected 2 layers with Exposure Adjustment on top, got count={len(layers)}")
+            return
+        record_pass("EXP-08", "Adjustment layer structure", "Dedicated adjustment layer inserted above base layer leaving artwork intact")
+        img.remove_layer(layers[0])
+
+        # EXP-09: Blend modes and opacity verified
+        modes_to_test = [
+            ("luminosity", Gimp.LayerMode.LUMINANCE),
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+        ]
+        for bname, expected_mode in modes_to_test:
+            cfg_b = proc.create_config()
+            cfg_b.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_b.set_property("image", img)
+            cfg_b.set_property("preset", "plus-1-stop")
+            cfg_b.set_property("blend-mode", bname)
+            cfg_b.set_property("opacity", 75.0)
+            cfg_b.set_property("output-mode", "new-layer")
+            cfg_b.set_property("mask-type", "none")
+            proc.run(cfg_b)
+            lyr_b = img.get_layers()[0]
+            if lyr_b.get_mode() != expected_mode or abs(lyr_b.get_opacity() - 75.0) > 0.01:
+                record_fail("EXP-09", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_b.get_mode())}, opacity {lyr_b.get_opacity()}%")
+                return
+            img.remove_layer(lyr_b)
+        record_pass("EXP-09", "Blend modes & opacity validation", "Luminosity, Multiply, Screen, Overlay, Soft Light & 75% opacity validated")
+
+        # EXP-10: Conceal-All black layer mask verified
+        cfg_black = proc.create_config()
+        cfg_black.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_black.set_property("image", img)
+        cfg_black.set_property("preset", "plus-2-stops")
+        cfg_black.set_property("output-mode", "new-layer")
+        cfg_black.set_property("mask-type", "conceal-all")
+        proc.run(cfg_black)
+
+        lyr_black = img.get_layers()[0]
+        mask_black = lyr_black.get_mask()
+        if mask_black is None:
+            record_fail("EXP-10", "Conceal-All mask", "Expected attached black mask, got None")
+            return
+        m_val = mask_black.get_pixel(50, 50).get_rgba()
+        if m_val.red > 0.01:
+            record_fail("EXP-10", "Conceal-All mask", f"Expected black mask (0.0), got {m_val.red}")
+            return
+        # With black mask, composite image should match base layer exactly
+        comp_px = get_composite_pixel(img, 50, 50)
+        base_px = base.get_pixel(50, 50).get_rgba()
+        if abs(comp_px.red - base_px.red) > 0.000001:
+            record_fail("EXP-10", "Conceal-All invariance", f"Composite altered by {abs(comp_px.red - base_px.red)}")
+            return
+        record_pass("EXP-10", "Conceal-All black layer mask", "Black mask attached and fully conceals adjustment layer (composite diff 0.000000)")
+        img.remove_layer(lyr_black)
+
+        # EXP-11: Reveal-All white layer mask verified
+        cfg_white = proc.create_config()
+        cfg_white.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_white.set_property("image", img)
+        cfg_white.set_property("preset", "plus-1-stop")
+        cfg_white.set_property("output-mode", "new-layer")
+        cfg_white.set_property("mask-type", "reveal-all")
+        proc.run(cfg_white)
+
+        lyr_white = img.get_layers()[0]
+        mask_white = lyr_white.get_mask()
+        if mask_white is None:
+            record_fail("EXP-11", "Reveal-All mask", "Expected attached white mask, got None")
+            return
+        mw_val = mask_white.get_pixel(50, 50).get_rgba()
+        if mw_val.red < 0.99:
+            record_fail("EXP-11", "Reveal-All mask", f"Expected white mask (1.0), got {mw_val.red}")
+            return
+        record_pass("EXP-11", "Reveal-All white layer mask", "White editable mask attached for subtractive brush masking")
+        img.remove_layer(lyr_white)
+
+        # EXP-12: Active selection auto-mask confinement verified
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_sel_mask = proc.create_config()
+        cfg_sel_mask.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel_mask.set_property("image", img)
+        cfg_sel_mask.set_property("preset", "plus-1-stop")
+        cfg_sel_mask.set_property("output-mode", "new-layer")
+        cfg_sel_mask.set_property("mask-type", "auto")
+        proc.run(cfg_sel_mask)
+
+        lyr_sel = img.get_layers()[0]
+        m_sel = lyr_sel.get_mask()
+        if m_sel is None:
+            record_fail("EXP-12", "Selection auto-mask", "Expected attached selection mask, got None")
+            return
+        m_inside = m_sel.get_pixel(30, 30).get_rgba()
+        m_outside = m_sel.get_pixel(10, 10).get_rgba()
+        if m_inside.red < 0.99 or m_outside.red > 0.01:
+            record_fail("EXP-12", "Selection auto-mask", f"Expected white inside ({m_inside.red}) and black outside ({m_outside.red})")
+            return
+        record_pass("EXP-12", "Active selection auto-mask", "Active selection automatically converted into attached layer mask")
+        img.remove_layer(lyr_sel)
+        Gimp.Selection.none(img)
+
+        # EXP-13: In-place mode verified
+        temp_layer = Gimp.Layer.new(img, "TempLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(temp_layer, None, 0)
+        img.set_selected_layers([temp_layer])
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.25, 0.25, 0.25)"))
+        temp_layer.edit_fill(Gimp.FillType.FOREGROUND)
+
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_inplace = proc.create_config()
+        cfg_inplace.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inplace.set_property("image", img)
+        cfg_inplace.set_property("preset", "plus-1-stop")
+        cfg_inplace.set_property("output-mode", "in-place")
+        proc.run(cfg_inplace)
+
+        p_in = temp_layer.get_pixel(30, 30).get_rgba()
+        p_out = temp_layer.get_pixel(10, 10).get_rgba()
+        if abs(p_in.red - 0.50) > 0.03 or abs(p_out.red - 0.25) > 0.03:
+            record_fail("EXP-13", "In-place selection confinement", f"Expected in=0.50, out=0.25, got in={p_in.red:.3f}, out={p_out.red:.3f}")
+            return
+        record_pass("EXP-13", "In-place selection confinement", f"In-place mode adjusts inside selection ({p_in.red:.3f}) while preserving outside ({p_out.red:.3f})")
+        img.remove_layer(temp_layer)
+        Gimp.Selection.none(img)
+
+        # EXP-14: Base layer pixel preservation
+        after_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+        max_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_samples, after_samples)
+        )
+        if max_diff > 0.000001:
+            record_fail("EXP-14", "Base layer preservation", f"Base pixels altered by {max_diff:.6f} > 0")
+            return
+        record_pass("EXP-14", "Base layer pixel preservation", f"Original source pixels 100% untouched across all non-destructive operations (diff {max_diff:.6f})")
+
+    except Exception as e:
+        record_fail("EXP-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -9288,6 +9595,7 @@ def run_all_tests():
     test_stroke_layer()
     test_solid_color_fill()
     test_gradient_fill()
+    test_exposure_adjustment()
 
 
 

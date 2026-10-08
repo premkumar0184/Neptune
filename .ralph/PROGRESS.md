@@ -1337,3 +1337,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `dc15362`.
 - **Result**: Success.
 - **Next**: Phase 53 — Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin.
+
+## Iteration 55 — Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin
+- **Date**: 2026-10-08
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Solid Color Fill Layer & Canvas Fill Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 93, 101, 103, 353, 357, 358: "Color adjustment and fill layers", "Create fill layers", "Change adjustment and fill layer options", "Fill objects, selections, and layers", "Fill the work canvas", "Fill a selection or layer with color", and `photoshop_docs.md` Section 348 lines 10380-10416: "Edit > Fill", `fill-selection-layer-color.html`: "Learn how to add a solid color fill to any selection or layer in professional photoeditor to enhance your designs and speed up your editing process. Under Contents, select Foreground Color, Background Color, Black, 50% Gray, White, or Color. Under Blending, select Mode and Opacity. Select Preserve Transparency to fill only non-transparent areas"). In Photoshop, Solid Color Fill Layers (`Layer > New Fill Layer > Solid Color...`) provide flexible, non-destructive color foundations and tinting by creating a full-canvas colored layer with active selections converted automatically into an attached editable layer mask. Stock GIMP provides only destructive bucket fill and drawable edit fill, lacking automatic fill layer creation, selection mask auto-attachment, color presets (50% Neutral Gray, Black, White, Foreground, Background, Custom RGB), blend modes, opacity, and preserve transparency alpha locking. Implementing `solid-color-fill.py` brings complete Photoshop parity to Linux photo editing with `python-fu-solid-color-fill`: 6 color sources, 3 fill scopes (Solid Color Fill Layer, Selection-Only, In-Place), 6 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity slider, layer mask options (Auto selection mask, None, Reveal-All, Conceal-All, Selection), preserve transparency alpha locking, and single-step `Ctrl+Z` undo protection.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-solid-color-fill` with 6 color presets, 3 fill scopes, full canvas fill with selection mask conversion, preserve transparency alpha locking, 6 blend modes, and interactive procedure dialog.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `solid-color-fill` (47 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (47 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 48: `test_solid_color_fill` (asserting SCF-01 through SCF-14: PDB registration, procedure argument schema, SUCCESS status, Foreground color fill `[1.0, 0.402, 0.1]`, Background color fill `[0.597, 0.202, 0.799]`, 50% Neutral Gray `[0.503, 0.503, 0.503]`, Solid Black `[0.0, 0.0, 0.0]`, Solid White `[1.0, 1.0, 1.0]`, Custom cyan RGB `[0.0, 1.0, 1.0]`, Solid Color Fill Layer with selection mask [full canvas filled under mask, mask matches selection], Selection-only fill scope confinement, Blend modes Multiply, Screen, Overlay, Soft Light, HSL Color & 60% opacity, Preserve Transparency in-place [opaque filled, transparent preserved], Conceal-All black layer mask composite invariance `diff == 0.000000`, and base layer pixel preservation `diff == 0.000000`). Total tests increased to 503 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Solid Color Fill Layer & Canvas Fill Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 53 complete and scheduled Phase 54 (Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin).
+- **Technical discoveries**:
+  - In Photoshop Solid Color Fill Layer architecture, when a selection is active, the fill layer is created covering the entire canvas and filled solid, and the selection is attached as an editable layer mask. This ensures painting on the mask later reveals the solid color across the entire image.
+  - GIMP 3.x PyGObject `Gimp.Layer.get_lock_alpha()` and `Gimp.Layer.set_lock_alpha(True)` accurately mirror Photoshop's "Preserve Transparency" checkbox during in-place fills, protecting transparent pixels from receiving paint.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 47 plugins verified).
+    - Stage 2: `install.sh --batch` passed (47 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 503 tests across 48 test suites in 49.74s.
+    - Final quality gate: SUCCESS across all stages in 64.46s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `eea8edd`.
+- **Result**: Success.
+- **Next**: Phase 54 — Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin.

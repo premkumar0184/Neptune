@@ -797,6 +797,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Solid Color Fill Layer & Canvas Fill Helper
+- **Source topic**: Color adjustment and fill layers - Create fill layers / Fill objects, selections, and layers - Fill a selection or layer with color / Fill the work canvas (`Topics.txt` lines 93, 101, 103, 353, 357, 358, `photoshop_docs.md` Section 348 lines 10380-10416)
+- **Photoshop behavior**: Layer > New Fill Layer > Solid Color: creates a full-canvas layer filled with a solid color, automatically converting any active selection into an attached layer mask. Edit > Fill (Contents: Foreground, Background, Black, 50% Gray, White, Color) with blend modes, opacity, and Preserve Transparency option.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `solid-color-fill` providing `python-fu-solid-color-fill` in `<Image>/Layer/New Fill Layer/Solid Color...`, `<Image>/Edit/Fill with Solid Color...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`.
+- **Current capability**: Non-destructive solid color fill generation with 6 color presets (Foreground, Background, 50% Neutral Gray #808080, Solid Black, Solid White, Custom RGB sliders), 3 fill scopes (Solid Color Fill Layer: full canvas with selection mask, Selection Only: new layer confined to selection, In-Place: active layer fill with preserve transparency alpha locking), professional blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity slider (0-100%), editable layer mask attachment (Auto selection mask, None, Reveal-All, Conceal-All, Active Selection), and single-step `Ctrl+Z` undo protection. Original source layer pixels remain 100% untouched (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.get_selected_layers`, `image.insert_layer`, `target_layer.edit_fill`, `target_layer.set_lock_alpha`, `Gimp.FillType.FOREGROUND`, `Gimp.AddMaskType.SELECTION`, `Gimp.AddMaskType.WHITE`, `Gimp.AddMaskType.BLACK`).
+- **Implementation priority**: High (Phase 53).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema, execution status (SUCCESS), Foreground color fill fidelity, Background color fill fidelity, 50% Neutral Gray exact values (R=0.503, G=0.503, B=0.503), Solid Black (0.000), Solid White (1.000), Custom cyan RGB, Solid Color Fill Layer with active selection auto-mask (full canvas layer with selection converted to mask), Selection-only fill scope confinement, blend modes (Multiply, Screen, Overlay, Soft Light, HSL Color) & 60% opacity, Preserve Transparency in-place fill (opaque filled, transparent preserved), Conceal-All black layer mask composite invariance (`diff == 0.000000`), and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 55):
+  1. `verify_config.py`: Section 6 passed with 47 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-solid-color-fill`), procedure arguments verified across all 9 properties, execution status SUCCESS verified, Foreground color fill verified ([R=1.000, G=0.402, B=0.100]), Background color fill verified ([R=0.597, G=0.202, B=0.799]), 50% Neutral Gray verified ([R=0.503, G=0.503, B=0.503]), Solid Black verified ([0.0, 0.0, 0.0]), Solid White verified ([1.0, 1.0, 1.0]), Custom RGB cyan verified ([0.0, 1.0, 1.0]), Solid Color Fill Layer with selection mask verified (full canvas filled under mask, mask matches selection), Selection-only fill scope verified (confined to selection, outside transparent), Blend modes Multiply, Screen, Overlay, Soft Light, HSL Color & 60% opacity validated, Preserve Transparency in-place verified (opaque filled, transparent preserved), Conceal-All black layer mask composite invariance verified (`diff == 0.000000`), and base layer pixels 100% untouched (`diff == 0.000000`). Total 503/503 assertions passed. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 55).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

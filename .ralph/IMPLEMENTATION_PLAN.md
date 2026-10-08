@@ -383,13 +383,22 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate stroke width, positioning (inside/center/outside), color fidelity, blend mode assignment, non-destructive layer preservation, and headless GIMP test suite.
 
 ### Phase 53 — Non-Destructive Solid Color Fill Layer & Canvas Fill Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `solid-color-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`.
-- [ ] Create dedicated Solid Color Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Solid Color...` and `Edit > Fill...` (Contents: Color).
-- [ ] Support color sources: Foreground Color, Background Color, 50% Neutral Gray (#808080), Solid Black (#000000), Solid White (#ffffff), and Custom RGB sliders.
-- [ ] Support fill scopes: Full canvas document fill or active selection confinement.
-- [ ] Support blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color), opacity (0-100%), and editable layer masks (Reveal-All, Conceal-All, Active Selection), preserving underlying base artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Solid Color...`, `<Image>/Edit/Fill with Solid Color...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate color accuracy across all presets, selection mask confinement, blend mode assignment, opacity scaling, non-destructive base layer preservation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `solid-color-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/solid-color-fill/solid-color-fill.py`.
+- [x] Create dedicated Solid Color Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Solid Color...` and `Edit > Fill...` (Contents: Color).
+- [x] Support color sources: Foreground Color, Background Color, 50% Neutral Gray (#808080), Solid Black (#000000), Solid White (#ffffff), and Custom RGB sliders.
+- [x] Support fill scopes: Full canvas document fill or active selection confinement.
+- [x] Support blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color), opacity (0-100%), and editable layer masks (Reveal-All, Conceal-All, Active Selection), preserving underlying base artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/New Fill Layer/Solid Color...`, `<Image>/Edit/Fill with Solid Color...`, and `<Image>/Filters/Retouching`.
+- [x] Validate color accuracy across all presets, selection mask confinement, blend mode assignment, opacity scaling, non-destructive base layer preservation, and headless GIMP test suite.
+
+### Phase 54 — Non-Destructive Gradient Fill Layer & Multi-Style Gradient Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-fill` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-fill/gradient-fill.py`.
+- [ ] Create dedicated Gradient Fill Layer helper simulating Photoshop `Layer > New Fill Layer > Gradient...` and Gradient tool fill workflows (`Topics.txt` lines 101, 342, 343; `photoshop_docs.md` Section 336-337).
+- [ ] Support gradient types / styles: Linear, Radial, Angle (conical), Reflected (symmetric bilateral linear), and Diamond (shaped).
+- [ ] Support gradient color presets (Foreground to Background, Foreground to Transparent, Black to White, Neutral Vintage Warm, Sunset Horizon, Cyberpunk Neon, Metallic Silver) and custom start/end colors.
+- [ ] Support gradient controls: Angle (-180° to 180°), Scale (10% to 200%), Reverse gradient toggle, Dither toggle, blend modes (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color), opacity (0-100%), and attached editable layer masks (Reveal-All, Conceal-All, Active Selection).
+- [ ] Register under menu path `<Image>/Layer/New Fill Layer/Gradient...`, `<Image>/Edit/Fill with Gradient...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate gradient style geometry, angle rotation, scale expansion, color transition accuracy, reverse toggle, blend modes, layer mask attachment, and non-destructive base layer preservation via headless GIMP test suite.
 
 
 

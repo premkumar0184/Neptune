@@ -118,6 +118,7 @@ def test_pdb_registration():
         ("python-fu-pattern-preview", "Pattern Tile Preview Helper"),
         ("python-fu-pattern-fill", "Fill with Pattern Tile Helper"),
         ("python-fu-stroke-layer", "Selection & Layer Stroke Helper"),
+        ("python-fu-solid-color-fill", "Solid Color Fill Layer & Canvas Fill Helper"),
     ]
 
 
@@ -8600,6 +8601,301 @@ def test_stroke_layer():
         img.delete()
 
 
+def test_solid_color_fill():
+    print("\n--- Test Suite 48: Solid Color Fill Layer & Canvas Fill Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-solid-color-fill")
+    if proc is None:
+        record_fail("SCF-01", "Procedure lookup", "Procedure python-fu-solid-color-fill not found in PDB")
+        return
+
+    # SCF-01: Procedure arguments verification
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "color-source", "custom-r", "custom-g", "custom-b",
+        "fill-scope", "blend-mode", "opacity", "mask-type",
+        "preserve-transparency"
+    ]
+    missing = [a for a in expected_args if a not in args]
+    if missing:
+        record_fail("SCF-01", "Procedure argument signatures", f"Missing arguments: {missing} (found: {args})")
+        return
+    record_pass("SCF-01", "Procedure lookup & argument signatures", f"All {len(expected_args)} arguments verified ({args})")
+
+    # Create a 100x100 RGB image with distinctive baseline content
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "BaseLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    img.set_selected_layers([base])
+
+    # Fill base layer with color: R=0.2, G=0.4, B=0.6
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.4, 0.6)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    orig_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # SCF-02: Execution status verified (PDB status SUCCESS)
+        cfg_test = proc.create_config()
+        cfg_test.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_test.set_property("image", img)
+        cfg_test.set_property("color-source", "foreground")
+        cfg_test.set_property("fill-scope", "new-fill-layer")
+        cfg_test.set_property("mask-type", "none")
+        res = proc.run(cfg_test)
+        if res.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SCF-02", "PDB execution status", f"Expected SUCCESS (3), got {res.index(0)}")
+            return
+        record_pass("SCF-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+        test_lyr = img.get_layers()[0]
+        img.remove_layer(test_lyr)
+
+        # SCF-03: Foreground color fill verified
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.4, 0.1)"))
+        cfg_fg = proc.create_config()
+        cfg_fg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fg.set_property("image", img)
+        cfg_fg.set_property("color-source", "foreground")
+        cfg_fg.set_property("fill-scope", "new-fill-layer")
+        cfg_fg.set_property("mask-type", "none")
+        proc.run(cfg_fg)
+        fg_layer = img.get_layers()[0]
+        p_fg = fg_layer.get_pixel(50, 50).get_rgba()
+        if abs(p_fg.red - 1.0) > 0.02 or abs(p_fg.green - 0.4) > 0.02 or abs(p_fg.blue - 0.1) > 0.02:
+            record_fail("SCF-03", "Foreground color fill", f"Expected [1.0, 0.4, 0.1], got [{p_fg.red:.3f}, {p_fg.green:.3f}, {p_fg.blue:.3f}]")
+            return
+        record_pass("SCF-03", "Foreground color fill", f"Context foreground filled ([R={p_fg.red:.3f}, G={p_fg.green:.3f}, B={p_fg.blue:.3f}])")
+        img.remove_layer(fg_layer)
+
+        # SCF-04: Background color fill verified
+        Gimp.context_set_background(Gegl.Color.new("rgb(0.6, 0.2, 0.8)"))
+        cfg_bg = proc.create_config()
+        cfg_bg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_bg.set_property("image", img)
+        cfg_bg.set_property("color-source", "background")
+        cfg_bg.set_property("fill-scope", "new-fill-layer")
+        cfg_bg.set_property("mask-type", "none")
+        proc.run(cfg_bg)
+        bg_layer = img.get_layers()[0]
+        p_bg = bg_layer.get_pixel(50, 50).get_rgba()
+        if abs(p_bg.red - 0.6) > 0.02 or abs(p_bg.green - 0.2) > 0.02 or abs(p_bg.blue - 0.8) > 0.02:
+            record_fail("SCF-04", "Background color fill", f"Expected [0.6, 0.2, 0.8], got [{p_bg.red:.3f}, {p_bg.green:.3f}, {p_bg.blue:.3f}]")
+            return
+        record_pass("SCF-04", "Background color fill", f"Context background filled ([R={p_bg.red:.3f}, G={p_bg.green:.3f}, B={p_bg.blue:.3f}])")
+        img.remove_layer(bg_layer)
+
+        # SCF-05: 50% Neutral Gray fill verified (#808080)
+        cfg_gray = proc.create_config()
+        cfg_gray.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_gray.set_property("image", img)
+        cfg_gray.set_property("color-source", "50-gray")
+        cfg_gray.set_property("fill-scope", "new-fill-layer")
+        cfg_gray.set_property("mask-type", "none")
+        proc.run(cfg_gray)
+        gray_layer = img.get_layers()[0]
+        p_gray = gray_layer.get_pixel(50, 50).get_rgba()
+        if abs(p_gray.red - 0.5) > 0.02 or abs(p_gray.green - 0.5) > 0.02 or abs(p_gray.blue - 0.5) > 0.02:
+            record_fail("SCF-05", "50% Neutral Gray fill", f"Expected ~0.50, got [{p_gray.red:.3f}, {p_gray.green:.3f}, {p_gray.blue:.3f}]")
+            return
+        record_pass("SCF-05", "50% Neutral Gray fill", f"Neutral gray 50% verified ([R={p_gray.red:.3f}, G={p_gray.green:.3f}, B={p_gray.blue:.3f}])")
+        img.remove_layer(gray_layer)
+
+        # SCF-06: Solid Black fill verified (#000000)
+        cfg_black = proc.create_config()
+        cfg_black.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_black.set_property("image", img)
+        cfg_black.set_property("color-source", "black")
+        cfg_black.set_property("fill-scope", "new-fill-layer")
+        cfg_black.set_property("mask-type", "none")
+        proc.run(cfg_black)
+        black_layer = img.get_layers()[0]
+        p_black = black_layer.get_pixel(50, 50).get_rgba()
+        if p_black.red > 0.01 or p_black.green > 0.01 or p_black.blue > 0.01:
+            record_fail("SCF-06", "Solid Black fill", f"Expected [0.0, 0.0, 0.0], got [{p_black.red:.3f}, {p_black.green:.3f}, {p_black.blue:.3f}]")
+            return
+        record_pass("SCF-06", "Solid Black fill", f"Solid black verified ([R={p_black.red:.3f}, G={p_black.green:.3f}, B={p_black.blue:.3f}])")
+        img.remove_layer(black_layer)
+
+        # SCF-07: Solid White fill verified (#ffffff)
+        cfg_white = proc.create_config()
+        cfg_white.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_white.set_property("image", img)
+        cfg_white.set_property("color-source", "white")
+        cfg_white.set_property("fill-scope", "new-fill-layer")
+        cfg_white.set_property("mask-type", "none")
+        proc.run(cfg_white)
+        white_layer = img.get_layers()[0]
+        p_white = white_layer.get_pixel(50, 50).get_rgba()
+        if p_white.red < 0.99 or p_white.green < 0.99 or p_white.blue < 0.99:
+            record_fail("SCF-07", "Solid White fill", f"Expected [1.0, 1.0, 1.0], got [{p_white.red:.3f}, {p_white.green:.3f}, {p_white.blue:.3f}]")
+            return
+        record_pass("SCF-07", "Solid White fill", f"Solid white verified ([R={p_white.red:.3f}, G={p_white.green:.3f}, B={p_white.blue:.3f}])")
+        img.remove_layer(white_layer)
+
+        # SCF-08: Custom RGB color application verified (Cyan: 0.0, 1.0, 1.0)
+        cfg_custom = proc.create_config()
+        cfg_custom.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_custom.set_property("image", img)
+        cfg_custom.set_property("color-source", "custom")
+        cfg_custom.set_property("custom-r", 0.0)
+        cfg_custom.set_property("custom-g", 1.0)
+        cfg_custom.set_property("custom-b", 1.0)
+        cfg_custom.set_property("fill-scope", "new-fill-layer")
+        cfg_custom.set_property("mask-type", "none")
+        proc.run(cfg_custom)
+        custom_layer = img.get_layers()[0]
+        p_cust = custom_layer.get_pixel(50, 50).get_rgba()
+        if p_cust.red > 0.01 or p_cust.green < 0.99 or p_cust.blue < 0.99:
+            record_fail("SCF-08", "Custom RGB fill", f"Expected [0.0, 1.0, 1.0], got [{p_cust.red:.3f}, {p_cust.green:.3f}, {p_cust.blue:.3f}]")
+            return
+        record_pass("SCF-08", "Custom RGB color application", f"Custom cyan RGB verified ([R={p_cust.red:.3f}, G={p_cust.green:.3f}, B={p_cust.blue:.3f}])")
+        img.remove_layer(custom_layer)
+
+        # SCF-09: Solid Color Fill Layer with active selection auto-mask
+        # Create rectangular selection from (20, 20) to (60, 60)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_auto = proc.create_config()
+        cfg_auto.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto.set_property("image", img)
+        cfg_auto.set_property("color-source", "black")
+        cfg_auto.set_property("fill-scope", "new-fill-layer")
+        cfg_auto.set_property("mask-type", "auto")
+        proc.run(cfg_auto)
+
+        auto_layer = img.get_layers()[0]
+        mask = auto_layer.get_mask()
+        if mask is None:
+            record_fail("SCF-09", "Auto selection mask", "No layer mask attached to fill layer")
+            return
+
+        # Sample mask inside selection (40, 40) and outside (10, 10)
+        m_in = mask.get_pixel(40, 40).get_rgba()
+        m_out = mask.get_pixel(10, 10).get_rgba()
+        if m_in.red < 0.99 or m_out.red > 0.01:
+            record_fail("SCF-09", "Auto selection mask", f"Expected mask white inside ({m_in.red:.3f}) and black outside ({m_out.red:.3f})")
+            return
+
+        # Also verify the underlying layer pixel at (10, 10) is filled with black across the canvas under the mask
+        p_under = auto_layer.get_pixel(10, 10).get_rgba()
+        if p_under.alpha < 0.99 or p_under.red > 0.01:
+            record_fail("SCF-09", "Full canvas under mask", f"Expected full canvas solid black under mask, got alpha={p_under.alpha}, red={p_under.red}")
+            return
+        record_pass("SCF-09", "Solid Color Fill Layer with selection mask", "Full-canvas layer filled with selection converted to editable layer mask")
+        img.remove_layer(auto_layer)
+        Gimp.Selection.none(img)
+
+        # SCF-10: Selection-only fill scope verified
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 40, 40)
+        cfg_sel_only = proc.create_config()
+        cfg_sel_only.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel_only.set_property("image", img)
+        cfg_sel_only.set_property("color-source", "white")
+        cfg_sel_only.set_property("fill-scope", "selection-only")
+        cfg_sel_only.set_property("mask-type", "none")
+        proc.run(cfg_sel_only)
+
+        sel_layer = img.get_layers()[0]
+        p_in_sel = sel_layer.get_pixel(40, 40).get_rgba()
+        p_out_sel = sel_layer.get_pixel(10, 10).get_rgba()
+        if p_in_sel.alpha < 0.99 or p_in_sel.red < 0.99 or p_out_sel.alpha > 0.01:
+            record_fail("SCF-10", "Selection-only fill scope", f"Expected opaque white inside (a={p_in_sel.alpha}, r={p_in_sel.red}) and transparent outside (a={p_out_sel.alpha})")
+            return
+        record_pass("SCF-10", "Selection-only fill scope", "New layer contains fill strictly inside active selection boundary")
+        img.remove_layer(sel_layer)
+        Gimp.Selection.none(img)
+
+        # SCF-11: Blend modes and opacity verified
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+        ]
+        for bname, expected_mode in modes_to_test:
+            cfg_b = proc.create_config()
+            cfg_b.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_b.set_property("image", img)
+            cfg_b.set_property("color-source", "50-gray")
+            cfg_b.set_property("blend-mode", bname)
+            cfg_b.set_property("opacity", 60.0)
+            cfg_b.set_property("fill-scope", "new-fill-layer")
+            cfg_b.set_property("mask-type", "none")
+            proc.run(cfg_b)
+
+            b_layer = img.get_layers()[0]
+            if b_layer.get_mode() != expected_mode or abs(b_layer.get_opacity() - 60.0) > 0.01:
+                record_fail("SCF-11", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(b_layer.get_mode())}, opacity {b_layer.get_opacity()}%")
+                return
+            img.remove_layer(b_layer)
+        record_pass("SCF-11", "Blend modes & opacity validation", "Multiply, Screen, Overlay, Soft Light, HSL Color & 60% opacity validated")
+
+        # SCF-12: Preserve transparency in-place fill verified
+        # Create a layer where left half is filled and right half is transparent
+        half_layer = Gimp.Layer.new(img, "HalfLayer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(half_layer, None, 0)
+        img.set_selected_layers([half_layer])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.3, 0.3)"))
+        half_layer.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        # Run fill in-place with preserve-transparency=True and white color
+        cfg_pt = proc.create_config()
+        cfg_pt.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pt.set_property("image", img)
+        cfg_pt.set_property("color-source", "white")
+        cfg_pt.set_property("fill-scope", "in-place")
+        cfg_pt.set_property("preserve-transparency", True)
+        proc.run(cfg_pt)
+
+        p_left = half_layer.get_pixel(25, 50).get_rgba()
+        p_right = half_layer.get_pixel(75, 50).get_rgba()
+        if p_left.alpha < 0.99 or p_left.red < 0.99 or p_right.alpha > 0.01:
+            record_fail("SCF-12", "Preserve transparency", f"Expected opaque white at (25,50) (a={p_left.alpha}, r={p_left.red}) and transparent at (75,50) (a={p_right.alpha})")
+            return
+        record_pass("SCF-12", "Preserve transparency in-place", f"Opaque pixels filled (a={p_left.alpha:.2f}, r={p_left.red:.2f}) while transparent pixels preserved (a={p_right.alpha:.2f})")
+        img.remove_layer(half_layer)
+
+        # SCF-13: Conceal-All black layer mask verified
+        img.set_selected_layers([base])
+        cfg_cmask = proc.create_config()
+        cfg_cmask.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cmask.set_property("image", img)
+        cfg_cmask.set_property("color-source", "white")
+        cfg_cmask.set_property("fill-scope", "new-fill-layer")
+        cfg_cmask.set_property("mask-type", "conceal-all")
+        proc.run(cfg_cmask)
+
+        cmask_layer = img.get_layers()[0]
+        cmask = cmask_layer.get_mask()
+        if cmask is None:
+            record_fail("SCF-13", "Conceal-all mask", "No layer mask attached")
+            return
+        m_sample = cmask.get_pixel(50, 50).get_rgba()
+        if m_sample.red > 0.01:
+            record_fail("SCF-13", "Conceal-all mask", f"Expected black mask (0.0), got {m_sample.red:.3f}")
+            return
+        record_pass("SCF-13", "Conceal-All black layer mask", "Conceal-all mask initialized with solid black (0.000000)")
+        img.remove_layer(cmask_layer)
+
+        # SCF-14: Base layer pixel preservation
+        after_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+        max_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_samples, after_samples)
+        )
+        if max_diff > 0.000001:
+            record_fail("SCF-14", "Base layer preservation", f"Base pixels altered by {max_diff:.6f} > 0")
+            return
+        record_pass("SCF-14", "Base layer pixel preservation", f"Original source pixels 100% untouched across all non-destructive operations (diff {max_diff:.6f})")
+
+    except Exception as e:
+        record_fail("SCF-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -8657,6 +8953,7 @@ def run_all_tests():
     test_frame_animation()
     test_seamless_pattern()
     test_stroke_layer()
+    test_solid_color_fill()
 
 
 

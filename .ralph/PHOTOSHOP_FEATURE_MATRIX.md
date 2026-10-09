@@ -1115,6 +1115,29 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Layer Comps & Composition Variations Manager Plugin
+- **Source topic**: Create and manage layer comps (`Topics.txt` lines 138-141; `photoshop_docs.md` Section 145 lines 4175-4268: "Create and manage layer comps - Capture multiple design variations in a single file using snapshots of layer visibility, position, and appearance")
+- **Photoshop behavior**: Captures snapshots of the Layers panel recording layer visibility, spatial position / offsets, and appearance (opacity and blend mode). Supports creating, applying, cycling (next/previous), updating, deleting comps, resilience against missing/deleted layers with warnings, and exporting all or selected comps to separate PNG/JPEG files (`File > Export > Layer Comps To Files`).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `layer-comps` (`python-fu-create-layer-comp`, `python-fu-apply-layer-comp`, `python-fu-cycle-layer-comp`, `python-fu-update-layer-comp`, `python-fu-delete-layer-comp`, `python-fu-export-layer-comps`) registered in `<Image>/Layer/Layer Comps`, `<Image>/Window/Layer Comps`, and `<Image>/File/Export`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
+- **Current capability**:
+  1. `python-fu-create-layer-comp`: Captures active layer stack state (visibility, offsets, opacity, mode) with configurable recording toggles and optional comments into persistent document parasite `photogimp/layer-comps`.
+  2. `python-fu-apply-layer-comp`: Restores recorded layer visibility, position offsets, and appearance for all captured layers.
+  3. `python-fu-cycle-layer-comp`: Cycles forward (Next) or backward (Previous) through document comps.
+  4. `python-fu-update-layer-comp`: Updates an existing comp snapshot with the current layer states.
+  5. `python-fu-delete-layer-comp`: Removes a single comp or all comps (`__ALL__`) from document.
+  6. `python-fu-export-layer-comps`: Exports each comp variation as a separate PNG or JPEG image to disk, restoring original canvas state cleanly after export.
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject, `Gio.File`, PDB export procedures (`file-png-export`, `file-jpeg-export`).
+- **Implementation priority**: High (Phase 71).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 6 procedures (LC-01), persistent parasite storage (LC-02), visibility restoration (LC-03), position offsets restoration (LC-04), appearance restoration (LC-05), selective recording for visibility only (LC-06), position only (LC-07), appearance only (LC-08), comp updates (LC-09), cycle next/prev navigation (LC-10), single and clear-all deletion (LC-11), missing layer resilience (LC-12), PNG file export (LC-13), JPEG file export (LC-14), pre-export document state restoration (LC-15), and base canvas preservation (`diff == 0.000000`, LC-16).
+- **Verification evidence** (Iteration 73):
+  1. `verify_config.py`: Section 6 passed with 65 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions LC-01 through LC-16 passing in Test Suite 66.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 73).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

@@ -536,18 +536,25 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate non-destructive filter re-application, filter mask preservation across edits, presets, and headless GIMP test suite (assertions SF-01 to SF-16).
 
 ### Phase 71 — Layer Comps & Composition Variations Manager Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `layer-comps` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
-- [ ] Simulate Photoshop `Window > Layer Comps` (`Topics.txt` lines 138-140; `photoshop_docs.md` Section 131-135 lines 3880-4020: "Layer comps - overview", "Create layer comps", "Apply and view layer comps", "Export layer comps").
-- [ ] Support capturing layer state snapshots (Visibility, Position / Offsets, Appearance / Opacity & Blend Mode), switching between comps, updating comps, and exporting variations.
-- [ ] Register under menu path `<Image>/Layer/Layer Comps...` and `<Image>/File/Export Layer Comps...`.
-- [ ] Validate snapshot persistence in image parasites (`photogimp/layer-comps`), state restoration, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `layer-comps` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
+- [x] Simulate Photoshop `Window > Layer Comps` (`Topics.txt` lines 138-141; `photoshop_docs.md` Section 145 lines 4175-4268: "Create and manage layer comps - Capture multiple design variations in a single file using snapshots of layer visibility, position, and appearance... Create a new layer comp... Apply and view layer comps... Update a layer comp... Clear layer comp warnings... Delete a layer comp... Export layer comps to files").
+- [x] Support capturing layer state snapshots (Visibility, Position / Offsets, Appearance / Opacity & Blend Mode), switching between comps, updating comps, cycle next/prev navigation, and exporting variations to PNG/JPEG.
+- [x] Register under menu path `<Image>/Layer/Layer Comps`, `<Image>/Window/Layer Comps`, and `<Image>/File/Export`.
+- [x] Validate snapshot persistence in image parasites (`photogimp/layer-comps`), selective property recording, missing layer resilience, file export, and headless GIMP test suite (assertions LC-01 to LC-16).
 
 ### Phase 72 — History States & Edit Session Audit Log Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `history-log` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
-- [ ] Simulate Photoshop `Edit > Preferences > History Log` and Snapshot Management (`Topics.txt` lines 141-150; `photoshop_docs.md` Section 136-140: "Save a history log", "Work with the History panel", "Create and use snapshots").
+- [ ] Simulate Photoshop `Edit > Preferences > History Log` and Snapshot Management (`Topics.txt` lines 35-40; `photoshop_docs.md` Section 136-140: "Save a history log", "Work with the History panel", "Create and use snapshots", "Manage image states").
 - [ ] Support recording detailed non-destructive undo session history, exporting audit logs to text/metadata, and creating named image state snapshots.
 - [ ] Register under menu path `<Image>/Edit/History Log...` and `<Image>/Edit/Create Snapshot...`.
 - [ ] Validate session history tracking, snapshot isolation, and headless GIMP test suite.
+
+### Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `placeholder-frames` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
+- [ ] Simulate Photoshop Frame Tool (`Topics.txt` lines 150-155: "Draw frames", "Convert shapes or text to frames", "Place an image into a frame", "Select a frame and its content", "Add a stroke to a frame").
+- [ ] Support creating rectangular / elliptical placeholder frames, placing images into frames with auto-fitting (Fill, Fit, Stretch), and stroke boundary styling.
+- [ ] Register under menu path `<Image>/Layer/Frames...` and `<Image>/Tools/Transform Tools/Frame...`.
+- [ ] Validate frame container hierarchy, clipping mask geometry, and headless GIMP test suite.
 
 
 

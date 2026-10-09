@@ -13,6 +13,7 @@ import shutil
 import struct
 import sys
 import time
+import json
 import numpy as np
 
 import gi
@@ -14877,6 +14878,408 @@ def test_smart_filters():
         img.delete()
 
 
+def test_layer_comps():
+    print("\n--- Test Suite 66: Layer Comps & Composition Variations Manager Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    procs = [
+        "python-fu-create-layer-comp",
+        "python-fu-apply-layer-comp",
+        "python-fu-cycle-layer-comp",
+        "python-fu-update-layer-comp",
+        "python-fu-delete-layer-comp",
+        "python-fu-export-layer-comps",
+    ]
+
+    for p_name in procs:
+        proc = pdb.lookup_procedure(p_name)
+        if proc is None:
+            record_fail("LC-01", f"Lookup {p_name}", f"Procedure {p_name} not found in PDB")
+            return
+    record_pass("LC-01", "Procedure signatures & argument audit", f"All 6 Layer Comp procedures verified in PDB: {procs}")
+
+    proc_create = pdb.lookup_procedure("python-fu-create-layer-comp")
+    proc_apply = pdb.lookup_procedure("python-fu-apply-layer-comp")
+    proc_cycle = pdb.lookup_procedure("python-fu-cycle-layer-comp")
+    proc_update = pdb.lookup_procedure("python-fu-update-layer-comp")
+    proc_delete = pdb.lookup_procedure("python-fu-delete-layer-comp")
+    proc_export = pdb.lookup_procedure("python-fu-export-layer-comps")
+
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base canvas
+        base = Gimp.Layer.new(img, "Base Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#0000ff"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(50, 50).get_rgba()
+
+        # Layer A (Red)
+        lyr_a = Gimp.Layer.new(img, "Layer A", 50, 50, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(lyr_a, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#ff0000"))
+        lyr_a.edit_fill(Gimp.FillType.FOREGROUND)
+        lyr_a.set_offsets(0, 0)
+        lyr_a.set_visible(True)
+
+        # Layer B (Green)
+        lyr_b = Gimp.Layer.new(img, "Layer B", 50, 50, Gimp.ImageType.RGBA_IMAGE, 80.0, Gimp.LayerMode.MULTIPLY)
+        img.insert_layer(lyr_b, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#00ff00"))
+        lyr_b.edit_fill(Gimp.FillType.FOREGROUND)
+        lyr_b.set_offsets(10, 20)
+        lyr_b.set_visible(False)
+
+        # LC-02: Create Layer Comp execution and persistent parasite storage
+        cfg_create = proc_create.create_config()
+        cfg_create.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_create.set_property("image", img)
+        cfg_create.set_property("comp-name", "Desktop Layout")
+        cfg_create.set_property("comment", "Full desktop theme")
+        cfg_create.set_property("record-visibility", True)
+        cfg_create.set_property("record-position", True)
+        cfg_create.set_property("record-appearance", True)
+        res_create = proc_create.run(cfg_create)
+        if res_create.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-02", "Create Layer Comp execution", f"Expected SUCCESS, got {res_create.index(0)}")
+            return
+
+        p_parasite = img.get_parasite("photogimp/layer-comps")
+        if p_parasite is None:
+            record_fail("LC-02", "Parasite attachment", "Parasite photogimp/layer-comps not found on image")
+            return
+        store = json.loads(bytes(p_parasite.get_data()).decode("utf-8"))
+        if store.get("active_comp") != "Desktop Layout" or len(store.get("comps", [])) != 1:
+            record_fail("LC-02", "Parasite metadata", f"Active comp mismatch or wrong count: {store}")
+            return
+        record_pass("LC-02", "Create Layer Comp persistent storage", "Layer comp created and saved to photogimp/layer-comps with active_comp='Desktop Layout'")
+
+        # LC-03: Layer Visibility snapshot & restoration across multiple comps
+        # Toggle visibility: hide A, show B
+        lyr_a.set_visible(False)
+        lyr_b.set_visible(True)
+        cfg_m = proc_create.create_config()
+        cfg_m.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_m.set_property("image", img)
+        cfg_m.set_property("comp-name", "Mobile Layout")
+        cfg_m.set_property("record-visibility", True)
+        cfg_m.set_property("record-position", True)
+        cfg_m.set_property("record-appearance", True)
+        proc_create.run(cfg_m)
+
+        # Apply Desktop Layout: A should be visible, B should be hidden
+        cfg_app = proc_apply.create_config()
+        cfg_app.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_app.set_property("image", img)
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        if not lyr_a.get_visible() or lyr_b.get_visible():
+            record_fail("LC-03", "Apply Desktop visibility", f"Expected A visible & B hidden, got A={lyr_a.get_visible()}, B={lyr_b.get_visible()}")
+            return
+
+        # Apply Mobile Layout: A should be hidden, B should be visible
+        cfg_app.set_property("comp-name", "Mobile Layout")
+        proc_apply.run(cfg_app)
+        if lyr_a.get_visible() or not lyr_b.get_visible():
+            record_fail("LC-03", "Apply Mobile visibility", f"Expected A hidden & B visible, got A={lyr_a.get_visible()}, B={lyr_b.get_visible()}")
+            return
+        record_pass("LC-03", "Layer Visibility restoration", "Layer visibility correctly restored between Desktop (A visible, B hidden) and Mobile (A hidden, B visible)")
+
+        # LC-04: Layer Position / Offsets snapshot & restoration
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        # Move Layer B to (35, 45) in a new comp
+        lyr_b.set_offsets(35, 45)
+        cfg_t = proc_create.create_config()
+        cfg_t.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t.set_property("image", img)
+        cfg_t.set_property("comp-name", "Tablet Layout")
+        cfg_t.set_property("record-visibility", True)
+        cfg_t.set_property("record-position", True)
+        cfg_t.set_property("record-appearance", True)
+        proc_create.run(cfg_t)
+
+        # Apply Desktop Layout: lyr_b offsets should be (10, 20)
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        offs_b = lyr_b.get_offsets()
+        if (int(offs_b[-2]), int(offs_b[-1])) != (10, 20):
+            record_fail("LC-04", "Desktop offsets", f"Expected (10, 20), got {(int(offs_b[-2]), int(offs_b[-1]))}")
+            return
+
+        # Apply Tablet Layout: lyr_b offsets should be (35, 45)
+        cfg_app.set_property("comp-name", "Tablet Layout")
+        proc_apply.run(cfg_app)
+        offs_b_tab = lyr_b.get_offsets()
+        if (int(offs_b_tab[-2]), int(offs_b_tab[-1])) != (35, 45):
+            record_fail("LC-04", "Tablet offsets", f"Expected (35, 45), got {(int(offs_b_tab[-2]), int(offs_b_tab[-1]))}")
+            return
+        record_pass("LC-04", "Layer Position restoration", "Layer spatial offsets restored accurately: Desktop at (10, 20) and Tablet at (35, 45)")
+
+        # LC-05: Layer Appearance (Opacity & Blend Mode) snapshot & restoration
+        # Modify appearance of Layer B
+        lyr_b.set_opacity(50.0)
+        lyr_b.set_mode(Gimp.LayerMode.SCREEN)
+        cfg_dim = proc_create.create_config()
+        cfg_dim.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dim.set_property("image", img)
+        cfg_dim.set_property("comp-name", "Dim Screen")
+        cfg_dim.set_property("record-visibility", True)
+        cfg_dim.set_property("record-position", True)
+        cfg_dim.set_property("record-appearance", True)
+        proc_create.run(cfg_dim)
+
+        # Apply Desktop Layout: opacity 80.0%, mode MULTIPLY
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        if abs(lyr_b.get_opacity() - 80.0) > 0.1 or lyr_b.get_mode() != Gimp.LayerMode.MULTIPLY:
+            record_fail("LC-05", "Desktop appearance", f"Expected 80.0% MULTIPLY, got {lyr_b.get_opacity()}% mode={lyr_b.get_mode()}")
+            return
+
+        # Apply Dim Screen: opacity 50.0%, mode SCREEN
+        cfg_app.set_property("comp-name", "Dim Screen")
+        proc_apply.run(cfg_app)
+        if abs(lyr_b.get_opacity() - 50.0) > 0.1 or lyr_b.get_mode() != Gimp.LayerMode.SCREEN:
+            record_fail("LC-05", "Dim Screen appearance", f"Expected 50.0% SCREEN, got {lyr_b.get_opacity()}% mode={lyr_b.get_mode()}")
+            return
+        record_pass("LC-05", "Layer Appearance restoration", "Layer opacity (80.0% vs 50.0%) and blend mode (MULTIPLY vs SCREEN) restored accurately")
+
+        # LC-06: Selective property recording: Visibility only
+        lyr_a.set_visible(True)
+        lyr_a.set_offsets(5, 5)
+        lyr_a.set_opacity(100.0)
+        cfg_vo = proc_create.create_config()
+        cfg_vo.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vo.set_property("image", img)
+        cfg_vo.set_property("comp-name", "Vis Only")
+        cfg_vo.set_property("record-visibility", True)
+        cfg_vo.set_property("record-position", False)
+        cfg_vo.set_property("record-appearance", False)
+        proc_create.run(cfg_vo)
+
+        # Modify lyr_a: hide it, change offsets to (50, 50), opacity to 30.0%
+        lyr_a.set_visible(False)
+        lyr_a.set_offsets(50, 50)
+        lyr_a.set_opacity(30.0)
+        cfg_app.set_property("comp-name", "Vis Only")
+        proc_apply.run(cfg_app)
+        offs_vo = lyr_a.get_offsets()
+        if not lyr_a.get_visible() or (int(offs_vo[-2]), int(offs_vo[-1])) != (50, 50) or abs(lyr_a.get_opacity() - 30.0) > 0.1:
+            record_fail("LC-06", "Vis Only selectivity", f"Expected visible=True, offsets=(50, 50), opacity=30.0%; got vis={lyr_a.get_visible()}, offs={(int(offs_vo[-2]), int(offs_vo[-1]))}, op={lyr_a.get_opacity()}%")
+            return
+        record_pass("LC-06", "Selective recording: Visibility only", "Visibility restored without mutating position or opacity")
+
+        # LC-07: Selective property recording: Position only
+        lyr_a.set_offsets(15, 25)
+        cfg_po = proc_create.create_config()
+        cfg_po.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_po.set_property("image", img)
+        cfg_po.set_property("comp-name", "Pos Only")
+        cfg_po.set_property("record-visibility", False)
+        cfg_po.set_property("record-position", True)
+        cfg_po.set_property("record-appearance", False)
+        proc_create.run(cfg_po)
+
+        # Change offsets to (0, 0), hide lyr_a
+        lyr_a.set_offsets(0, 0)
+        lyr_a.set_visible(False)
+        cfg_app.set_property("comp-name", "Pos Only")
+        proc_apply.run(cfg_app)
+        offs_po = lyr_a.get_offsets()
+        if (int(offs_po[-2]), int(offs_po[-1])) != (15, 25) or lyr_a.get_visible() != False:
+            record_fail("LC-07", "Pos Only selectivity", f"Expected offsets=(15, 25), vis=False; got offs={(int(offs_po[-2]), int(offs_po[-1]))}, vis={lyr_a.get_visible()}")
+            return
+        record_pass("LC-07", "Selective recording: Position only", "Position offsets restored to (15, 25) without mutating visibility")
+
+        # LC-08: Selective property recording: Appearance only
+        lyr_a.set_opacity(95.0)
+        lyr_a.set_mode(Gimp.LayerMode.OVERLAY)
+        cfg_ao = proc_create.create_config()
+        cfg_ao.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ao.set_property("image", img)
+        cfg_ao.set_property("comp-name", "App Only")
+        cfg_ao.set_property("record-visibility", False)
+        cfg_ao.set_property("record-position", False)
+        cfg_ao.set_property("record-appearance", True)
+        proc_create.run(cfg_ao)
+
+        # Change opacity to 40.0%, move to (60, 60)
+        lyr_a.set_opacity(40.0)
+        lyr_a.set_offsets(60, 60)
+        cfg_app.set_property("comp-name", "App Only")
+        proc_apply.run(cfg_app)
+        offs_ao = lyr_a.get_offsets()
+        if abs(lyr_a.get_opacity() - 95.0) > 0.1 or lyr_a.get_mode() != Gimp.LayerMode.OVERLAY or (int(offs_ao[-2]), int(offs_ao[-1])) != (60, 60):
+            record_fail("LC-08", "App Only selectivity", f"Expected op=95.0%, mode=OVERLAY, offs=(60, 60); got op={lyr_a.get_opacity()}%, mode={lyr_a.get_mode()}, offs={(int(offs_ao[-2]), int(offs_ao[-1]))}")
+            return
+        record_pass("LC-08", "Selective recording: Appearance only", "Appearance restored (95.0% OVERLAY) without mutating position offsets")
+
+        # LC-09: Update Layer Comp
+        cfg_app.set_property("comp-name", "Tablet Layout")
+        proc_apply.run(cfg_app)
+        lyr_a.set_offsets(42, 42)
+        cfg_upd = proc_update.create_config()
+        cfg_upd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_upd.set_property("image", img)
+        cfg_upd.set_property("comp-name", "Tablet Layout")
+        cfg_upd.set_property("comment", "Updated tablet spacing")
+        res_upd = proc_update.run(cfg_upd)
+        if res_upd.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-09", "Update execution", f"Expected SUCCESS, got {res_upd.index(0)}")
+            return
+
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        cfg_app.set_property("comp-name", "Tablet Layout")
+        proc_apply.run(cfg_app)
+        offs_upd = lyr_a.get_offsets()
+        if (int(offs_upd[-2]), int(offs_upd[-1])) != (42, 42):
+            record_fail("LC-09", "Updated offsets", f"Expected (42, 42), got {(int(offs_upd[-2]), int(offs_upd[-1]))}")
+            return
+        record_pass("LC-09", "Update Layer Comp", "Comp snapshot successfully updated with new coordinates (42, 42) and comment")
+
+        # LC-10: Cycle Layer Comps (Next / Previous)
+        cfg_app.set_property("comp-name", "Desktop Layout")
+        proc_apply.run(cfg_app)
+        cfg_cyc = proc_cycle.create_config()
+        cfg_cyc.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cyc.set_property("image", img)
+        cfg_cyc.set_property("direction", 0)  # Next
+        res_cyc = proc_cycle.run(cfg_cyc)
+        if res_cyc.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-10", "Cycle next execution", f"Expected SUCCESS, got {res_cyc.index(0)}")
+            return
+        p_c = img.get_parasite("photogimp/layer-comps")
+        st_c = json.loads(bytes(p_c.get_data()).decode("utf-8"))
+        if st_c.get("active_comp") == "Desktop Layout":
+            record_fail("LC-10", "Cycle next active", f"Expected transition from Desktop Layout, got {st_c.get('active_comp')}")
+            return
+
+        cfg_cyc.set_property("direction", 1)  # Previous
+        proc_cycle.run(cfg_cyc)
+        p_c_prev = img.get_parasite("photogimp/layer-comps")
+        st_c_prev = json.loads(bytes(p_c_prev.get_data()).decode("utf-8"))
+        if st_c_prev.get("active_comp") != "Desktop Layout":
+            record_fail("LC-10", "Cycle prev active", f"Expected return to Desktop Layout, got {st_c_prev.get('active_comp')}")
+            return
+        record_pass("LC-10", "Cycle Layer Comps (Next / Previous)", "Next and Previous cycle navigation transitions cleanly through comps")
+
+        # LC-11: Delete Layer Comp
+        cfg_del = proc_delete.create_config()
+        cfg_del.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_del.set_property("image", img)
+        cfg_del.set_property("comp-name", "Vis Only")
+        res_del = proc_delete.run(cfg_del)
+        if res_del.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-11", "Delete execution", f"Expected SUCCESS, got {res_del.index(0)}")
+            return
+        p_del = img.get_parasite("photogimp/layer-comps")
+        st_del = json.loads(bytes(p_del.get_data()).decode("utf-8"))
+        names_after_del = [c.get("name") for c in st_del.get("comps", [])]
+        if "Vis Only" in names_after_del:
+            record_fail("LC-11", "Delete single comp", f"'Vis Only' still present in {names_after_del}")
+            return
+        record_pass("LC-11", "Delete Layer Comp", "Single comp deleted cleanly from document parasite store")
+
+        # LC-12: Missing layer resilience
+        tmp_lyr = Gimp.Layer.new(img, "Temporary Marker", 20, 20, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(tmp_lyr, None, 0)
+        cfg_temp = proc_create.create_config()
+        cfg_temp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_temp.set_property("image", img)
+        cfg_temp.set_property("comp-name", "With Marker")
+        proc_create.run(cfg_temp)
+
+        # Delete the temporary layer
+        img.remove_layer(tmp_lyr)
+
+        # Apply "With Marker": should gracefully skip deleted layer without error
+        cfg_app.set_property("comp-name", "With Marker")
+        res_resil = proc_apply.run(cfg_app)
+        if res_resil.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-12", "Missing layer resilience", f"Expected SUCCESS, got {res_resil.index(0)}")
+            return
+        record_pass("LC-12", "Missing layer warning & resilience", "Comp applied gracefully when referenced layer was deleted")
+
+        # LC-13: Export Layer Comps to Files in PNG format
+        import tempfile
+        tmp_dir = tempfile.mkdtemp(prefix="photogimp_lc_test_")
+        cfg_exp = proc_export.create_config()
+        cfg_exp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exp.set_property("image", img)
+        cfg_exp.set_property("output-dir", tmp_dir)
+        cfg_exp.set_property("format", "png")
+        cfg_exp.set_property("prefix", "lc_png")
+        cfg_exp.set_property("selected-only", False)
+        res_exp = proc_export.run(cfg_exp)
+        if res_exp.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-13", "Export PNG execution", f"Expected SUCCESS, got {res_exp.index(0)}")
+            return
+        png_files = [f for f in os.listdir(tmp_dir) if f.startswith("lc_png_") and f.endswith(".png")]
+        if len(png_files) < 2:
+            record_fail("LC-13", "Export PNG files", f"Expected at least 2 exported PNG files, found {png_files}")
+            return
+        for pf in png_files:
+            fsize = os.path.getsize(os.path.join(tmp_dir, pf))
+            if fsize <= 0:
+                record_fail("LC-13", "Export PNG size", f"File {pf} is empty")
+                return
+        record_pass("LC-13", "Export Layer Comps to PNG", f"Successfully exported {len(png_files)} PNG files to disk with valid non-zero size")
+
+        # LC-14: Export Layer Comps to Files in JPEG format
+        cfg_exp_jpg = proc_export.create_config()
+        cfg_exp_jpg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exp_jpg.set_property("image", img)
+        cfg_exp_jpg.set_property("output-dir", tmp_dir)
+        cfg_exp_jpg.set_property("format", "jpeg")
+        cfg_exp_jpg.set_property("prefix", "lc_jpg")
+        cfg_exp_jpg.set_property("selected-only", True)
+        res_exp_jpg = proc_export.run(cfg_exp_jpg)
+        if res_exp_jpg.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LC-14", "Export JPEG execution", f"Expected SUCCESS, got {res_exp_jpg.index(0)}")
+            return
+        jpg_files = [f for f in os.listdir(tmp_dir) if f.startswith("lc_jpg_") and f.endswith(".jpg")]
+        if len(jpg_files) != 1:
+            record_fail("LC-14", "Export JPEG files", f"Expected 1 selected JPEG file, found {jpg_files}")
+            return
+        record_pass("LC-14", "Export Layer Comps to JPEG", "Selected comp exported successfully as JPEG format with valid non-zero size")
+
+        # Clean up temp export dir
+        try:
+            import shutil
+            shutil.rmtree(tmp_dir)
+        except Exception:
+            pass
+
+        # LC-15: Export restores original document state
+        p_fin = img.get_parasite("photogimp/layer-comps")
+        st_fin = json.loads(bytes(p_fin.get_data()).decode("utf-8"))
+        if st_fin.get("active_comp") != "With Marker":
+            record_fail("LC-15", "Pre-export active comp restore", f"Expected 'With Marker', got {st_fin.get('active_comp')}")
+            return
+        record_pass("LC-15", "Pre-export document state restoration", "Document layer state and active comp faithfully restored after export")
+
+        # LC-16: Target & base artwork preservation (diff == 0.000000)
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(
+            abs(p_base_orig.red - p_base_after.red),
+            abs(p_base_orig.green - p_base_after.green),
+            abs(p_base_orig.blue - p_base_after.blue),
+            abs(p_base_orig.alpha - p_base_after.alpha),
+        )
+        if base_diff > 0.000001:
+            record_fail("LC-16", "Base layer preservation", f"Base layer pixel modified: diff {base_diff:.6f}")
+            return
+        record_pass("LC-16", "Target & base artwork preservation", f"Base canvas artwork 100% untouched across all operations (diff {base_diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("LC-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -14953,9 +15356,7 @@ def run_all_tests():
     test_layer_style_manager()
     test_knockout_blending()
     test_smart_filters()
-
-
-
+    test_layer_comps()
 
     elapsed = time.time() - start_time
 

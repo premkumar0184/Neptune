@@ -1833,9 +1833,43 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (64 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 772 tests across 65 test suites in 140.30s.
     - Final quality gate: SUCCESS across all stages in 156.77s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `f094818`. Outer repo `4417d68`.
+- **Commit**: PhotoGIMP sub-repo `f094818`. Outer repo `4417d68` (chore metadata `26b6927`).
 - **Result**: Success.
 - **Next**: Phase 71 — Layer Comps & Composition Variations Manager Plugin (`layer-comps`).
+
+## Iteration 73 — Layer Comps & Composition Variations Manager Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Layer Comps & Composition Variations Manager Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 138-141: "Create layer compositions: Create and manage layer comps"; `photoshop_docs.md` Section 145 lines 4175-4268: "Create and manage layer comps - Capture multiple design variations in a single file using snapshots of layer visibility, position, and appearance... Create a new layer comp... Apply and view layer comps... Update a layer comp... Clear layer comp warnings... Delete a layer comp... Export layer comps to files"). In Adobe Photoshop:
+  1. `Create Layer Comp`: Records layer visibility (show/hide), position spatial coordinates/offsets, and appearance (opacity and blend mode) snapshots into the document.
+  2. `Apply Layer Comp`: Restores recorded layer properties for all captured layers.
+  3. `Cycle Layer Comps`: Next / Previous controls to cycle seamlessly through all composition variations.
+  4. `Update Layer Comp`: Re-captures the current layer stack state into an existing comp.
+  5. `Delete Layer Comp`: Deletes a specific comp or clears all comps (`__ALL__`).
+  6. `Export Layer Comps to Files`: Exports each comp variation as a separate PNG or JPEG image to disk, restoring original canvas state cleanly after export.
+  Stock GIMP provides no built-in equivalent for Photoshop's Layer Comps panel and workflow. Implementing `layer-comps` provides complete Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`: Created native Python 3 GObject-Introspection plugin implementing 6 PDB procedures (`python-fu-create-layer-comp`, `python-fu-apply-layer-comp`, `python-fu-cycle-layer-comp`, `python-fu-update-layer-comp`, `python-fu-delete-layer-comp`, `python-fu-export-layer-comps`) with persistent image parasite storage (`photogimp/layer-comps`), selective property recording flags (`record_visibility`, `record_position`, `record_appearance`), recursive layer group traversal, warning resilience on deleted/renamed layers, temporary clone exporting (PNG/JPEG), pre-export canvas state restoration, and 100% base artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `layer-comps` (65 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (65 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 66: `test_layer_comps` (asserting LC-01 through LC-16: PDB registration and argument signatures across all 6 procedures, persistent parasite storage, visibility restoration across multiple comps, position offsets restoration, opacity and blend mode restoration, selective recording for visibility only, position only, appearance only, comp updating, cycle next/prev navigation, single and clear-all deletion, missing layer resilience, PNG export, JPEG export, pre-export state restoration, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 788 passing across 66 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Layer Comps & Composition Variations Manager entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 71 complete and scheduled Phase 72 (History States & Edit Session Audit Log Plugin) and Phase 73 (Placeholder Frames & Clipping Masks Layout Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x, `image.duplicate()` can be exported non-interactively using `file-png-export` and `file-jpeg-export` with `Gio.File.new_for_path(path)` and deleted via `dup.delete()` to avoid any stray open images during batch comp exports.
+  - Layer comp state can be stored cleanly in a structured JSON parasite on the image (`photogimp/layer-comps`), enabling full cross-session persistence and multi-layer state restoration with selective property masking.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 65 plugins verified).
+    - Stage 2: `install.sh --batch` passed (65 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 788 tests across 66 test suites in 147.15s.
+    - Final quality gate: SUCCESS across all stages in 164.19s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `e1bc160`. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 72 — History States & Edit Session Audit Log Plugin (`history-log`).
+
 
 
 

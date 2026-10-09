@@ -1833,7 +1833,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (64 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 772 tests across 65 test suites in 140.30s.
     - Final quality gate: SUCCESS across all stages in 156.77s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `f094818`. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `f094818`. Outer repo `4417d68`.
 - **Result**: Success.
 - **Next**: Phase 71 — Layer Comps & Composition Variations Manager Plugin (`layer-comps`).
 

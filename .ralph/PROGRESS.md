@@ -1736,8 +1736,41 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (61 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 724 tests across 62 test suites in 137.65s.
     - Final quality gate: SUCCESS across all stages in 167.65s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `8bfe377`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `8bfe377`. Outer repo `23dc71a`.
 - **Result**: Success.
 - **Next**: Phase 68 — Global Lighting & Layer Style Effects Manager Plugin.
+
+## Iteration 70 — Global Lighting & Layer Style Effects Manager Plugin Suite
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Global Lighting & Layer Style Effects Manager Plugin Suite in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665: "Set a global lighting angle for all layers", "Scale layer effects", "Copy and paste layer styles", "Remove layer effects", "Work with layer styles"). In Adobe Photoshop, layer styles are managed through a unified suite of commands:
+  1. `Global Light...`: Synchronizes directional lighting angle (-180° to 180°) and altitude (0° to 90°) document-wide across all directional effects (Drop Shadow, Inner Shadow, Bevel & Emboss).
+  2. `Scale Effects...`: Rescales sizes, distances, and radii proportionally (10% to 500%) across all attached style layers.
+  3. `Copy Layer Style` and `Paste Layer Style`: Transfers the entire style stack between layers with automatic geometric adaptation.
+  4. `Clear Layer Style`: Provides single-click removal of all attached style layers, leaving underlying artwork 100% untouched (`diff == 0.000000`).
+  Stock GIMP provides no built-in equivalent for managing layer style suites across layers. Implementing `layer-style-manager` completes the Photoshop layer style ecosystem in PhotoGIMP.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`: Created native Python 3 GObject-Introspection plugin implementing 5 PDB procedures (`python-fu-global-light`, `python-fu-scale-layer-effects`, `python-fu-copy-layer-style`, `python-fu-paste-layer-style`, `python-fu-clear-layer-style`) with persistent image parasites (`photogimp/global-light`, `photogimp/layer-style-scale`, `photogimp/style-clipboard`), proportional scaling arithmetic, full style layer tree traversal, relative layer stack positioning, single-step `Ctrl+Z` undo protection, and 100% artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `layer-style-manager` (62 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (62 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 63: `test_layer_style_manager` (asserting LSM-01 through LSM-16: PDB registration and argument signatures across all 5 procedures, Global Light angle/altitude persistence and directional offset updates, Scale Effects proportional rescaling [200%], Copy Layer Style serialization, Paste Layer Style replication with correct relative stack positioning, Clear Layer Style removal without touching unrelated layers or target artwork, no-op handling on unstyled layers, single-step undo group encapsulation, and target/base layer pixel preservation `diff == 0.000000`). Total tests increased to 740 passing across 63 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Global Lighting & Layer Style Manager entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 68 complete and scheduled Phase 69 (Knockout Blending & Texture Cutout Effects Helper Plugin) and Phase 70 (Smart Filters & Non-Destructive Filter Effects Helper Plugin).
+- **Technical discoveries**:
+  - GIMP 3.x `Gimp.Parasite.new(name, flags, data)` requires `flags=1` (`Gimp.ParasiteFlags.PERSISTENT`) and UTF-8 encoded bytes (`data.encode("utf-8")`) for persistent storage across PDB procedures and sessions.
+  - Attached style layers conform to the naming prefix `f"{target_name} ({StyleTag}..."` with tags: `(Drop Shadow`, `(Outer Glow`, `(Inner Glow`, `(Inner Shadow`, `(Color Overlay`, `(Gradient Overlay`, `(Pattern Overlay`, `(Satin`, `(Stroke`, plus adjacent `(Bevel & Emboss)` groups.
+  - Clearing styles targets exclusively the active layer's attached styles without touching neighboring layers or the base artwork (`diff == 0.000000`).
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 62 plugins verified).
+    - Stage 2: `install.sh --batch` passed (62 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 740 tests across 63 test suites in 138.39s.
+    - Final quality gate: SUCCESS across all stages in 155.91s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5d29ce3`. Outer repo `7f734f2`.
+- **Result**: Success.
+- **Next**: Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin.
+
 
 

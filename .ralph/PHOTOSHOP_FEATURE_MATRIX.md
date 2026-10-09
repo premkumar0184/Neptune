@@ -1052,6 +1052,28 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Global Lighting & Layer Style Effects Manager Plugin Suite
+- **Source topic**: Set a global lighting angle for all layers / Scale layer effects / Copy and paste layer styles / Remove layer effects / Work with layer styles (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665)
+- **Photoshop behavior**: Manages layer style collections across layers: Global Light synchronizes directional light angle (-180° to 180°) and altitude (0° to 90°) document-wide; Scale Effects proportionally rescales effect sizes and distances (10% to 500%); Copy and Paste Layer Style transfers all attached layer styles from one layer to another; Clear Layer Style deletes all attached style layers while leaving base artwork 100% untouched (`diff == 0.000000`).
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `layer-style-manager` providing `python-fu-global-light`, `python-fu-scale-layer-effects`, `python-fu-copy-layer-style`, `python-fu-paste-layer-style`, and `python-fu-clear-layer-style` under `<Image>/Layer/Layer Style/`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
+- **Current capability**:
+  1. `python-fu-global-light`: Persistent document-wide lighting angle (-180° to 180°) and altitude (0° to 90°) stored in image parasite `"photogimp/global-light"`, dynamically synchronizing directional shadow offsets.
+  2. `python-fu-scale-layer-effects`: Proportionally rescales sizes, distances, and radii (10% to 500%) across all attached style layers, recording scale factors in parasite `"photogimp/layer-style-scale"`.
+  3. `python-fu-copy-layer-style`: Serializes all attached layer styles (Drop Shadow, Outer Glow, Inner Glow, Inner Shadow, Color Overlay, Gradient Overlay, Pattern Overlay, Satin, Stroke, Bevel & Emboss) into persistent clipboard parasite `"photogimp/style-clipboard"`.
+  4. `python-fu-paste-layer-style`: Replicates copied style layers onto destination target layer matching relative positions (below/above target layer).
+  5. `python-fu-clear-layer-style`: Detects and removes all attached style layers from target layer in one click; leaves artwork pixels 100% untouched (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`Gimp.Parasite.new`, `Gimp.ParasiteFlags.PERSISTENT`, `image.get_parasite`, `image.attach_parasite`, GeglBuffer `"RGBA float"`, NumPy array processing).
+- **Implementation priority**: High (Phase 68).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 5 procedures, Global Light angle/altitude persistence and directional offset updates, Scale Effects proportional rescaling (200%), Copy Layer Style serialization to clipboard parasite, Paste Layer Style replication onto destination layer with correct relative positioning, Clear Layer Style removal of all attached styles, and base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 70):
+  1. `verify_config.py`: Section 6 passed with 62 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified across all 5 procedures (LSM-01), Global Light angle/altitude persistence and directional offset updates verified (LSM-02, LSM-03, LSM-12), Scale Effects proportional rescaling verified at 200% (LSM-04, LSM-11), Copy Layer Style serialization verified (LSM-05, LSM-13), Paste Layer Style replication verified with proper stack positioning (LSM-06, LSM-07), Clear Layer Style removal verified without touching unrelated layers or target artwork (LSM-08, LSM-09, LSM-10), no-op handling on unstyled layers verified (LSM-14), single-step undo group encapsulation verified (LSM-15), and target and base layer pixels 100% untouched (`diff == 0.000000`, LSM-16). Total 740/740 assertions passed across 63 test suites in 131.93s; all quality gate stages passed in 160.29s. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 70).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

@@ -1,59 +1,57 @@
-# Current Task — Iteration 69
+# Current Task — Iteration 70
 
 ## Task
-**Phase 67 — Non-Destructive Stroke Layer Style Helper Plugin (`python-fu-stroke-style`)**
+**Phase 68 — Global Lighting & Layer Style Effects Manager Plugin Suite (`python-fu-global-light`, `python-fu-scale-layer-effects`, `python-fu-copy-layer-style`, `python-fu-paste-layer-style`, `python-fu-clear-layer-style`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Stroke: Size, Position [Outside, Inside, Center], Blend Mode, Opacity, Overprint, Fill Type [Color, Gradient, Pattern]"), Stroke is a core layer style in professional graphic design, UI styling, icon fabrication, and typographic styling.
+In Adobe Photoshop (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665: "Set a global lighting angle for all layers", "Scale layer effects", "Copy and paste layer styles", "Remove layer effects", "Display or hide layer styles"), layer styles are not isolated one-off effects; they form an integrated system managed collectively:
+1. **Global Light** (`Layer > Layer Style > Global Light...`): Synchronizes directional lighting angle (-180° to 180°) and altitude (0° to 90°) across all directional effects in the document (Drop Shadow, Inner Shadow, Bevel & Emboss) to ensure visual coherence.
+2. **Scale Layer Effects** (`Layer > Layer Style > Scale Effects...`): Proportionally rescales the size, distance, and blur radius (10% to 500%) across all attached layer style layers when scaling artwork or canvases.
+3. **Copy & Paste Layer Styles** (`Layer > Layer Style > Copy Layer Style` / `Paste Layer Style`): Allows copying the full suite of layer styles from one layer and pasting them onto destination layers with automatic geometric adaptation.
+4. **Clear Layer Style** (`Layer > Layer Style > Clear Layer Style`): One-click removal of all attached layer style layers/groups, leaving the underlying target artwork 100% untouched (`diff == 0.000000`).
 
-While Phase 54 introduced `stroke-layer` for `Edit > Stroke...` selection outlines, stock GIMP provides no built-in equivalent to Photoshop's dedicated Stroke Layer Style dialog. Specifically, it lacks:
-- Native Photoshop Stroke Layer Style integration (`Layer > Layer Style > Stroke...`);
-- Three distinct Fill Types: Solid Color, Gradient (Linear, Radial, Reflected with Angle & Scale), and Pattern (Checkerboard, Stripes, Mesh, Polka Dots, Carbon Fiber, Active Pattern with Scale);
-- Geometric Position Modes: Outside (stroke dilates outward from silhouette), Inside (stroke insets strictly within layer silhouette), and Center (stroke is centered across the silhouette boundary);
-- Dedicated non-destructive layer placement (Outside placed immediately beneath target layer or Inside placed above target layer, or in a grouped layer style container), leaving underlying target artwork 100% untouched (`diff == 0.000000`);
-- Curated stroke style presets;
-- Standard Photoshop blend modes and opacity scaling;
-- Auto, None, Reveal-All, Conceal-All, and Active Selection layer mask integration;
-- Single-step `Ctrl+Z` undo protection.
-
-Implementing native GIMP 3.x Python 3 plugin `stroke-style` closes this gap with complete Photoshop parity.
+Stock GIMP provides no built-in equivalents for managing layer style suites across layers. Implementing `layer-style-manager` completes the Photoshop layer style ecosystem in PhotoGIMP.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py` (New plugin implementing `python-fu-stroke-style`)
-- `PhotoGIMP/scripts/verify_config.py` (Register `stroke-style` in `REQUIRED_PLUGINS`, updating audit inventory to 61 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py` (New plugin implementing all 5 PDB procedures)
+- `PhotoGIMP/scripts/verify_config.py` (Register `layer-style-manager` with its 5 procedures in `REQUIRED_PLUGINS`, updating audit inventory to 62 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 62: `test_stroke_style`, assertions STRK-01 through STRK-16)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Stroke Layer Style entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 67 status)
-- `.ralph/PROGRESS.md` (Log Iteration 69 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 69 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 63: `test_layer_style_manager`, assertions LSM-01 through LSM-16)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Global Lighting & Layer Style Manager entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 68 status)
+- `.ralph/PROGRESS.md` (Log Iteration 70 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 70 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/` created with `stroke-style.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/` created with `layer-style-manager.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] PDB procedure registered in GIMP PDB:
-   - `python-fu-stroke-style` under `<Image>/Layer/Layer Style/Stroke...`, `<Image>/Filters/Light and Shadow/Stroke (Layer Style)...`, and `<Image>/Filters/Retouching`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 62):
-   - STRK-01: Procedure lookup and argument signatures verified across all properties.
-   - STRK-02: Execution status verified (PDB status SUCCESS).
-   - STRK-03: Outside stroke geometry verified (stroke appears outside original silhouette; interior artwork untouched).
-   - STRK-04: Inside stroke geometry verified (stroke is strictly confined within original silhouette; outside pixels alpha strictly 0.000).
-   - STRK-05: Center stroke geometry verified (stroke straddles the silhouette boundary with both inside and outside expansion).
-   - STRK-06: Size scaling verified (width 10px creates wider stroke band than width 3px).
-   - STRK-07: Solid Color fill type & RGB fidelity verified (custom RGB swatch accurate).
-   - STRK-08: Gradient fill type verified (linear and radial gradients rendered inside stroke band).
-   - STRK-09: Pattern fill type verified (repeating pattern texture rendered inside stroke band).
-   - STRK-10: Curated presets verified across all choices (e.g. classic black, white sticker, gold luxury, neon glow, etc.).
-   - STRK-11: Blend modes validated (Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, Color).
-   - STRK-12: Opacity modulation verified (opacity 50% scales stroke alpha).
-   - STRK-13: Layer stack placement verified (outside stroke placed immediately beneath, inside stroke placed immediately above).
-   - STRK-14: Auto layer mask attachment behavior verified (selection when active, none when empty).
-   - STRK-15: Target layer artwork and base pixels 100% untouched (`diff == 0.000000`).
-   - STRK-16: Single-step undo group encapsulation verified.
-5. [x] `verify_config.py` Section 6 passes with all 61 required plugins audited.
+3. [x] 5 PDB procedures registered in GIMP PDB:
+   - `python-fu-global-light` under `<Image>/Layer/Layer Style/Global Light...` and `<Image>/Filters/Light and Shadow`
+   - `python-fu-scale-layer-effects` under `<Image>/Layer/Layer Style/Scale Effects...` and `<Image>/Filters/Light and Shadow`
+   - `python-fu-copy-layer-style` under `<Image>/Layer/Layer Style/Copy Layer Style`
+   - `python-fu-paste-layer-style` under `<Image>/Layer/Layer Style/Paste Layer Style`
+   - `python-fu-clear-layer-style` under `<Image>/Layer/Layer Style/Clear Layer Style`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 63):
+   - LSM-01: Procedure lookup and argument signatures verified across all 5 procedures.
+   - LSM-02: Global Light sets and retrieves image parasite lighting angles.
+   - LSM-03: Global Light updates directional parameters across attached style layers.
+   - LSM-04: Scale Layer Effects scales size/distance properties proportionally (e.g. 200%).
+   - LSM-05: Copy Layer Style serializes attached styles to clipboard parasite.
+   - LSM-06: Paste Layer Style replicates copied styles onto destination layer.
+   - LSM-07: Pasted style layers correctly positioned relative to destination layer.
+   - LSM-08: Clear Layer Style removes all attached style layers from target layer.
+   - LSM-09: Clear Layer Style leaves target layer artwork 100% untouched (`diff == 0.000000`).
+   - LSM-10: Clear Layer Style leaves unrelated layers in stack untouched.
+   - LSM-11: Scale Effects rescales multi-style compound layer stacks.
+   - LSM-12: Global Light altitude modulation verified.
+   - LSM-13: Style clipboard persists across active image operations.
+   - LSM-14: Graceful handling of layers with no styles attached (no-op SUCCESS).
+   - LSM-15: Single-step undo group encapsulation verified across operations.
+   - LSM-16: Target and base layer artwork preserved with zero degradation (`diff == 0.000000`).
+5. [x] `verify_config.py` Section 6 passes with all 62 required plugins audited.
 6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0.
 
 ## Verification Commands
@@ -64,5 +62,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive stroke layer style helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 69 - stroke layer style helper plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement global lighting and layer style manager plugin suite`
+- Outer repository commit: `feat(ralph): complete iteration 70 - global lighting and layer style manager plugin suite`

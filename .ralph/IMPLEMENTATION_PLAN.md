@@ -511,12 +511,12 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate stroke positioning (Inside, Outside, Center), size dilation/erosion geometry, fill types, blend modes, opacity scaling, layer mask attachment, and headless GIMP test suite (assertions STRK-01 to STRK-16).
 
 ### Phase 68 — Global Lighting & Layer Style Effects Manager Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `layer-style-manager` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
-- [ ] Simulate Photoshop `Layer > Layer Style > Global Light...`, `Copy Layer Style`, `Paste Layer Style`, `Clear Layer Style`, and `Scale Effects...` (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665).
-- [ ] Support unified Global Light azimuth angle and altitude across all directional layer styles (Drop Shadow, Inner Shadow, Bevel & Emboss).
-- [ ] Support copying style parameters across layers, clearing applied layer style containers, toggling style visibility, and scaling layer effect radii proportionally (10% to 500%).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Global Light...`, `<Image>/Layer/Layer Style/Scale Effects...`, `<Image>/Layer/Layer Style/Copy Layer Style`, `<Image>/Layer/Layer Style/Paste Layer Style`, and `<Image>/Layer/Layer Style/Clear Layer Style`.
-- [ ] Validate global angle synchronization, effect scaling arithmetic, style copy/paste persistence, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `layer-style-manager` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
+- [x] Simulate Photoshop `Layer > Layer Style > Global Light...`, `Copy Layer Style`, `Paste Layer Style`, `Clear Layer Style`, and `Scale Effects...` (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665).
+- [x] Support unified Global Light azimuth angle and altitude across all directional layer styles (Drop Shadow, Inner Shadow, Bevel & Emboss).
+- [x] Support copying style parameters across layers, clearing applied layer style containers, toggling style visibility, and scaling layer effect radii proportionally (10% to 500%).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Global Light...`, `<Image>/Layer/Layer Style/Scale Effects...`, `<Image>/Layer/Layer Style/Copy Layer Style`, `<Image>/Layer/Layer Style/Paste Layer Style`, and `<Image>/Layer/Layer Style/Clear Layer Style`.
+- [x] Validate global angle synchronization, effect scaling arithmetic, style copy/paste persistence, and headless GIMP test suite.
 
 ### Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `knockout-blending` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
@@ -525,6 +525,14 @@ This file is the authoritative roadmap of product-development work to transform 
 - [ ] Support Fill Opacity separation (0% to 100%) allowing layer effects (strokes, bevels, shadows) to remain visible while layer fill punches through.
 - [ ] Register under menu path `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`.
 - [ ] Validate shallow and deep knockout transparency punching, fill opacity decoupling, and headless GIMP test suite.
+
+### Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `smart-filters` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
+- [ ] Simulate Photoshop `Filter > Convert for Smart Filters` and Smart Filter stack management (`Topics.txt` lines 122-137, 451-455; `photoshop_docs.md` Section 122-130 lines 3700-3850: "Apply Smart Filters", "Edit Smart Filters", "Smart Filter mask").
+- [ ] Support converting layers to Smart Object containers with non-destructive filter passes, attached Smart Filter mask, and re-editable filter parameters.
+- [ ] Register under menu path `<Image>/Filters/Smart Filters...` and `<Image>/Layer/Smart Objects/Convert for Smart Filters`.
+- [ ] Validate non-destructive filter re-application, filter mask feathering/inversion, and headless GIMP test suite.
+
 
 
 

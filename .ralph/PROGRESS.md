@@ -1937,7 +1937,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (67 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 820 tests across 68 test suites in 147.11s.
     - Final quality gate: SUCCESS across all stages in 163.73s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `6a479bd`. Outer repo `PENDING`.
+- **Commit**: PhotoGIMP sub-repo `6a479bd`. Outer repo `5de69f9`.
 - **Result**: Success.
 - **Next**: Phase 74 — Image Stacks Statistical Blending Helper Plugin (`image-stacks`).
 

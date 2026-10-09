@@ -485,12 +485,22 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate pattern tiling, rotation, scaling, silhouette boundary clipping, blend modes, and headless GIMP test suite (assertions PO-01 to PO-16).
 
 ### Phase 65 — Non-Destructive Satin Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `satin` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/satin/satin.py`.
-- [ ] Create dedicated Satin Layer Style helper simulating Photoshop `Layer > Layer Style > Satin...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Satin: Blend Mode, Opacity, Angle, Distance, Size, Contour, Invert").
-- [ ] Support Photoshop Satin parameters: Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn, Soft Light, Overlay), Opacity (0% to 100%), Solid Color RGB swatch, Angle (-180° to 180° with dual directional offset trigonometry), Distance (0 to 200px), Size / Blur Radius (0 to 200px), Invert toggle (creates interior silk/satin specular sheen vs matte shadow), and Contour falloff modulation.
-- [ ] Support non-destructive overlay layer placement directly above target layer, strict silhouette boundary clipping ($A_{\text{overlay}} = A_{\text{satin}} \cdot A_{\text{target}}$), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Satin...`, `<Image>/Filters/Light and Shadow/Satin (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate dual offset distance casting, angle trigonometry, Gaussian blur size, invert specular sheen, silhouette boundary clipping, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `satin` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/satin/satin.py`.
+- [x] Create dedicated Satin Layer Style helper simulating Photoshop `Layer > Layer Style > Satin...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Satin: Blend Mode, Opacity, Angle, Distance, Size, Contour, Invert").
+- [x] Support Photoshop Satin parameters: Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn, Soft Light, Overlay, Screen), Opacity (0% to 100%), Solid Color RGB swatch, Angle (-180° to 180° with dual directional offset trigonometry), Distance (0 to 200px), Size / Blur Radius (0 to 200px), Invert toggle (creates interior silk/satin specular sheen vs matte shadow), Contour falloff modulation, and film grain noise.
+- [x] Support non-destructive overlay layer placement directly above target layer, strict silhouette boundary clipping ($A_{\text{overlay}} = A_{\text{satin}} \cdot A_{\text{target}}$), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Satin...`, `<Image>/Filters/Light and Shadow/Satin (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate dual offset distance casting, angle trigonometry, Gaussian blur size, invert specular sheen, silhouette boundary clipping, and headless GIMP test suite (assertions ST-01 to ST-16).
+
+### Phase 66 — Non-Destructive Bevel and Emboss Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `bevel-emboss` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/bevel-emboss/bevel-emboss.py`.
+- [ ] Create dedicated Bevel & Emboss helper simulating Photoshop `Layer > Layer Style > Bevel & Emboss...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3610: "Bevel & Emboss: Style (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss), Technique (Smooth, Chisel Hard, Chisel Soft), Depth, Direction (Up, Down), Size, Soften, Shading Angle & Altitude, Highlight Mode/Opacity, Shadow Mode/Opacity").
+- [ ] Support Photoshop Bevel & Emboss styles: Inner Bevel, Outer Bevel, Emboss, Pillow Emboss.
+- [ ] Support directional lighting trigonometry with Angle (-180° to 180°) and Altitude (0° to 90°), separate Highlight (Screen/Normal, custom color/opacity) and Shadow (Multiply/Normal, custom color/opacity) passes.
+- [ ] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Bevel and Emboss...`, `<Image>/Filters/Light and Shadow/Bevel and Emboss (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate bevel styles, lighting angle/altitude, highlight/shadow separation, soften blur falloff, and headless GIMP test suite.
+
 
 
 

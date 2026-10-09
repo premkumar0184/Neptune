@@ -1652,6 +1652,34 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (58 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 676 tests across 59 test suites in 111.66s.
     - Final quality gate: SUCCESS across all stages in 128.32s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `6049833`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `6049833`. Outer repo `77d332a`.
 - **Result**: Success.
 - **Next**: Phase 65 — Non-Destructive Satin Layer Style Helper Plugin.
+
+## Iteration 67 — Non-Destructive Satin Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Satin Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/satin/satin.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Satin: Blend Mode, Color, Opacity, Angle, Distance, Size, Contour, Invert"). In Adobe Photoshop, Satin represents a signature layer effect that applies interior shading and specular highlights inside layer boundaries to simulate silk, satin, polished metal, and contoured fabric folds. Stock GIMP provides no built-in equivalent to Photoshop's Satin layer style, lacks dual-directional offset trigonometry ($\pm \Delta x = \pm d \cos\theta, \pm \Delta y = \mp d \sin\theta$), lacks difference fold rendering ($M_{\text{diff}} = |M_1 - M_2|$ and $M_{\text{inv}} = (1 - M_{\text{diff}}) \cdot A_{\text{target}}$), lacks Contour falloff curve modulation, lacks automatic boundary silhouette clipping ($A_{\text{overlay}} = A_{\text{satin}} \cdot A_{\text{target}}$), lacks film grain noise texture injection, and lacks dedicated overlay layer placement leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `satin.py` brings complete Photoshop parity to Linux photo editing with `python-fu-satin`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/satin/satin.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-satin` with dual-directional offset trigonometry, 6 curated presets (`deep-silk`, `pearl-sheen`, `golden-folds`, `velvet-depth`, `midnight-glow`, `subtle-contour`, `custom`), Angle (-180° to 180°), Distance (0 to 200px), Size Gaussian blur radius diffusion (0 to 200px), Invert specular sheen vs shadow toggle, Contour range power-law shaping (1% to 100%), custom solid color RGB swatches, 8 blend modes (Multiply, Normal, Color Burn, Linear Burn, Darken, Soft Light, Overlay, Screen), opacity control (0-100%), film grain noise injection, editable layer mask options (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `satin` (59 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (59 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 60: `test_satin` (asserting ST-01 through ST-16: PDB registration, procedure argument schema across 16 properties, SUCCESS status, satin interior specular fold transition verified [center alpha 0.980 > edge 0.255], strict boundary silhouette clipping [max outside alpha 0.000000], semi-transparent edge alpha preservation [edge alpha 0.063 <= 0.500], distance offset translation verified [distance 20px alpha 0.00 vs 5px alpha 1.00], size blur radius falloff verified [size 2px alpha 0.000 vs 25px alpha 0.341], invert toggle verified [inverted 0.99 vs shadow 0.01], contour range curve falloff verified [range 25% alpha 0.125 vs 100% alpha 0.357], angle directional rotation verified [angle 0° alpha 0.00 vs 90° alpha 1.00], custom amber swatch verified [R=1.00, G=0.80, B=0.20], all 6 curated presets verified, dedicated overlay layer stack placement immediately above parent layer, 8 blend modes validated, opacity scaling [75.0%], auto layer mask attachment behavior, and target/base layer pixel preservation `diff == 0.000000`). Total tests increased to 692 passing across 60 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Satin Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 65 complete and scheduled Phase 66 (Non-Destructive Bevel and Emboss Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - Calling `layer.merge_filters()` in GIMP 3.x creates a newly allocated `GeglBuffer` backing for the layer; calling `s_buf = layer.get_buffer()` again after filter merge is necessary to read blurred pixels and apply silhouette alpha clipping correctly.
+  - In GIMP 3.x, `Gimp.LayerMode.BURN` (value 41) corresponds to Photoshop's "Color Burn" blending mode (`Gimp.LayerMode.COLOR_BURN` does not exist in PyGObject bindings).
+  - Shift-differencing dual boundary alpha mattes ($M_{\text{diff}} = |M_1 - M_2|$) generates the interior satin fold geometry in pure vectorized NumPy arithmetic in sub-millisecond execution time without external dependencies.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 59 plugins verified).
+    - Stage 2: `install.sh --batch` passed (59 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 692 tests across 60 test suites in 116.81s.
+    - Final quality gate: SUCCESS across all stages in 132.46s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `8255c84`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 66 — Non-Destructive Bevel and Emboss Layer Style Helper Plugin.
+

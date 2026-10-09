@@ -12798,6 +12798,408 @@ def test_pattern_overlay():
         img.delete()
 
 
+def test_satin():
+    print("\n--- Test Suite 60: Non-Destructive Satin Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-satin")
+    if not proc:
+        record_fail("ST-01", "Procedure lookup", "Procedure python-fu-satin not found in PDB")
+        return
+
+    # ST-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "angle", "distance",
+        "size", "invert", "range", "satin-r", "satin-g", "satin-b",
+        "blend-mode", "opacity", "noise", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("ST-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("ST-01", "Procedure signatures & argument audit", f"All 16 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    # Semi-transparent pixel at (20, 20) with alpha 0.50
+    rect_px = Gegl.Rectangle.new(20, 20, 1, 1)
+    half_px = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+    art.get_buffer().set(rect_px, "RGBA float", half_px)
+    art.get_buffer().flush()
+
+    # Capture original baseline samples
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # ST-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "deep-silk")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("ST-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("ST-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # ST-03: Satin interior specular fold transition verified
+        lyr_satin = img.get_layers()[0]
+        p_cen = lyr_satin.get_pixel(50, 50).get_rgba()
+        p_edge = lyr_satin.get_pixel(25, 25).get_rgba()
+        if p_cen.alpha <= p_edge.alpha + 0.2:
+            record_fail("ST-03", "Satin interior specular fold", f"Expected specular center alpha > edge alpha + 0.2; got center={p_cen.alpha:.3f}, edge={p_edge.alpha:.3f}")
+            return
+        record_pass("ST-03", "Satin interior specular fold transition", f"Specular fold gradient verified (center alpha {p_cen.alpha:.3f} > edge {p_edge.alpha:.3f})")
+
+        # ST-04: Strict boundary silhouette clipping (outside alpha == 0.000)
+        outside_coords = [(5, 5), (10, 10), (15, 50), (85, 50), (50, 85), (95, 95)]
+        max_out_alpha = max(lyr_satin.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_alpha > 0.0001:
+            record_fail("ST-04", "Boundary silhouette clipping", f"Expected outside alpha 0.000, got {max_out_alpha:.4f}")
+            return
+        record_pass("ST-04", "Strict boundary silhouette clipping", f"Overlay pixels strictly clipped inside parent silhouette (max outside alpha {max_out_alpha:.6f})")
+
+        # ST-05: Semi-transparent edge alpha preservation
+        p_semi = lyr_satin.get_pixel(20, 20).get_rgba()
+        if p_semi.alpha > 0.501 or p_semi.alpha <= 0.001:
+            record_fail("ST-05", "Semi-transparent edge alpha", f"Expected edge alpha <= 0.50 and > 0, got {p_semi.alpha:.3f}")
+            return
+        record_pass("ST-05", "Semi-transparent edge alpha preservation", f"Semi-transparent edge alpha bounded by parent silhouette ({p_semi.alpha:.3f} <= 0.500)")
+        img.remove_layer(lyr_satin)
+
+        # ST-06: Distance offset translation verified
+        img.set_selected_layers([art])
+        cfg_d20 = proc.create_config()
+        cfg_d20.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d20.set_property("image", img)
+        cfg_d20.set_property("preset", "custom")
+        cfg_d20.set_property("distance", 20.0)
+        cfg_d20.set_property("size", 1.0)
+        cfg_d20.set_property("mask-type", "none")
+        proc.run(cfg_d20)
+        lyr_d20 = img.get_layers()[0]
+        p_d20 = lyr_d20.get_pixel(35, 50).get_rgba().alpha
+        img.remove_layer(lyr_d20)
+
+        img.set_selected_layers([art])
+        cfg_d5 = proc.create_config()
+        cfg_d5.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d5.set_property("image", img)
+        cfg_d5.set_property("preset", "custom")
+        cfg_d5.set_property("distance", 5.0)
+        cfg_d5.set_property("size", 1.0)
+        cfg_d5.set_property("mask-type", "none")
+        proc.run(cfg_d5)
+        lyr_d5 = img.get_layers()[0]
+        p_d5 = lyr_d5.get_pixel(35, 50).get_rgba().alpha
+        img.remove_layer(lyr_d5)
+
+        if abs(p_d20 - p_d5) < 0.5:
+            record_fail("ST-06", "Distance offset translation", f"Distance 20px vs 5px did not translate folds (d20={p_d20:.2f}, d5={p_d5:.2f})")
+            return
+        record_pass("ST-06", "Distance offset translation", f"Distance modulates offset fold reach (distance 20px alpha {p_d20:.2f} vs 5px alpha {p_d5:.2f})")
+
+        # ST-07: Size blur radius falloff verified
+        img.set_selected_layers([art])
+        cfg_sz2 = proc.create_config()
+        cfg_sz2.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sz2.set_property("image", img)
+        cfg_sz2.set_property("preset", "custom")
+        cfg_sz2.set_property("angle", 0.0)
+        cfg_sz2.set_property("distance", 15.0)
+        cfg_sz2.set_property("size", 2.0)
+        cfg_sz2.set_property("mask-type", "none")
+        proc.run(cfg_sz2)
+        lyr_sz2 = img.get_layers()[0]
+        p_sz2 = lyr_sz2.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_sz2)
+
+        img.set_selected_layers([art])
+        cfg_sz25 = proc.create_config()
+        cfg_sz25.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sz25.set_property("image", img)
+        cfg_sz25.set_property("preset", "custom")
+        cfg_sz25.set_property("angle", 0.0)
+        cfg_sz25.set_property("distance", 15.0)
+        cfg_sz25.set_property("size", 25.0)
+        cfg_sz25.set_property("mask-type", "none")
+        proc.run(cfg_sz25)
+        lyr_sz25 = img.get_layers()[0]
+        p_sz25 = lyr_sz25.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_sz25)
+
+        if abs(p_sz25 - p_sz2) < 0.2:
+            record_fail("ST-07", "Size blur falloff", f"Size 25px vs 2px did not diffuse folds (sz2={p_sz2:.3f}, sz25={p_sz25:.3f})")
+            return
+        record_pass("ST-07", "Size blur radius falloff", f"Size modulates Gaussian blur diffusion (size 2px alpha {p_sz2:.3f} vs 25px alpha {p_sz25:.3f})")
+
+        # ST-08: Invert toggle verified
+        img.set_selected_layers([art])
+        cfg_inv = proc.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", img)
+        cfg_inv.set_property("preset", "custom")
+        cfg_inv.set_property("invert", True)
+        cfg_inv.set_property("distance", 15.0)
+        cfg_inv.set_property("size", 10.0)
+        cfg_inv.set_property("mask-type", "none")
+        proc.run(cfg_inv)
+        lyr_inv = img.get_layers()[0]
+        p_inv = lyr_inv.get_pixel(50, 50).get_rgba().alpha
+        img.remove_layer(lyr_inv)
+
+        img.set_selected_layers([art])
+        cfg_noinv = proc.create_config()
+        cfg_noinv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_noinv.set_property("image", img)
+        cfg_noinv.set_property("preset", "custom")
+        cfg_noinv.set_property("invert", False)
+        cfg_noinv.set_property("distance", 15.0)
+        cfg_noinv.set_property("size", 10.0)
+        cfg_noinv.set_property("mask-type", "none")
+        proc.run(cfg_noinv)
+        lyr_noinv = img.get_layers()[0]
+        p_noinv = lyr_noinv.get_pixel(50, 50).get_rgba().alpha
+        img.remove_layer(lyr_noinv)
+
+        if abs(p_inv - p_noinv) < 0.5:
+            record_fail("ST-08", "Invert toggle", f"Invert True vs False did not flip fold response (inv={p_inv:.3f}, noinv={p_noinv:.3f})")
+            return
+        record_pass("ST-08", "Invert toggle", f"Invert toggle flips specular sheen vs matte shadow folds (inverted {p_inv:.2f} vs shadow {p_noinv:.2f})")
+
+        # ST-09: Contour range curve falloff verified
+        rect_cen = Gegl.Rectangle.new(50, 50, 1, 1)
+        half_cen = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+        art.get_buffer().set(rect_cen, "RGBA float", half_cen)
+        art.get_buffer().flush()
+
+        img.set_selected_layers([art])
+        cfg_r25 = proc.create_config()
+        cfg_r25.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r25.set_property("image", img)
+        cfg_r25.set_property("preset", "custom")
+        cfg_r25.set_property("distance", 0.0)
+        cfg_r25.set_property("size", 0.0)
+        cfg_r25.set_property("range", 25.0)
+        cfg_r25.set_property("mask-type", "none")
+        proc.run(cfg_r25)
+        lyr_r25 = img.get_layers()[0]
+        p_r25 = lyr_r25.get_pixel(50, 50).get_rgba().alpha
+        img.remove_layer(lyr_r25)
+
+        img.set_selected_layers([art])
+        cfg_r100 = proc.create_config()
+        cfg_r100.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r100.set_property("image", img)
+        cfg_r100.set_property("preset", "custom")
+        cfg_r100.set_property("distance", 0.0)
+        cfg_r100.set_property("size", 0.0)
+        cfg_r100.set_property("range", 100.0)
+        cfg_r100.set_property("mask-type", "none")
+        proc.run(cfg_r100)
+        lyr_r100 = img.get_layers()[0]
+        p_r100 = lyr_r100.get_pixel(50, 50).get_rgba().alpha
+        img.remove_layer(lyr_r100)
+
+        full_cen = struct.pack("4f", 0.0, 0.6, 0.0, 1.0)
+        art.get_buffer().set(rect_cen, "RGBA float", full_cen)
+        art.get_buffer().flush()
+
+        if abs(p_r100 - p_r25) < 0.15:
+            record_fail("ST-09", "Contour range curve falloff", f"Range 100% vs 25% curve delta too small (r100={p_r100:.3f}, r25={p_r25:.3f})")
+            return
+        record_pass("ST-09", "Contour range curve falloff", f"Contour curve modulates falloff power law (range 25% alpha {p_r25:.3f} vs 100% alpha {p_r100:.3f})")
+
+        # ST-10: Angle directional rotation verified
+        img.set_selected_layers([art])
+        cfg_ang0 = proc.create_config()
+        cfg_ang0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ang0.set_property("image", img)
+        cfg_ang0.set_property("preset", "custom")
+        cfg_ang0.set_property("angle", 0.0)
+        cfg_ang0.set_property("distance", 15.0)
+        cfg_ang0.set_property("size", 1.0)
+        cfg_ang0.set_property("mask-type", "none")
+        proc.run(cfg_ang0)
+        lyr_ang0 = img.get_layers()[0]
+        p_ang0 = lyr_ang0.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_ang0)
+
+        img.set_selected_layers([art])
+        cfg_ang90 = proc.create_config()
+        cfg_ang90.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ang90.set_property("image", img)
+        cfg_ang90.set_property("preset", "custom")
+        cfg_ang90.set_property("angle", 90.0)
+        cfg_ang90.set_property("distance", 15.0)
+        cfg_ang90.set_property("size", 1.0)
+        cfg_ang90.set_property("mask-type", "none")
+        proc.run(cfg_ang90)
+        lyr_ang90 = img.get_layers()[0]
+        p_ang90 = lyr_ang90.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_ang90)
+
+        if abs(p_ang0 - p_ang90) < 0.5:
+            record_fail("ST-10", "Angle directional rotation", f"Angle 0° vs 90° did not rotate fold axis (ang0={p_ang0:.2f}, ang90={p_ang90:.2f})")
+            return
+        record_pass("ST-10", "Angle directional rotation", f"Directional angle rotates dual offset orientation (angle 0° alpha {p_ang0:.2f} vs 90° alpha {p_ang90:.2f})")
+
+        # ST-11: Custom solid color RGB fidelity
+        img.set_selected_layers([art])
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("preset", "custom")
+        cfg_col.set_property("satin-r", 1.0)
+        cfg_col.set_property("satin-g", 0.8)
+        cfg_col.set_property("satin-b", 0.2)
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+        lyr_col = img.get_layers()[0]
+        p_col = lyr_col.get_pixel(50, 50).get_rgba()
+        if abs(p_col.red - 1.0) > 0.05 or abs(p_col.green - 0.8) > 0.05 or abs(p_col.blue - 0.2) > 0.05:
+            record_fail("ST-11", "Custom solid color RGB fidelity", f"Expected [1.0, 0.8, 0.2], got [{p_col.red:.3f}, {p_col.green:.3f}, {p_col.blue:.3f}]")
+            return
+        record_pass("ST-11", "Custom solid color RGB fidelity", f"Custom amber swatch verified (R={p_col.red:.2f}, G={p_col.green:.2f}, B={p_col.blue:.2f})")
+        img.remove_layer(lyr_col)
+
+        # ST-12: Curated presets verified across all choices
+        presets_to_test = ["deep-silk", "pearl-sheen", "golden-folds", "velvet-depth", "midnight-glow", "subtle-contour"]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyr_p = img.get_layers()[0]
+            if lyr_p is None:
+                record_fail("ST-12", f"Preset {pname}", "Failed to create overlay layer")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("ST-12", "Curated presets verified", f"All {len(presets_to_test)} curated satin presets verified")
+
+        # ST-13: Layer stack placement verified
+        img.set_selected_layers([art])
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("preset", "deep-silk")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+        layers = img.get_layers()
+        pos_ol = img.get_item_position(layers[0])
+        pos_art = img.get_item_position(art)
+        if pos_ol != 0 or pos_art != 1:
+            record_fail("ST-13", "Layer stack placement", f"Expected overlay at 0, art at 1; got overlay={pos_ol}, art={pos_art}")
+            return
+        record_pass("ST-13", "Layer stack placement", "Overlay layer inserted immediately above parent layer in stack")
+        img.remove_layer(layers[0])
+
+        # ST-14: Blend modes & opacity validation
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("color-burn", Gimp.LayerMode.BURN),
+            ("linear-burn", Gimp.LayerMode.LINEAR_BURN),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("screen", Gimp.LayerMode.SCREEN),
+        ]
+        for bname, expected_mode in modes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "custom")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("ST-14", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("ST-14", "Blend modes & opacity validation", "Multiply, Normal, Color Burn, Linear Burn, Darken, Soft Light, Overlay, Screen & 75% opacity validated")
+
+        # ST-15: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("preset", "deep-silk")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        lyr_auto_no = img.get_layers()[0]
+        if lyr_auto_no.get_mask() is not None:
+            record_fail("ST-15", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(lyr_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("preset", "deep-silk")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        lyr_auto_sel = img.get_layers()[0]
+        mask_auto = lyr_auto_sel.get_mask()
+        if mask_auto is None:
+            record_fail("ST-15", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_auto_in = mask_auto.get_pixel(35, 35).get_rgba().red
+        if m_auto_in < 0.99:
+            record_fail("ST-15", "Auto layer mask", f"Expected mask white inside selection, got {m_auto_in:.3f}")
+            return
+        record_pass("ST-15", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(lyr_auto_sel)
+        Gimp.Selection.none(img)
+
+        # ST-16: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("ST-16", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("ST-16", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("ST-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -12867,6 +13269,7 @@ def run_all_tests():
     test_color_overlay()
     test_gradient_overlay()
     test_pattern_overlay()
+    test_satin()
 
 
 

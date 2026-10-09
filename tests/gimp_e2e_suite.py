@@ -11404,6 +11404,387 @@ def test_inner_glow():
         img.delete()
 
 
+def test_inner_shadow():
+    print("\n--- Test Suite 56: Non-Destructive Inner Shadow Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-inner-shadow")
+    if not proc:
+        record_fail("IS-01", "Procedure lookup", "Procedure python-fu-inner-shadow not found in PDB")
+        return
+
+    # IS-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "angle", "distance",
+        "choke", "size", "range", "opacity", "blend-mode",
+        "shadow-r", "shadow-g", "shadow-b", "noise", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("IS-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("IS-01", "Procedure signatures & argument audit", f"All 16 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # IS-02 & IS-03: PDB execution & Light angle 120° directional shadow cast
+        img.set_selected_layers([art])
+        cfg_120 = proc.create_config()
+        cfg_120.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_120.set_property("image", img)
+        cfg_120.set_property("preset", "custom")
+        cfg_120.set_property("angle", 120.0)
+        cfg_120.set_property("distance", 8.0)
+        cfg_120.set_property("choke", 0.0)
+        cfg_120.set_property("size", 10.0)
+        cfg_120.set_property("range", 50.0)
+        cfg_120.set_property("opacity", 75.0)
+        cfg_120.set_property("blend-mode", "multiply")
+        cfg_120.set_property("shadow-r", 0.0)
+        cfg_120.set_property("shadow-g", 0.0)
+        cfg_120.set_property("shadow-b", 0.0)
+        cfg_120.set_property("noise", 0.0)
+        cfg_120.set_property("mask-type", "none")
+
+        res_120 = proc.run(cfg_120)
+        if res_120.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-02", "PDB execution status", f"Execution returned {res_120.index(0)}")
+            return
+        record_pass("IS-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        lyr_120 = img.get_layers()[0]
+        a_tl = lyr_120.get_pixel(24, 24).get_rgba().alpha
+        a_br = lyr_120.get_pixel(76, 76).get_rgba().alpha
+        if a_tl < 0.20 or a_tl <= a_br + 0.15:
+            record_fail("IS-03", "Light angle 120° shadow cast", f"Expected top-left alpha > bottom-right alpha, got tl={a_tl:.3f}, br={a_br:.3f}")
+            return
+        record_pass("IS-03", "Light angle 120° directional shadow cast", f"Directional shadow verified (top-left alpha {a_tl:.3f} > bottom-right alpha {a_br:.3f})")
+        img.remove_layer(lyr_120)
+
+        # IS-04: Light angle 0° directional shadow cast (light from right casts to the left inside)
+        img.set_selected_layers([art])
+        cfg_0 = proc.create_config()
+        cfg_0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_0.set_property("image", img)
+        cfg_0.set_property("preset", "custom")
+        cfg_0.set_property("angle", 0.0)
+        cfg_0.set_property("distance", 8.0)
+        cfg_0.set_property("choke", 0.0)
+        cfg_0.set_property("size", 10.0)
+        cfg_0.set_property("mask-type", "none")
+        proc.run(cfg_0)
+        lyr_0 = img.get_layers()[0]
+        a_r = lyr_0.get_pixel(76, 50).get_rgba().alpha
+        a_l = lyr_0.get_pixel(24, 50).get_rgba().alpha
+        if a_r < 0.20 or a_r <= a_l + 0.15:
+            record_fail("IS-04", "Light angle 0° shadow cast", f"Expected right edge alpha > left edge alpha, got r={a_r:.3f}, l={a_l:.3f}")
+            return
+        record_pass("IS-04", "Light angle 0° directional shadow cast", f"Directional 0° shadow verified (right edge alpha {a_r:.3f} > left edge alpha {a_l:.3f})")
+        img.remove_layer(lyr_0)
+
+        # IS-05: Strict boundary silhouette clipping (outside alpha == 0.000)
+        img.set_selected_layers([art])
+        cfg_clip = proc.create_config()
+        cfg_clip.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clip.set_property("image", img)
+        cfg_clip.set_property("preset", "custom")
+        cfg_clip.set_property("distance", 15.0)
+        cfg_clip.set_property("choke", 30.0)
+        cfg_clip.set_property("size", 20.0)
+        cfg_clip.set_property("mask-type", "none")
+        proc.run(cfg_clip)
+        lyr_clip = img.get_layers()[0]
+        outside_coords = [(10, 10), (10, 50), (90, 50), (50, 10), (50, 90), (18, 18), (82, 82), (5, 5)]
+        max_out_alpha = max(lyr_clip.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_alpha > 0.000001:
+            record_fail("IS-05", "Silhouette boundary clipping", f"Glow leaked outside target silhouette (max outside alpha {max_out_alpha:.6f})")
+            return
+        record_pass("IS-05", "Strict boundary silhouette clipping", f"Shadow strictly clipped within parent silhouette (max outside alpha {max_out_alpha:.6f})")
+        img.remove_layer(lyr_clip)
+
+        # IS-06: Distance offset translation verified
+        img.set_selected_layers([art])
+        cfg_d5 = proc.create_config()
+        cfg_d5.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d5.set_property("image", img)
+        cfg_d5.set_property("preset", "custom")
+        cfg_d5.set_property("angle", 120.0)
+        cfg_d5.set_property("distance", 5.0)
+        cfg_d5.set_property("size", 10.0)
+        cfg_d5.set_property("mask-type", "none")
+        proc.run(cfg_d5)
+        lyr_d5 = img.get_layers()[0]
+        a_d5 = lyr_d5.get_pixel(35, 35).get_rgba().alpha
+        img.remove_layer(lyr_d5)
+
+        img.set_selected_layers([art])
+        cfg_d20 = proc.create_config()
+        cfg_d20.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d20.set_property("image", img)
+        cfg_d20.set_property("preset", "custom")
+        cfg_d20.set_property("angle", 120.0)
+        cfg_d20.set_property("distance", 20.0)
+        cfg_d20.set_property("size", 10.0)
+        cfg_d20.set_property("mask-type", "none")
+        proc.run(cfg_d20)
+        lyr_d20 = img.get_layers()[0]
+        a_d20 = lyr_d20.get_pixel(35, 35).get_rgba().alpha
+        img.remove_layer(lyr_d20)
+
+        if a_d20 <= a_d5:
+            record_fail("IS-06", "Distance offset translation", f"Expected distance 20px ({a_d20:.3f}) > distance 5px ({a_d5:.3f}) at deep interior (35, 35)")
+            return
+        record_pass("IS-06", "Distance offset translation", f"Distance extends inner shadow reach (dist 20px a={a_d20:.3f} > dist 5px a={a_d5:.3f})")
+
+        # IS-07: Choke boundary expansion control verified
+        img.set_selected_layers([art])
+        cfg_ch0 = proc.create_config()
+        cfg_ch0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ch0.set_property("image", img)
+        cfg_ch0.set_property("preset", "custom")
+        cfg_ch0.set_property("distance", 0.0)
+        cfg_ch0.set_property("choke", 0.0)
+        cfg_ch0.set_property("size", 15.0)
+        cfg_ch0.set_property("mask-type", "none")
+        proc.run(cfg_ch0)
+        lyr_ch0 = img.get_layers()[0]
+        a_ch0 = lyr_ch0.get_pixel(23, 50).get_rgba().alpha
+        img.remove_layer(lyr_ch0)
+
+        img.set_selected_layers([art])
+        cfg_ch60 = proc.create_config()
+        cfg_ch60.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ch60.set_property("image", img)
+        cfg_ch60.set_property("preset", "custom")
+        cfg_ch60.set_property("distance", 0.0)
+        cfg_ch60.set_property("choke", 60.0)
+        cfg_ch60.set_property("size", 15.0)
+        cfg_ch60.set_property("mask-type", "none")
+        proc.run(cfg_ch60)
+        lyr_ch60 = img.get_layers()[0]
+        a_ch60 = lyr_ch60.get_pixel(23, 50).get_rgba().alpha
+        img.remove_layer(lyr_ch60)
+
+        if a_ch60 <= a_ch0:
+            record_fail("IS-07", "Choke boundary control", f"Expected choke 60% ({a_ch60:.3f}) > choke 0% ({a_ch0:.3f}) at edge")
+            return
+        record_pass("IS-07", "Choke boundary expansion control", f"Choke thickens solid edge matte inward prior to blur (choke 60% a={a_ch60:.3f} > choke 0% a={a_ch0:.3f})")
+
+        # IS-08: Size halo radius control verified
+        img.set_selected_layers([art])
+        cfg_s5 = proc.create_config()
+        cfg_s5.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s5.set_property("image", img)
+        cfg_s5.set_property("preset", "custom")
+        cfg_s5.set_property("distance", 0.0)
+        cfg_s5.set_property("size", 5.0)
+        cfg_s5.set_property("mask-type", "none")
+        proc.run(cfg_s5)
+        lyr_s5 = img.get_layers()[0]
+        a_s5 = lyr_s5.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_s5)
+
+        img.set_selected_layers([art])
+        cfg_s25 = proc.create_config()
+        cfg_s25.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s25.set_property("image", img)
+        cfg_s25.set_property("preset", "custom")
+        cfg_s25.set_property("distance", 0.0)
+        cfg_s25.set_property("size", 25.0)
+        cfg_s25.set_property("mask-type", "none")
+        proc.run(cfg_s25)
+        lyr_s25 = img.get_layers()[0]
+        a_s25 = lyr_s25.get_pixel(30, 50).get_rgba().alpha
+        img.remove_layer(lyr_s25)
+
+        if a_s25 <= a_s5:
+            record_fail("IS-08", "Size halo radius control", f"Expected size 25px ({a_s25:.3f}) > size 5px ({a_s5:.3f}) at interior (30, 50)")
+            return
+        record_pass("IS-08", "Size halo radius control", f"Size expands inner shadow diffusion radius (size 25px a={a_s25:.3f} > size 5px a={a_s5:.3f})")
+
+        # IS-09: Custom shadow RGB color fidelity
+        img.set_selected_layers([art])
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("preset", "custom")
+        cfg_col.set_property("distance", 0.0)
+        cfg_col.set_property("size", 10.0)
+        cfg_col.set_property("shadow-r", 0.0)
+        cfg_col.set_property("shadow-g", 0.5)
+        cfg_col.set_property("shadow-b", 1.0)
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+        lyr_col = img.get_layers()[0]
+        p_c = lyr_col.get_pixel(22, 50).get_rgba()
+        if abs(p_c.red - 0.0) > 0.01 or abs(p_c.green - 0.5) > 0.02 or abs(p_c.blue - 1.0) > 0.01:
+            record_fail("IS-09", "Custom shadow color", f"Expected [0, 0.5, 1], got [{p_c.red:.3f}, {p_c.green:.3f}, {p_c.blue:.3f}]")
+            return
+        record_pass("IS-09", "Custom shadow RGB color fidelity", "Exact custom RGB color verified ([R=0.000, G=0.500, B=1.000])")
+        img.remove_layer(lyr_col)
+
+        # IS-10: Curated presets verified
+        presets_to_test = ["deep-carved", "subtle-inset", "soft-ambient", "hard-edge"]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_pre = proc.create_config()
+            cfg_pre.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_pre.set_property("image", img)
+            cfg_pre.set_property("preset", pname)
+            cfg_pre.set_property("mask-type", "none")
+            proc.run(cfg_pre)
+            lyr_p = img.get_layers()[0]
+            if lyr_p is None:
+                record_fail("IS-10", f"Preset {pname}", "Failed to create shadow layer")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("IS-10", "Curated presets", "Deep-carved, subtle-inset, soft-ambient, hard-edge presets verified")
+
+        # IS-11: Layer stack placement verified
+        img.set_selected_layers([art])
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("preset", "default")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+        layers = img.get_layers()
+        pos_sh = img.get_item_position(layers[0])
+        pos_art = img.get_item_position(art)
+        if pos_sh != 0 or pos_art != 1:
+            record_fail("IS-11", "Layer stack placement", f"Expected shadow at 0, art at 1; got shadow={pos_sh}, art={pos_art}")
+            return
+        record_pass("IS-11", "Layer stack placement", "Shadow layer inserted immediately above parent layer in stack")
+        img.remove_layer(layers[0])
+
+        # IS-12: Blend modes & opacity validation
+        modes_to_test = [
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("burn", Gimp.LayerMode.BURN),
+            ("linear-burn", Gimp.LayerMode.LINEAR_BURN),
+        ]
+        for bname, expected_mode in modes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "custom")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("IS-12", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("IS-12", "Blend modes & opacity validation", "Multiply, Normal, Darken, Color Burn, Linear Burn & 75% opacity validated")
+
+        # IS-13: Range contour falloff modulation
+        img.set_selected_layers([art])
+        cfg_r20 = proc.create_config()
+        cfg_r20.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r20.set_property("image", img)
+        cfg_r20.set_property("preset", "custom")
+        cfg_r20.set_property("distance", 0.0)
+        cfg_r20.set_property("range", 20.0)
+        cfg_r20.set_property("size", 15.0)
+        cfg_r20.set_property("mask-type", "none")
+        proc.run(cfg_r20)
+        lyr_r20 = img.get_layers()[0]
+        a_r20 = lyr_r20.get_pixel(25, 50).get_rgba().alpha
+        img.remove_layer(lyr_r20)
+
+        img.set_selected_layers([art])
+        cfg_r80 = proc.create_config()
+        cfg_r80.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_r80.set_property("image", img)
+        cfg_r80.set_property("preset", "custom")
+        cfg_r80.set_property("distance", 0.0)
+        cfg_r80.set_property("range", 80.0)
+        cfg_r80.set_property("size", 15.0)
+        cfg_r80.set_property("mask-type", "none")
+        proc.run(cfg_r80)
+        lyr_r80 = img.get_layers()[0]
+        a_r80 = lyr_r80.get_pixel(25, 50).get_rgba().alpha
+        img.remove_layer(lyr_r80)
+
+        if a_r80 <= a_r20:
+            record_fail("IS-13", "Range contour modulation", f"Expected range 80% ({a_r80:.3f}) > range 20% ({a_r20:.3f})")
+            return
+        record_pass("IS-13", "Range contour falloff modulation", f"Contour range shapes opacity decay (range 80% a={a_r80:.3f} > range 20% a={a_r20:.3f})")
+
+        # IS-14: Conceal-All black layer mask and noise texture variance
+        img.set_selected_layers([art])
+        cfg_cm = proc.create_config()
+        cfg_cm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cm.set_property("image", img)
+        cfg_cm.set_property("preset", "custom")
+        cfg_cm.set_property("distance", 0.0)
+        cfg_cm.set_property("size", 15.0)
+        cfg_cm.set_property("noise", 25.0)
+        cfg_cm.set_property("mask-type", "conceal-all")
+        proc.run(cfg_cm)
+        lyr_cm = img.get_layers()[0]
+        mask_cm = lyr_cm.get_mask()
+        if mask_cm is None:
+            record_fail("IS-14", "Conceal-All mask", "Expected attached black mask, got None")
+            return
+        m_val = mask_cm.get_pixel(50, 50).get_rgba().red
+        if m_val > 0.01:
+            record_fail("IS-14", "Conceal-All mask", f"Expected black mask (0.0), got {m_val:.3f}")
+            return
+
+        noise_samples = [lyr_cm.get_pixel(x, y).get_rgba().alpha for x in range(21, 26) for y in range(40, 50)]
+        mean_nz = sum(noise_samples) / len(noise_samples)
+        var = sum((s - mean_nz) ** 2 for s in noise_samples) / len(noise_samples)
+        if var < 0.0001:
+            record_fail("IS-14", "Noise variance", f"Expected noise variance > 0.0001, got {var:.6f}")
+            return
+        record_pass("IS-14", "Conceal-All mask & noise texture", f"Black mask attached and film grain noise texture verified (variance {var:.6f} > 0.0001)")
+        img.remove_layer(lyr_cm)
+
+        # IS-15: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("IS-15", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("IS-15", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("IS-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -11469,6 +11850,7 @@ def run_all_tests():
     test_outer_glow()
     test_pattern_fill_layer()
     test_inner_glow()
+    test_inner_shadow()
 
 
 

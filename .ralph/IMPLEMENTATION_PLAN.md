@@ -453,12 +453,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate edge/center radiance, choke contraction, blur size falloff, noise injection, glow color fidelity, blend modes, and headless GIMP test suite.
 
 ### Phase 61 — Non-Destructive Inner Shadow Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `inner-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-shadow/inner-shadow.py`.
-- [ ] Create dedicated Inner Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Shadow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
-- [ ] Support Photoshop Inner Shadow parameters: Angle (-180° to 180° with directional light trigonometry), Distance (0 to 200px), Choke (0 to 100% boundary contraction prior to blur), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn), Noise / Graininess (0 to 100%), and curated presets (Standard Inset, Deep Carved Inset, Subtle Bevel Inset, Soft Ambient Inset, Hard Edge Cutout, Custom Sliders).
-- [ ] Support non-destructive shadow layer placement clipped strictly inside parent layer silhouette, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Inner Shadow...`, `<Image>/Filters/Light and Shadow/Inner Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate angle offset trigonometry, distance translation, choke contraction, size gaussian falloff, silhouette clipping, noise injection, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `inner-shadow` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-shadow/inner-shadow.py`.
+- [x] Create dedicated Inner Shadow Layer Style helper simulating Photoshop `Layer > Layer Style > Inner Shadow...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [x] Support Photoshop Inner Shadow parameters: Angle (-180° to 180° with directional light trigonometry), Distance (0 to 200px), Choke (0 to 100% boundary contraction prior to blur), Size / Blur Radius (0 to 200px), Opacity (0 to 100%), Shadow Color (Custom RGB or Black), Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn), Noise / Graininess (0 to 100%), and curated presets (Standard Inset, Deep Carved Inset, Subtle Bevel Inset, Soft Ambient Inset, Hard Edge Cutout, Custom Sliders).
+- [x] Support non-destructive shadow layer placement clipped strictly inside parent layer silhouette, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Inner Shadow...`, `<Image>/Filters/Light and Shadow/Inner Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate angle offset trigonometry, distance translation, choke contraction, size gaussian falloff, silhouette clipping, noise injection, and headless GIMP test suite.
+
+### Phase 62 — Non-Destructive Color Overlay & Gradient Overlay Layer Style Helper Plugins
+- [ ] Implement native GIMP 3.x Python 3 plugins `color-overlay` and `gradient-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/`.
+- [ ] Create dedicated Color Overlay & Gradient Overlay helpers simulating Photoshop `Layer > Layer Style > Color Overlay...` and `Layer > Layer Style > Gradient Overlay...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [ ] Support Photoshop Color Overlay parameters: Solid Color RGB swatch, Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, Color), Opacity (0 to 100%), and strict silhouette clipping to target layer pixels.
+- [ ] Support Photoshop Gradient Overlay parameters: Gradient Preset / Custom colors, Geometry (Linear, Radial, Angle, Reflected, Diamond), Angle (-180° to 180°), Scale (10% to 500%), Reverse toggle, Dither toggle, Blend Mode, Opacity, and strict silhouette clipping.
+- [ ] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Color Overlay...`, `<Image>/Layer/Layer Style/Gradient Overlay...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate color/gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, and headless GIMP test suite.
 
 
 

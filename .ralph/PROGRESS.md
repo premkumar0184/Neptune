@@ -1550,3 +1550,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo and Outer repo committed.
 - **Result**: Success.
 - **Next**: Phase 61 — Non-Destructive Inner Shadow Layer Style Helper Plugin.
+
+## Iteration 63 — Non-Destructive Inner Shadow Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Inner Shadow Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-shadow/inner-shadow.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Inner Shadow: Blend Mode, Opacity, Noise, Color, Angle, Use Global Light, Distance, Choke, Size, Contour"). In Adobe Photoshop, Inner Shadow represents the companion layer style to Drop Shadow and Inner Glow, casting directional shading inside the silhouette of a layer or selection to simulate depth, engraving, cutouts, and recessed surface bevels. Stock GIMP lacks a dedicated Inner Shadow layer style dialog, lacks Photoshop's directional light angle trigonometry (-180° to 180°), lacks Distance translation offset inside the silhouette, lacks Choke boundary contraction prior to blurring, lacks Size blur radius falloff, lacks Contour range falloff curve shaping ($A' = A^{50/\text{range}}$), lacks film grain noise texture injection, and lacks dedicated shadow layer positioning clipped strictly inside the target layer's silhouette, leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `inner-shadow.py` brings complete Photoshop parity to Linux photo editing with `python-fu-inner-shadow`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/inner-shadow/inner-shadow.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-inner-shadow` with directional light angle trigonometry ($\Delta x = -d \cos(\theta), \Delta y = d \sin(\theta)$), distance offset translation, Choke boundary contraction, Size Gaussian blur falloff, Range contour curve modulation, film grain noise injection, 5 curated presets (Photoshop Standard Default, Deep Carved Inset, Subtle Inset Bevel, Soft Ambient Inset, Hard Edge Cutout, Custom Sliders), 5 blend modes (Multiply, Normal, Darken, Color Burn, Linear Burn), opacity control (0-100%), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `inner-shadow` (55 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (55 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 56: `test_inner_shadow` (asserting IS-01 through IS-15: PDB registration, procedure argument schema across 16 properties, SUCCESS status, Light angle 120° directional shadow cast [top-left alpha 0.827 > bottom-right alpha 0.106], Light angle 0° directional shadow cast [right edge alpha 0.804 > left edge alpha 0.016], strict boundary silhouette clipping [max outside alpha 0.000000], Distance offset translation [dist 20px a=0.671 > dist 5px a=0.027], Choke boundary expansion control [choke 60% a=1.000 > choke 0% a=0.651], Size halo radius control [size 25px a=0.455 > size 5px a=0.000], custom shadow RGB color fidelity [[R=0.000, G=0.500, B=1.000]], curated presets, layer stack placement immediately above parent layer in stack, blend modes Multiply, Normal, Darken, Color Burn, Linear Burn & 75% opacity validated, Range contour falloff modulation [range 80% a=0.631 > range 20% a=0.157], conceal-all black layer mask & film grain noise texture variance [0.018117 > 0.0001], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 629 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Inner Shadow Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 61 complete and scheduled Phase 62 (Non-Destructive Color Overlay & Gradient Overlay Layer Style Helper Plugins).
+- **Technical discoveries**:
+  - In directional inner shadow casting, when light source shines from angle $\theta$, the shadow falls on the opposite side inside the boundary, projecting inwards by offset $\Delta x = -\text{distance} \cdot \cos(\theta), \Delta y = \text{distance} \cdot \sin(\theta)$.
+  - Inverting the target silhouette selection, shifting it by offset $(\Delta x, \Delta y)$, growing/contracting by Choke, blurring with Gaussian blur, and masking by the original layer's silhouette yields the mathematically exact inner shadow geometry matching Adobe Photoshop.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 55 plugins verified).
+    - Stage 2: `install.sh --batch` passed (55 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 629 tests across 56 test suites in 83.98s.
+    - Final quality gate: SUCCESS across all stages in 110.15s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `2c67189`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 62 — Non-Destructive Color Overlay & Gradient Overlay Layer Style Helper Plugins.

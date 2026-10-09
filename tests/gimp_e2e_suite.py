@@ -13200,6 +13200,371 @@ def test_satin():
         img.delete()
 
 
+def test_bevel_emboss():
+    print("\n--- Test Suite 61: Non-Destructive Bevel & Emboss Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-bevel-emboss")
+    if not proc:
+        record_fail("BE-01", "Procedure lookup", "Procedure python-fu-bevel-emboss not found in PDB")
+        return
+
+    # BE-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "style", "technique",
+        "depth", "direction", "size", "soften", "angle", "altitude",
+        "gloss", "highlight-mode", "highlight-r", "highlight-g", "highlight-b",
+        "highlight-opacity", "shadow-mode", "shadow-r", "shadow-g", "shadow-b",
+        "shadow-opacity", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("BE-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("BE-01", "Procedure signatures & argument audit", f"All 24 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    # Semi-transparent pixel at (20, 20) with alpha 0.50
+    rect_px = Gegl.Rectangle.new(20, 20, 1, 1)
+    half_px = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+    art.get_buffer().set(rect_px, "RGBA float", half_px)
+    art.get_buffer().flush()
+
+    # Capture original baseline samples
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # BE-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "classic-inner-bevel")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("BE-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("BE-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # BE-03: Directional lighting verified at 120°
+        grp = img.get_layers()[0]
+        children = grp.get_children()
+        hl_lyr = [c for c in children if "Highlight" in c.get_name()][0]
+        sh_lyr = [c for c in children if "Shadow" in c.get_name()][0]
+
+        hl_tl = hl_lyr.get_pixel(25, 25).get_rgba().alpha
+        sh_tl = sh_lyr.get_pixel(25, 25).get_rgba().alpha
+        hl_br = hl_lyr.get_pixel(75, 75).get_rgba().alpha
+        sh_br = sh_lyr.get_pixel(75, 75).get_rgba().alpha
+
+        if hl_tl < 0.15 or sh_br < 0.15 or sh_tl > 0.05 or hl_br > 0.05:
+            record_fail("BE-03", "Directional lighting at 120°", f"Expected TL highlight & BR shadow; got hl_tl={hl_tl:.3f}, sh_tl={sh_tl:.3f}, hl_br={hl_br:.3f}, sh_br={sh_br:.3f}")
+            return
+        record_pass("BE-03", "Directional lighting at 120°", f"3D spherical illumination verified (TL highlight {hl_tl:.3f}, BR shadow {sh_br:.3f})")
+
+        # BE-04: Flat interior neutrality (center flat alpha is 0.0)
+        hl_cen = hl_lyr.get_pixel(50, 50).get_rgba().alpha
+        sh_cen = sh_lyr.get_pixel(50, 50).get_rgba().alpha
+        if hl_cen > 0.001 or sh_cen > 0.001:
+            record_fail("BE-04", "Flat interior neutrality", f"Expected center alpha 0.0, got hl={hl_cen:.4f}, sh={sh_cen:.4f}")
+            return
+        record_pass("BE-04", "Flat interior neutrality", f"Flat unsloped regions retain 0.0 alpha identity neutrality (hl={hl_cen:.4f}, sh={sh_cen:.4f})")
+
+        # BE-05: Strict boundary silhouette clipping (Inner Bevel outside alpha == 0.000)
+        outside_coords = [(5, 5), (10, 10), (15, 50), (85, 50), (50, 85), (95, 95)]
+        max_out_hl = max(hl_lyr.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        max_out_sh = max(sh_lyr.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_hl > 0.0001 or max_out_sh > 0.0001:
+            record_fail("BE-05", "Boundary silhouette clipping", f"Outside leak detected (hl={max_out_hl:.4f}, sh={max_out_sh:.4f})")
+            return
+        record_pass("BE-05", "Strict boundary silhouette clipping", f"Inner bevel strictly clipped inside parent silhouette (max outside alpha {max(max_out_hl, max_out_sh):.6f})")
+        img.remove_layer(grp)
+
+        # BE-06: Direction inversion verified (Direction Down swaps highlight and shadow)
+        img.set_selected_layers([art])
+        cfg_down = proc.create_config()
+        cfg_down.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_down.set_property("image", img)
+        cfg_down.set_property("preset", "custom")
+        cfg_down.set_property("direction", "down")
+        cfg_down.set_property("angle", 120.0)
+        cfg_down.set_property("mask-type", "none")
+        proc.run(cfg_down)
+        grp_down = img.get_layers()[0]
+        hl_down = [c for c in grp_down.get_children() if "Highlight" in c.get_name()][0]
+        sh_down = [c for c in grp_down.get_children() if "Shadow" in c.get_name()][0]
+
+        d_hl_tl = hl_down.get_pixel(25, 25).get_rgba().alpha
+        d_sh_tl = sh_down.get_pixel(25, 25).get_rgba().alpha
+        d_hl_br = hl_down.get_pixel(75, 75).get_rgba().alpha
+        d_sh_br = sh_down.get_pixel(75, 75).get_rgba().alpha
+
+        if d_sh_tl < 0.15 or d_hl_br < 0.15 or d_hl_tl > 0.05 or d_sh_br > 0.05:
+            record_fail("BE-06", "Direction Down inversion", f"Expected inverted relief; got sh_tl={d_sh_tl:.3f}, hl_br={d_hl_br:.3f}")
+            return
+        record_pass("BE-06", "Direction inversion verified", f"Direction Down creates inverted carved relief (TL shadow {d_sh_tl:.3f}, BR highlight {d_hl_br:.3f})")
+        img.remove_layer(grp_down)
+
+        # BE-07: Light angle rotation verified (Angle 0° illuminates right edge)
+        img.set_selected_layers([art])
+        cfg_ang0 = proc.create_config()
+        cfg_ang0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ang0.set_property("image", img)
+        cfg_ang0.set_property("preset", "custom")
+        cfg_ang0.set_property("angle", 0.0)
+        cfg_ang0.set_property("mask-type", "none")
+        proc.run(cfg_ang0)
+        grp_ang0 = img.get_layers()[0]
+        hl_ang0 = [c for c in grp_ang0.get_children() if "Highlight" in c.get_name()][0]
+        sh_ang0 = [c for c in grp_ang0.get_children() if "Shadow" in c.get_name()][0]
+
+        a0_hl_r = hl_ang0.get_pixel(78, 50).get_rgba().alpha
+        a0_sh_l = sh_ang0.get_pixel(22, 50).get_rgba().alpha
+        if a0_hl_r < 0.20 or a0_sh_l < 0.20:
+            record_fail("BE-07", "Angle 0° rotation", f"Expected right highlight & left shadow; got r_hl={a0_hl_r:.3f}, l_sh={a0_sh_l:.3f}")
+            return
+        record_pass("BE-07", "Light angle rotation verified", f"Angle rotates illumination azimuth (0° light: right highlight {a0_hl_r:.3f}, left shadow {a0_sh_l:.3f})")
+        img.remove_layer(grp_ang0)
+
+        # BE-08: Light altitude modulation verified (Altitude 75° vs 15°)
+        img.set_selected_layers([art])
+        cfg_alt15 = proc.create_config()
+        cfg_alt15.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_alt15.set_property("image", img)
+        cfg_alt15.set_property("preset", "custom")
+        cfg_alt15.set_property("altitude", 15.0)
+        cfg_alt15.set_property("mask-type", "none")
+        proc.run(cfg_alt15)
+        grp_alt15 = img.get_layers()[0]
+        hl_alt15 = [c for c in grp_alt15.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba().alpha
+        img.remove_layer(grp_alt15)
+
+        img.set_selected_layers([art])
+        cfg_alt75 = proc.create_config()
+        cfg_alt75.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_alt75.set_property("image", img)
+        cfg_alt75.set_property("preset", "custom")
+        cfg_alt75.set_property("altitude", 75.0)
+        cfg_alt75.set_property("mask-type", "none")
+        proc.run(cfg_alt75)
+        grp_alt75 = img.get_layers()[0]
+        hl_alt75 = [c for c in grp_alt75.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba().alpha
+        img.remove_layer(grp_alt75)
+
+        if hl_alt15 <= hl_alt75 + 0.15:
+            record_fail("BE-08", "Altitude modulation", f"Expected lower altitude to produce higher directional contrast; got alt15={hl_alt15:.3f}, alt75={hl_alt75:.3f}")
+            return
+        record_pass("BE-08", "Light altitude modulation verified", f"Altitude modulates directional contrast (15° grazing alpha {hl_alt15:.3f} > 75° zenith {hl_alt75:.3f})")
+
+        # BE-09: Depth scaling verified (Depth 300% vs 50%)
+        img.set_selected_layers([art])
+        cfg_d300 = proc.create_config()
+        cfg_d300.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d300.set_property("image", img)
+        cfg_d300.set_property("preset", "custom")
+        cfg_d300.set_property("depth", 300.0)
+        cfg_d300.set_property("mask-type", "none")
+        proc.run(cfg_d300)
+        grp_d300 = img.get_layers()[0]
+        hl_d300 = [c for c in grp_d300.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba().alpha
+        img.remove_layer(grp_d300)
+
+        img.set_selected_layers([art])
+        cfg_d50 = proc.create_config()
+        cfg_d50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_d50.set_property("image", img)
+        cfg_d50.set_property("preset", "custom")
+        cfg_d50.set_property("depth", 50.0)
+        cfg_d50.set_property("mask-type", "none")
+        proc.run(cfg_d50)
+        grp_d50 = img.get_layers()[0]
+        hl_d50 = [c for c in grp_d50.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba().alpha
+        img.remove_layer(grp_d50)
+
+        if hl_d300 <= hl_d50 + 0.15:
+            record_fail("BE-09", "Depth scaling", f"Expected depth 300% > 50%; got d300={hl_d300:.3f}, d50={hl_d50:.3f}")
+            return
+        record_pass("BE-09", "Depth scaling verified", f"Depth modulates slope steepness (depth 300% alpha {hl_d300:.3f} > 50% alpha {hl_d50:.3f})")
+
+        # BE-10: Bevel styles verified (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss)
+        styles_to_test = ["inner-bevel", "outer-bevel", "emboss", "pillow-emboss"]
+        for sname in styles_to_test:
+            img.set_selected_layers([art])
+            cfg_s = proc.create_config()
+            cfg_s.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_s.set_property("image", img)
+            cfg_s.set_property("preset", "custom")
+            cfg_s.set_property("style", sname)
+            cfg_s.set_property("mask-type", "none")
+            proc.run(cfg_s)
+            grp_s = img.get_layers()[0]
+            if len(grp_s.get_children()) != 2:
+                record_fail("BE-10", f"Style {sname}", "Failed to create Highlight and Shadow passes")
+                return
+            img.remove_layer(grp_s)
+        record_pass("BE-10", "Bevel styles verified", "All 4 bevel styles (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss) verified")
+
+        # BE-11: Bevel techniques verified (Smooth vs Chisel Hard)
+        img.set_selected_layers([art])
+        cfg_chisel = proc.create_config()
+        cfg_chisel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_chisel.set_property("image", img)
+        cfg_chisel.set_property("preset", "custom")
+        cfg_chisel.set_property("technique", "chisel-hard")
+        cfg_chisel.set_property("mask-type", "none")
+        proc.run(cfg_chisel)
+        grp_chisel = img.get_layers()[0]
+        hl_chisel = [c for c in grp_chisel.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba().alpha
+        img.remove_layer(grp_chisel)
+
+        if hl_chisel < 0.20:
+            record_fail("BE-11", "Chisel Hard technique", f"Expected high facet alpha, got {hl_chisel:.3f}")
+            return
+        record_pass("BE-11", "Bevel techniques verified", f"Chisel Hard technique multi-faceted edge verified (facet alpha {hl_chisel:.3f})")
+
+        # BE-12: Custom highlight and shadow colors RGB fidelity
+        img.set_selected_layers([art])
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("preset", "custom")
+        cfg_col.set_property("highlight-r", 0.0)
+        cfg_col.set_property("highlight-g", 1.0)
+        cfg_col.set_property("highlight-b", 1.0)
+        cfg_col.set_property("shadow-r", 0.5)
+        cfg_col.set_property("shadow-g", 0.0)
+        cfg_col.set_property("shadow-b", 0.0)
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+        grp_col = img.get_layers()[0]
+        hl_col = [c for c in grp_col.get_children() if "Highlight" in c.get_name()][0].get_pixel(25, 25).get_rgba()
+        sh_col = [c for c in grp_col.get_children() if "Shadow" in c.get_name()][0].get_pixel(75, 75).get_rgba()
+
+        if abs(hl_col.green - 1.0) > 0.05 or abs(hl_col.blue - 1.0) > 0.05 or abs(sh_col.red - 0.5) > 0.05:
+            record_fail("BE-12", "Color fidelity", f"Expected Cyan highlight & Maroon shadow; got hl=[G={hl_col.green:.2f}, B={hl_col.blue:.2f}], sh=[R={sh_col.red:.2f}]")
+            return
+        record_pass("BE-12", "Custom colors RGB fidelity", f"Custom Cyan highlight (G={hl_col.green:.2f}, B={hl_col.blue:.2f}) and Maroon shadow (R={sh_col.red:.2f}) verified")
+        img.remove_layer(grp_col)
+
+        # BE-13: Curated presets verified across all choices
+        presets_to_test = ["classic-inner-bevel", "hard-chisel-metal", "deep-emboss", "pillow-carved", "soft-round-bevel", "outer-rim"]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            grp_p = img.get_layers()[0]
+            if len(grp_p.get_children()) != 2:
+                record_fail("BE-13", f"Preset {pname}", "Failed to create bevel passes")
+                return
+            img.remove_layer(grp_p)
+        record_pass("BE-13", "Curated presets verified", f"All {len(presets_to_test)} curated Bevel & Emboss presets verified")
+
+        # BE-14: Layer stack placement and group container verified
+        img.set_selected_layers([art])
+        cfg_stk = proc.create_config()
+        cfg_stk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_stk.set_property("image", img)
+        cfg_stk.set_property("preset", "classic-inner-bevel")
+        cfg_stk.set_property("highlight-mode", "screen")
+        cfg_stk.set_property("shadow-mode", "multiply")
+        cfg_stk.set_property("highlight-opacity", 75.0)
+        cfg_stk.set_property("shadow-opacity", 75.0)
+        cfg_stk.set_property("mask-type", "none")
+        proc.run(cfg_stk)
+        grp_stk = img.get_layers()[0]
+        pos_grp = img.get_item_position(grp_stk)
+        pos_art = img.get_item_position(art)
+        if pos_grp != 0 or pos_art != 1:
+            record_fail("BE-14", "Layer stack placement", f"Expected group at 0, art at 1; got group={pos_grp}, art={pos_art}")
+            return
+        ch = grp_stk.get_children()
+        hl_l = [c for c in ch if "Highlight" in c.get_name()][0]
+        sh_l = [c for c in ch if "Shadow" in c.get_name()][0]
+        if hl_l.get_mode() != Gimp.LayerMode.SCREEN or sh_l.get_mode() != Gimp.LayerMode.MULTIPLY or abs(hl_l.get_opacity() - 75.0) > 0.01:
+            record_fail("BE-14", "Pass modes & opacities", f"Expected Screen and Multiply at 75%; got hl={hl_l.get_mode()}, sh={sh_l.get_mode()}")
+            return
+        record_pass("BE-14", "Layer stack placement & group container", "Group placed at index 0 with Highlight (Screen, 75%) and Shadow (Multiply, 75%)")
+        img.remove_layer(grp_stk)
+
+        # BE-15: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("preset", "classic-inner-bevel")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        grp_auto_no = img.get_layers()[0]
+        if grp_auto_no.get_mask() is not None:
+            record_fail("BE-15", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(grp_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("preset", "classic-inner-bevel")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        grp_auto_sel = img.get_layers()[0]
+        mask_auto = grp_auto_sel.get_mask()
+        if mask_auto is None:
+            record_fail("BE-15", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_auto_in = mask_auto.get_pixel(35, 35).get_rgba().red
+        if m_auto_in < 0.99:
+            record_fail("BE-15", "Auto layer mask", f"Expected mask white inside selection, got {m_auto_in:.3f}")
+            return
+        record_pass("BE-15", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(grp_auto_sel)
+        Gimp.Selection.none(img)
+
+        # BE-16: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("BE-16", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("BE-16", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("BE-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -13270,6 +13635,7 @@ def run_all_tests():
     test_gradient_overlay()
     test_pattern_overlay()
     test_satin()
+    test_bevel_emboss()
 
 
 

@@ -493,13 +493,30 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate dual offset distance casting, angle trigonometry, Gaussian blur size, invert specular sheen, silhouette boundary clipping, and headless GIMP test suite (assertions ST-01 to ST-16).
 
 ### Phase 66 — Non-Destructive Bevel and Emboss Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `bevel-emboss` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/bevel-emboss/bevel-emboss.py`.
-- [ ] Create dedicated Bevel & Emboss helper simulating Photoshop `Layer > Layer Style > Bevel & Emboss...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3610: "Bevel & Emboss: Style (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss), Technique (Smooth, Chisel Hard, Chisel Soft), Depth, Direction (Up, Down), Size, Soften, Shading Angle & Altitude, Highlight Mode/Opacity, Shadow Mode/Opacity").
-- [ ] Support Photoshop Bevel & Emboss styles: Inner Bevel, Outer Bevel, Emboss, Pillow Emboss.
-- [ ] Support directional lighting trigonometry with Angle (-180° to 180°) and Altitude (0° to 90°), separate Highlight (Screen/Normal, custom color/opacity) and Shadow (Multiply/Normal, custom color/opacity) passes.
-- [ ] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Bevel and Emboss...`, `<Image>/Filters/Light and Shadow/Bevel and Emboss (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate bevel styles, lighting angle/altitude, highlight/shadow separation, soften blur falloff, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `bevel-emboss` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/bevel-emboss/bevel-emboss.py`.
+- [x] Create dedicated Bevel & Emboss helper simulating Photoshop `Layer > Layer Style > Bevel & Emboss...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3610: "Bevel & Emboss: Style (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss), Technique (Smooth, Chisel Hard, Chisel Soft), Depth, Direction (Up, Down), Size, Soften, Shading Angle & Altitude, Highlight Mode/Opacity, Shadow Mode/Opacity").
+- [x] Support Photoshop Bevel & Emboss styles: Inner Bevel, Outer Bevel, Emboss, Pillow Emboss.
+- [x] Support directional lighting trigonometry with Angle (-180° to 180°) and Altitude (0° to 90°), separate Highlight (Screen/Normal, custom color/opacity) and Shadow (Multiply/Normal, custom color/opacity) passes.
+- [x] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Bevel and Emboss...`, `<Image>/Filters/Light and Shadow/Bevel and Emboss (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate bevel styles, lighting angle/altitude, highlight/shadow separation, soften blur falloff, and headless GIMP test suite (assertions BE-01 to BE-16).
+
+### Phase 67 — Non-Destructive Stroke Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `stroke-style` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py`.
+- [ ] Create dedicated Stroke Layer Style helper simulating Photoshop `Layer > Layer Style > Stroke...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Stroke: Size, Position [Outside, Inside, Center], Blend Mode, Opacity, Overprint, Fill Type [Color, Gradient, Pattern]").
+- [ ] Support Photoshop Stroke positioning: Outside (stroke expands outward from silhouette boundary), Inside (stroke is inset strictly within layer content boundary), and Center (stroke is centered on boundary edge).
+- [ ] Support Fill Types: Solid Color RGB swatch, Gradient (Linear / Radial with dual tones), and Pattern texture repetition.
+- [ ] Support non-destructive overlay layer placement (outside placed beneath or inside placed above parent layer, or grouped container), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Stroke...`, `<Image>/Filters/Light and Shadow/Stroke (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate stroke positioning (Inside, Outside, Center), size dilation/erosion geometry, fill types, blend modes, opacity scaling, layer mask attachment, and headless GIMP test suite.
+
+### Phase 68 — Global Lighting & Layer Style Effects Manager Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `layer-style-manager` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
+- [ ] Simulate Photoshop `Layer > Layer Style > Global Light...`, `Copy Layer Style`, `Paste Layer Style`, `Clear Layer Style`, and `Scale Effects...` (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665).
+- [ ] Support unified Global Light azimuth angle and altitude across all directional layer styles (Drop Shadow, Inner Shadow, Bevel & Emboss).
+- [ ] Support copying style parameters across layers, clearing applied layer style containers, toggling style visibility, and scaling layer effect radii proportionally (10% to 500%).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Global Light...`, `<Image>/Layer/Layer Style/Scale Effects...`, `<Image>/Layer/Layer Style/Copy Layer Style`, `<Image>/Layer/Layer Style/Paste Layer Style`, and `<Image>/Layer/Layer Style/Clear Layer Style`.
+- [ ] Validate global angle synchronization, effect scaling arithmetic, style copy/paste persistence, and headless GIMP test suite.
 
 
 

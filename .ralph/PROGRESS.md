@@ -1679,7 +1679,37 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (59 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 692 tests across 60 test suites in 116.81s.
     - Final quality gate: SUCCESS across all stages in 132.46s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `8255c84`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `8255c84`. Outer repo `34041ca`.
 - **Result**: Success.
 - **Next**: Phase 66 — Non-Destructive Bevel and Emboss Layer Style Helper Plugin.
+
+## Iteration 68 — Non-Destructive Bevel and Emboss Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Bevel and Emboss Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/bevel-emboss/bevel-emboss.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3610: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Bevel & Emboss: Style [Inner Bevel, Outer Bevel, Emboss, Pillow Emboss], Technique [Smooth, Chisel Hard, Chisel Soft], Depth, Direction [Up, Down], Size, Soften, Shading Angle & Altitude, Highlight Mode/Opacity, Shadow Mode/Opacity"). In Adobe Photoshop, Bevel and Emboss represents the definitive 3D surface relief layer style in professional graphic design, UI styling, icon fabrication, and typographic styling. Stock GIMP provides no built-in equivalent to Photoshop's Bevel and Emboss layer style, lacks non-destructive 3D height-map normal shading, lacks multi-style support (Inner Bevel, Outer Bevel, Emboss, Pillow Emboss), lacks technique styling (Smooth, Chisel Hard, Chisel Soft), lacks directional up/down relief inversion, lacks directional light Angle (-180° to 180°) and Altitude (0° to 90°) spherical illumination, lacks independent Highlight (Screen) and Shadow (Multiply) compositing passes, and lacks dedicated non-destructive layer placement leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `bevel-emboss.py` brings complete Photoshop parity to Linux photo editing with `python-fu-bevel-emboss`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/bevel-emboss/bevel-emboss.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-bevel-emboss` with 4 styles (`inner-bevel`, `outer-bevel`, `emboss`, `pillow-emboss`), 3 techniques (`smooth`, `chisel-hard`, `chisel-soft`), Depth (1.0% to 1000.0%), Direction (`up`, `down`), Size (0.0 to 250.0px), Soften (0.0 to 16.0px), light Angle (-180° to 180°), Altitude (0° to 90°), Gloss response (`linear`, `curved`), separate Highlight controls (Mode, Color RGB, Opacity 0-100%), separate Shadow controls (Mode, Color RGB, Opacity 0-100%), 6 curated presets (`classic-inner-bevel`, `hard-chisel-metal`, `deep-emboss`, `pillow-carved`, `soft-round-bevel`, `outer-rim`, `custom`), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), dedicated container group `(Bevel & Emboss)` inserted immediately above target layer with independent `Highlight` and `Shadow` passes, single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `bevel-emboss` (60 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (60 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 61: `test_bevel_emboss` (asserting BE-01 through BE-16: PDB registration, procedure argument schema across 24 properties, SUCCESS status, 3D directional lighting at 120° [TL highlight 0.353, BR shadow 0.690], flat interior neutrality [center flat alpha 0.0000 for both highlight and shadow], strict boundary silhouette clipping [outside alpha strictly 0.000000], direction inversion [Direction Down swaps highlight and shadow positions: TL shadow 0.353, BR highlight 0.690], light angle rotation [Angle 0° illuminates right edge with shadow on left: right highlight 1.000, left shadow 1.000], light altitude modulation [15° grazing alpha 0.396 > 75° zenith 0.106], depth scaling [Depth 300% alpha 0.914 > Depth 50% alpha 0.180], all 4 bevel styles [Inner Bevel, Outer Bevel, Emboss, Pillow Emboss], bevel techniques [Chisel Hard multi-faceted edge alpha 0.796], custom highlight Cyan and shadow Maroon RGB color fidelity, all 6 curated presets, dedicated container group stack placement with Highlight [Screen, 75%] and Shadow [Multiply, 75%], auto layer mask attachment behavior, and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 708 passing across 61 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Bevel & Emboss Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 66 complete and scheduled Phase 67 (Non-Destructive Stroke Layer Style Helper Plugin) and Phase 68 (Global Lighting & Layer Style Effects Manager Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, `Gimp.LayerMode.LINEAR_ADD` does not exist; the correct enum attribute is `Gimp.LayerMode.ADDITION` (value 31).
+  - In pure NumPy, 2D central gradients $(\frac{\partial H}{\partial x}, \frac{\partial H}{\partial y})$ of the bevel height profile $H(x, y)$ define outward surface normal components $(-g_x, -g_y)$.
+  - Light directional projection: $L_x = \text{dir} \cdot \cos(\phi) \cos(\theta)$, $L_y = -\text{dir} \cdot \cos(\phi) \sin(\theta)$.
+  - Directional illumination: $\text{directional} = \frac{-g_x L_x - g_y L_y}{\sqrt{g_x^2 + g_y^2 + 1}}$.
+  - Highlights face incident light ($\text{directional} > 0$), Shadows face away ($\text{directional} < 0$), flat surfaces remain exact $0.0000$ identity neutrality. Direction Down cleanly swaps highlights and shadows ($\text{dir} = -1.0$).
+  - In GIMP 3.x, `Gimp.GroupLayer` houses both the `Highlight` pass (Screen mode, 75% opacity, white RGB) and `Shadow` pass (Multiply mode, 75% opacity, black RGB), providing identical Photoshop blend mode semantics and single-click removal / undo.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 60 plugins verified).
+    - Stage 2: `install.sh --batch` passed (60 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 708 tests across 61 test suites in 121.20s.
+    - Final quality gate: SUCCESS across all stages in 148.53s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `5da75df`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 67 — Non-Destructive Stroke Layer Style Helper Plugin.
 

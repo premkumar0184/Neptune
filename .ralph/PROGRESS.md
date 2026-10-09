@@ -1902,6 +1902,6 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (66 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 804 tests across 67 test suites in 145.37s.
     - Final quality gate: SUCCESS across all stages in 161.84s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `c2e9dc7`. Outer repo `PENDING`.
+- **Commit**: PhotoGIMP sub-repo `c2e9dc7`. Outer repo `65f35eb`.
 - **Result**: Success.
 - **Next**: Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin (`placeholder-frames`).

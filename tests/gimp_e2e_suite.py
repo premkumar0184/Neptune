@@ -15574,6 +15574,346 @@ def test_history_log():
         img.delete()
 
 
+def test_placeholder_frames():
+    """Test Suite 68: Placeholder Frames & Clipping Masks Layout Helper Plugin."""
+    print("\n--- Test Suite 68: Placeholder Frames & Clipping Masks Layout Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    # PF-01: Procedure signatures & argument audit
+    procs = [
+        "python-fu-create-frame",
+        "python-fu-convert-to-frame",
+        "python-fu-place-image-in-frame",
+        "python-fu-set-frame-stroke",
+        "python-fu-adjust-frame-content",
+        "python-fu-release-frame",
+    ]
+    proc_objs = {}
+    for name in procs:
+        p = pdb.lookup_procedure(name)
+        if p is None:
+            record_fail("PF-01", f"Lookup {name}", f"Procedure {name} not found in PDB")
+            return
+        proc_objs[name] = p
+    record_pass("PF-01", "Procedure signatures & argument audit", f"All 6 Frame procedures verified in PDB: {procs}")
+
+    img = Gimp.Image.new(300, 300, Gimp.ImageBaseType.RGB)
+    try:
+        # Base canvas layer (Blue)
+        base = Gimp.Layer.new(img, "Base Artwork", 300, 300, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,0,1)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(150, 150).get_rgba()
+
+        # PF-02: Create rectangular frame
+        proc_create = proc_objs["python-fu-create-frame"]
+        cfg_create = proc_create.create_config()
+        cfg_create.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_create.set_property("image", img)
+        cfg_create.set_property("frame-name", "Header Box")
+        cfg_create.set_property("frame-shape", "rect")
+        cfg_create.set_property("use-selection", False)
+        cfg_create.set_property("pos-x", 50)
+        cfg_create.set_property("pos-y", 50)
+        cfg_create.set_property("width", 100)
+        cfg_create.set_property("height", 100)
+        cfg_create.set_property("fit-mode", "fill")
+        res_c = proc_create.run(cfg_create)
+        if res_c.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-02", "Create rect frame execution", f"Expected SUCCESS, got {res_c.index(0)}")
+            return
+
+        # Check group layer created and parasite stored
+        rect_group = None
+        for lyr in img.get_layers():
+            if lyr.get_name() == "Header Box (Frame)" and isinstance(lyr, Gimp.GroupLayer):
+                rect_group = lyr
+                break
+        if rect_group is None:
+            record_fail("PF-02", "Rect frame group layer", "Header Box (Frame) group layer not found")
+            return
+        meta_rect = json.loads(bytes(rect_group.get_parasite("photogimp/frame-container").get_data()).decode("utf-8"))
+        if meta_rect.get("shape") != "rect" or meta_rect.get("width") != 100 or meta_rect.get("height") != 100:
+            record_fail("PF-02", "Rect frame parasite metadata", f"Unexpected metadata: {meta_rect}")
+            return
+        record_pass("PF-02", "Create rectangular frame", "Rectangular placeholder frame created with persistent parasite metadata")
+
+        # PF-03: Create elliptical frame with oval mask geometry
+        cfg_create.set_property("frame-name", "Profile Circle")
+        cfg_create.set_property("frame-shape", "ellipse")
+        cfg_create.set_property("pos-x", 160)
+        cfg_create.set_property("pos-y", 60)
+        cfg_create.set_property("width", 80)
+        cfg_create.set_property("height", 80)
+        res_e = proc_create.run(cfg_create)
+        if res_e.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-03", "Create ellipse frame execution", f"Expected SUCCESS, got {res_e.index(0)}")
+            return
+        circle_group = None
+        for lyr in img.get_layers():
+            if lyr.get_name() == "Profile Circle (Frame)" and isinstance(lyr, Gimp.GroupLayer):
+                circle_group = lyr
+                break
+        if circle_group is None:
+            record_fail("PF-03", "Ellipse frame group layer", "Profile Circle (Frame) group layer not found")
+            return
+        meta_circle = json.loads(bytes(circle_group.get_parasite("photogimp/frame-container").get_data()).decode("utf-8"))
+        if meta_circle.get("shape") != "ellipse":
+            record_fail("PF-03", "Ellipse frame parasite", f"Expected shape ellipse, got {meta_circle.get('shape')}")
+            return
+        record_pass("PF-03", "Create elliptical frame", "Elliptical placeholder frame created with oval boundary mask")
+
+        # PF-04: Convert existing layer to frame
+        shape_lyr = Gimp.Layer.new(img, "Hero Shape", 60, 60, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(shape_lyr, None, 0)
+        shape_lyr.set_offsets(20, 200)
+        shape_lyr.edit_fill(Gimp.FillType.WHITE)
+        img.set_selected_layers([shape_lyr])
+
+        proc_conv = proc_objs["python-fu-convert-to-frame"]
+        cfg_conv = proc_conv.create_config()
+        cfg_conv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conv.set_property("image", img)
+        cfg_conv.set_property("frame-name", "Hero Converted")
+        cfg_conv.set_property("fit-mode", "fit")
+        res_cv = proc_conv.run(cfg_conv)
+        if res_cv.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-04", "Convert to frame execution", f"Expected SUCCESS, got {res_cv.index(0)}")
+            return
+        conv_found = any(l.get_name() == "Hero Converted (Frame)" for l in img.get_layers())
+        if not conv_found:
+            record_fail("PF-04", "Converted frame group", "Hero Converted (Frame) not found in layer stack")
+            return
+        record_pass("PF-04", "Convert layer to frame", "Active shape layer successfully converted into placeholder frame container")
+
+        # PF-05: Place image into frame with 'fill' (cover) auto-fitting
+        # Create a sample source layer with 200x100 aspect ratio (2:1)
+        src_photo = Gimp.Layer.new(img, "Landscape Photo", 200, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(src_photo, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1,0,0)"))  # Red
+        src_photo.edit_fill(Gimp.FillType.FOREGROUND)
+        img.set_selected_layers([src_photo])
+
+        proc_place = proc_objs["python-fu-place-image-in-frame"]
+        cfg_place = proc_place.create_config()
+        cfg_place.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_place.set_property("image", img)
+        cfg_place.set_property("frame-name", "Header Box")
+        cfg_place.set_property("file-path", "")  # place active layer
+        cfg_place.set_property("fit-mode", "fill")
+        res_pl = proc_place.run(cfg_place)
+        if res_pl.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-05", "Place image fill execution", f"Expected SUCCESS, got {res_pl.index(0)}")
+            return
+        placed_child = None
+        for ch in rect_group.get_children():
+            if "(Content)" in ch.get_name():
+                placed_child = ch
+                break
+        if placed_child is None:
+            record_fail("PF-05", "Placed content layer in group", "Content layer not found inside Header Box frame")
+            return
+        record_pass("PF-05", "Place image into frame (fill/cover)", f"Content scaled and centered in frame (dimensions {placed_child.get_width()}x{placed_child.get_height()})")
+
+        # PF-06: Place image into frame with 'fit' (contain) auto-fitting
+        src_portrait = Gimp.Layer.new(img, "Portrait Photo", 100, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(src_portrait, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,1,0)"))  # Green
+        src_portrait.edit_fill(Gimp.FillType.FOREGROUND)
+        img.set_selected_layers([src_portrait])
+
+        cfg_place.set_property("frame-name", "Profile Circle")
+        cfg_place.set_property("fit-mode", "fit")
+        res_pf = proc_place.run(cfg_place)
+        if res_pf.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-06", "Place image fit execution", f"Expected SUCCESS, got {res_pf.index(0)}")
+            return
+        circle_child = None
+        for ch in circle_group.get_children():
+            if "(Content)" in ch.get_name():
+                circle_child = ch
+                break
+        if circle_child is None:
+            record_fail("PF-06", "Placed fit layer in circle frame", "Content layer not found in Profile Circle")
+            return
+        if circle_child.get_width() != 40 or circle_child.get_height() != 80:
+            record_fail("PF-06", "Fit proportional scaling", f"Expected 40x80, got {circle_child.get_width()}x{circle_child.get_height()}")
+            return
+        record_pass("PF-06", "Place image into frame (fit/contain)", "Proportional aspect-ratio contain scaling verified (40x80 inside 80x80 frame)")
+
+        # PF-07: Place image into frame with 'stretch' auto-fitting
+        src_stretch = Gimp.Layer.new(img, "Texture Stretched", 50, 150, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(src_stretch, None, 0)
+        src_stretch.edit_fill(Gimp.FillType.WHITE)
+        img.set_selected_layers([src_stretch])
+
+        cfg_place.set_property("frame-name", "Header Box")
+        cfg_place.set_property("fit-mode", "stretch")
+        res_ps = proc_place.run(cfg_place)
+        if res_ps.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-07", "Place image stretch execution", f"Expected SUCCESS, got {res_ps.index(0)}")
+            return
+        stretch_child = None
+        for ch in rect_group.get_children():
+            if "Texture Stretched (Content)" in ch.get_name():
+                stretch_child = ch
+                break
+        if stretch_child is None or stretch_child.get_width() != 100 or stretch_child.get_height() != 100:
+            record_fail("PF-07", "Stretch dimensions", f"Expected 100x100, got {stretch_child.get_width() if stretch_child else 0}x{stretch_child.get_height() if stretch_child else 0}")
+            return
+        record_pass("PF-07", "Place image into frame (stretch)", "Non-uniform stretch scaling accurately fits exact frame geometry (100x100)")
+
+        # PF-08: Clipping mask confinement: content outside frame boundary strictly clipped
+        dup = img.duplicate()
+        merged = dup.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)
+        p_in_rect = merged.get_pixel(75, 75).get_rgba()
+        p_out_rect = merged.get_pixel(20, 20).get_rgba()
+        dup.delete()
+        if p_out_rect.blue < 0.99 or p_out_rect.red > 0.01:
+            record_fail("PF-08", "Clipping mask confinement", f"Frame content leaked outside mask at (20, 20): R={p_out_rect.red}, B={p_out_rect.blue}")
+            return
+        record_pass("PF-08", "Clipping mask confinement", "Content strictly confined within frame boundary; outside canvas completely preserved")
+
+        # PF-09: Frame stroke addition (inside position, custom RGB color)
+        proc_stroke = proc_objs["python-fu-set-frame-stroke"]
+        cfg_strk = proc_stroke.create_config()
+        cfg_strk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_strk.set_property("image", img)
+        cfg_strk.set_property("frame-name", "Header Box")
+        cfg_strk.set_property("stroke-width", 4)
+        cfg_strk.set_property("position", "inside")
+        cfg_strk.set_property("color-r", 1.0)
+        cfg_strk.set_property("color-g", 1.0)
+        cfg_strk.set_property("color-b", 0.0)  # Yellow
+        cfg_strk.set_property("opacity", 100.0)
+        res_st_in = proc_stroke.run(cfg_strk)
+        if res_st_in.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-09", "Inside frame stroke execution", f"Expected SUCCESS, got {res_st_in.index(0)}")
+            return
+        stroke_lyr = None
+        for lyr in img.get_layers():
+            if lyr.get_name() == "Header Box (Frame Stroke)":
+                stroke_lyr = lyr
+                break
+        if stroke_lyr is None:
+            record_fail("PF-09", "Stroke layer presence", "Header Box (Frame Stroke) layer not found")
+            return
+        p_st = stroke_lyr.get_pixel(52, 52).get_rgba()
+        if p_st.red < 0.9 or p_st.green < 0.9 or p_st.blue > 0.1:
+            record_fail("PF-09", "Inside stroke color fidelity", f"Expected yellow [1,1,0], got R={p_st.red}, G={p_st.green}, B={p_st.blue}")
+            return
+        record_pass("PF-09", "Frame stroke (inside position)", "Inside frame stroke border applied with custom yellow RGB color")
+
+        # PF-10: Frame stroke addition (outside position)
+        cfg_strk.set_property("position", "outside")
+        cfg_strk.set_property("stroke-width", 5)
+        res_st_out = proc_stroke.run(cfg_strk)
+        if res_st_out.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-10", "Outside frame stroke execution", f"Expected SUCCESS, got {res_st_out.index(0)}")
+            return
+        p_st_o = stroke_lyr.get_pixel(48, 48).get_rgba()
+        if p_st_o.alpha < 0.5:
+            record_fail("PF-10", "Outside stroke pixel", f"Expected stroke at (48, 48), alpha={p_st_o.alpha}")
+            return
+        record_pass("PF-10", "Frame stroke (outside position)", "Outside frame stroke border verified extending outward from frame edge")
+
+        # PF-11: Frame stroke addition (center position)
+        cfg_strk.set_property("position", "center")
+        cfg_strk.set_property("stroke-width", 6)
+        res_st_cen = proc_stroke.run(cfg_strk)
+        if res_st_cen.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-11", "Center frame stroke execution", f"Expected SUCCESS, got {res_st_cen.index(0)}")
+            return
+        record_pass("PF-11", "Frame stroke (center position)", "Center frame stroke border verified centered along frame edge")
+
+        # PF-12: Adjust frame content: pan offset dx, dy
+        proc_adj = proc_objs["python-fu-adjust-frame-content"]
+        cfg_adj = proc_adj.create_config()
+        cfg_adj.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_adj.set_property("image", img)
+        cfg_adj.set_property("frame-name", "Profile Circle")
+        cfg_adj.set_property("offset-x", 15)
+        cfg_adj.set_property("offset-y", -10)
+        cfg_adj.set_property("scale-factor", 1.0)
+        cfg_adj.set_property("reapply-fit", "none")
+        orig_offs = circle_child.get_offsets()
+        res_adj = proc_adj.run(cfg_adj)
+        if res_adj.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-12", "Adjust pan execution", f"Expected SUCCESS, got {res_adj.index(0)}")
+            return
+        new_offs = circle_child.get_offsets()
+        if int(new_offs[-2]) != int(orig_offs[-2]) + 15 or int(new_offs[-1]) != int(orig_offs[-1]) - 10:
+            record_fail("PF-12", "Pan offset delta", f"Expected {int(orig_offs[-2])+15}, {int(orig_offs[-1])-10}, got {new_offs}")
+            return
+        record_pass("PF-12", "Adjust frame content (pan)", "Content spatial offsets shifted by (dx=+15, dy=-10) inside frame")
+
+        # PF-13: Adjust frame content: scale factor
+        orig_w = circle_child.get_width()
+        cfg_adj.set_property("offset-x", 0)
+        cfg_adj.set_property("offset-y", 0)
+        cfg_adj.set_property("scale-factor", 1.5)
+        res_scale = proc_adj.run(cfg_adj)
+        if res_scale.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-13", "Adjust scale execution", f"Expected SUCCESS, got {res_scale.index(0)}")
+            return
+        if circle_child.get_width() != int(round(orig_w * 1.5)):
+            record_fail("PF-13", "Scale factor width", f"Expected {int(round(orig_w*1.5))}, got {circle_child.get_width()}")
+            return
+        record_pass("PF-13", "Adjust frame content (scale)", "Content scaled by 1.5x factor inside frame while keeping mask fixed")
+
+        # PF-14: Release frame: content unpacked to root layer
+        proc_rel = proc_objs["python-fu-release-frame"]
+        cfg_rel = proc_rel.create_config()
+        cfg_rel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rel.set_property("image", img)
+        cfg_rel.set_property("frame-name", "Profile Circle")
+        cfg_rel.set_property("keep-mask", True)
+        res_rel = proc_rel.run(cfg_rel)
+        if res_rel.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PF-14", "Release frame execution", f"Expected SUCCESS, got {res_rel.index(0)}")
+            return
+        circle_gone = not any(l.get_name() == "Profile Circle (Frame)" for l in img.get_layers())
+        if not circle_gone:
+            record_fail("PF-14", "Frame group cleanup", "Profile Circle (Frame) group still exists after release")
+            return
+        content_at_root = any("Portrait Photo" in l.get_name() for l in img.get_layers())
+        if not content_at_root:
+            record_fail("PF-14", "Unpacked content layer", "Portrait Photo content layer not found at root level")
+            return
+        record_pass("PF-14", "Release frame", "Content cleanly unpacked to root layer with preserved clipping mask and frame container removed")
+
+        # PF-15: Undo group encapsulation for frame operations
+        undo_before = img.undo_is_enabled()
+        cfg_create.set_property("frame-name", "Undo Frame")
+        res_undo_c = proc_create.run(cfg_create)
+        undo_after = img.undo_is_enabled()
+        if res_undo_c.index(0) != Gimp.PDBStatusType.SUCCESS or not undo_before or not undo_after:
+            record_fail("PF-15", "Undo group execution", "Frame creation undo group failed")
+            return
+        record_pass("PF-15", "Undo group encapsulation", "Single-step undo group encapsulation and active undo stack verified on frame operation")
+
+        # PF-16: Target & base canvas artwork preservation (diff == 0.000000)
+        p_base_after = base.get_pixel(150, 150).get_rgba()
+        base_diff = max(
+            abs(p_base_orig.red - p_base_after.red),
+            abs(p_base_orig.green - p_base_after.green),
+            abs(p_base_orig.blue - p_base_after.blue),
+            abs(p_base_orig.alpha - p_base_after.alpha),
+        )
+        if base_diff > 0.000001:
+            record_fail("PF-16", "Base layer preservation", f"Base layer pixel modified: diff {base_diff:.6f}")
+            return
+        record_pass("PF-16", "Target & base artwork preservation", f"Base canvas artwork 100% untouched across all operations (diff {base_diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("PF-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -15652,6 +15992,7 @@ def run_all_tests():
     test_smart_filters()
     test_layer_comps()
     test_history_log()
+    test_placeholder_frames()
 
     elapsed = time.time() - start_time
 

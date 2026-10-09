@@ -550,18 +550,25 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate session history tracking, snapshot isolation, and headless GIMP test suite (assertions HL-01 to HL-16).
 
 ### Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `placeholder-frames` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
-- [ ] Simulate Photoshop Frame Tool (`Topics.txt` lines 150-155: "Draw frames", "Convert shapes or text to frames", "Place an image into a frame", "Select a frame and its content", "Add a stroke to a frame").
-- [ ] Support creating rectangular / elliptical placeholder frames, placing images into frames with auto-fitting (Fill, Fit, Stretch), and stroke boundary styling.
-- [ ] Register under menu path `<Image>/Layer/Frames...` and `<Image>/Tools/Transform Tools/Frame...`.
-- [ ] Validate frame container hierarchy, clipping mask geometry, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `placeholder-frames` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
+- [x] Simulate Photoshop Frame Tool (`Topics.txt` lines 150-155: "Draw frames", "Convert shapes or text to frames", "Place an image into a frame", "Select a frame and its content", "Add a stroke to a frame").
+- [x] Support creating rectangular / elliptical placeholder frames, placing images into frames with auto-fitting (Fill, Fit, Stretch), and stroke boundary styling.
+- [x] Register under menu path `<Image>/Layer/Frames...` and `<Image>/Tools/Transform Tools/Frame...`.
+- [x] Validate frame container hierarchy, clipping mask geometry, and headless GIMP test suite (assertions PF-01 to PF-16).
 
 ### Phase 74 — Image Stacks Statistical Blending Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `image-stacks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
 - [ ] Simulate Photoshop Image Stacks (`Topics.txt` line 145: "Create and process image stacks"; `photoshop_docs.md`: "Image Stacks: Median, Mean, Maximum, Minimum, Range, Standard Deviation").
 - [ ] Support statistical stack modes to remove moving pedestrians/cars (Median), reduce noise (Mean), and exposure blending (Max/Min).
 - [ ] Register under menu path `<Image>/Layer/Smart Objects/Stack Mode...` and `<Image>/Filters/Combine/Image Stacks...`.
-- [ ] Validate stack mode algorithms and headless GIMP test suite.
+- [ ] Validate stack mode algorithms and headless GIMP test suite (assertions IS-01 to IS-16).
+
+### Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `artboards` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
+- [ ] Simulate Photoshop Artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document").
+- [ ] Support named artboard bounds, device presets (Desktop, Mobile, Social, Print), layout guidelines, and multi-artboard batch export.
+- [ ] Register under menu path `<Image>/Layer/Artboards` and `<Image>/File/Export/Export Artboards...`.
+- [ ] Validate artboard container hierarchies, coordinate bounds, and headless GIMP test suite.
 
 
 

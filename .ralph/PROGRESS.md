@@ -1905,3 +1905,39 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `c2e9dc7`. Outer repo `65f35eb`.
 - **Result**: Success.
 - **Next**: Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin (`placeholder-frames`).
+
+## Iteration 75 — Placeholder Frames & Clipping Masks Layout Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Placeholder Frames & Clipping Masks Layout Helper Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 150-155: "Draw frames", "Convert shapes or text to frames", "Place an image into a frame", "Select a frame and its content", "Add a stroke to a frame", "Apply patterns to template images"; `photoshop_docs.md` Section 154-158 lines 4600-4735: "Draw empty frames: In photoeditor, the Frame tool lets you create shapes that automatically mask and resize images placed inside them... rectangular, elliptical... Convert shapes or text layers into frames... Place an image into a frame... image becomes a Smart Object... images automatically resize to fit frame boundaries... Add a stroke to a frame: Size, Position [Inside, Center, Outside], Color"). In Adobe Photoshop:
+  1. `Draw Frames`: Creates rectangular or elliptical placeholder frames at specific coordinates or from active selection.
+  2. `Convert to Frame`: Converts any existing shape, text, or graphic layer into a frame placeholder.
+  3. `Place Image into Frame`: Inserts images (from file path or active layer) into the frame with auto-fitting modes: `Fill` (cover entire frame area, clipping overhang), `Fit` (contain entire image within frame bounds), `Stretch` (non-uniform fit to exact bounds), or `Original` (centered at 100% scale).
+  4. `Clipping Confinement`: Content inside the frame is strictly clipped by the frame mask, leaving all outside artwork intact.
+  5. `Frame Stroke`: Adds styled border stroke (`inside`, `center`, `outside`) with customizable RGB color, width, and opacity.
+  6. `Adjust Frame Content`: Pans (offset dx, dy) and scales content inside the frame while keeping frame boundary and clipping fixed.
+  7. `Release Frame`: Unpacks content from frame container back into standard root-level layers.
+  Stock GIMP provides no built-in equivalent for Photoshop's Frame Tool, placeholder frames, automatic aspect-ratio fitting, or frame stroke integration. Implementing `placeholder-frames` provides complete Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`: Created native Python 3 GObject-Introspection plugin implementing 6 PDB procedures (`python-fu-create-frame`, `python-fu-convert-to-frame`, `python-fu-place-image-in-frame`, `python-fu-set-frame-stroke`, `python-fu-adjust-frame-content`, `python-fu-release-frame`) with container group encapsulation (`photogimp/frame-container`), group layer masks, aspect-ratio scaling algorithms, channel subtraction stroke geometry, single-step undo protection, and 100% base artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `placeholder-frames` (67 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (67 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 68: `test_placeholder_frames` (asserting PF-01 through PF-16: PDB registration and argument signatures across all 6 procedures, rectangular frame creation, elliptical frame creation, convert layer to frame, place image fill cover, place image fit contain, place image stretch, clipping mask boundary confinement, inside stroke, outside stroke, center stroke, content pan offset, content scale factor, release frame, undo group encapsulation, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 820 passing across 68 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Placeholder Frames & Clipping Masks Layout Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 73 complete and scheduled Phase 74 (Image Stacks Statistical Blending Helper Plugin) and Phase 75 (Artboards & Multi-Canvas Layout Manager Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x, a layer mask attached directly to a `Gimp.GroupLayer` masks the entire rendered composite output of all children within that group, providing an exact architectural equivalent for Photoshop's Frame and clipping groups.
+  - In GIMP 3.x PyGObject, selection channels for geometric stroke calculation must be created via `chan = Gimp.Selection.save(image)` (which creates the channel and binds it to the image) rather than `Gimp.Channel.new_from_selection`.
+  - When placing an existing document layer into a frame, reordering it into the frame group with `image.reorder_item(active_lyr, group, 0)` moves the layer cleanly without creating orphaned duplicates at the root canvas level.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 67 plugins verified).
+    - Stage 2: `install.sh --batch` passed (67 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 820 tests across 68 test suites in 147.11s.
+    - Final quality gate: SUCCESS across all stages in 163.73s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `6a479bd`. Outer repo `PENDING`.
+- **Result**: Success.
+- **Next**: Phase 74 — Image Stacks Statistical Blending Helper Plugin (`image-stacks`).
+

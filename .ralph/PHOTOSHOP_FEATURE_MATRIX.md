@@ -1162,6 +1162,29 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Placeholder Frames & Clipping Masks Layout Helper Plugin
+- **Source topic**: Draw frames / Convert shapes or text to frames / Place image into frame / Frame stroke (`Topics.txt` lines 150-155; `photoshop_docs.md` Section 154-158 lines 4600-4735: "Draw empty frames: In photoeditor, the Frame tool lets you create shapes that automatically mask and resize images placed inside them... rectangular, elliptical... Convert shapes or text layers into frames... Place an image into a frame... image becomes a Smart Object... images automatically resize to fit frame boundaries... Add a stroke to a frame: Size, Position [Inside, Center, Outside], Color")
+- **Photoshop behavior**: Provides dedicated Frame placeholders (rectangular, elliptical, custom shapes) that automatically clip, scale, and fit placed images. Supports auto-fitting modes ('fill' cover, 'fit' contain, 'stretch', 'original'), border stroke styling ('inside', 'center', 'outside'), pan/scale adjustment within frame, and releasing content from frame.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `placeholder-frames` (`python-fu-create-frame`, `python-fu-convert-to-frame`, `python-fu-place-image-in-frame`, `python-fu-set-frame-stroke`, `python-fu-adjust-frame-content`, `python-fu-release-frame`) registered in `<Image>/Layer/Frames`, `<Image>/Tools/Transform Tools/Frame`, `<Image>/File/Place`, and `<Image>/Layer/Layer Style`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
+- **Current capability**:
+  1. `python-fu-create-frame`: Creates rectangular or elliptical placeholder frames with attached boundary mask and persistent metadata parasite `photogimp/frame-container`.
+  2. `python-fu-convert-to-frame`: Converts active shapes, text, or selection into a frame container.
+  3. `python-fu-place-image-in-frame`: Places images from disk file or active layer into frame container with aspect ratio auto-fitting ('fill' cover, 'fit' contain, 'stretch', 'original').
+  4. `python-fu-set-frame-stroke`: Adds styled border stroke ('inside', 'center', 'outside') with custom RGB swatch and opacity.
+  5. `python-fu-adjust-frame-content`: Pans (offset dx, dy) and rescales content inside frame while keeping frame boundary and clipping fixed.
+  6. `python-fu-release-frame`: Unpacks content from frame container back into standard root-level layers.
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject, `Gimp.GroupLayer`, `Gimp.Selection`, PDB API.
+- **Implementation priority**: High (Phase 73).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 6 procedures (PF-01), rectangular frame creation (PF-02), elliptical frame creation (PF-03), convert layer to frame (PF-04), place image fill cover (PF-05), place image fit contain (PF-06), place image stretch (PF-07), clipping mask boundary confinement (PF-08), inside stroke (PF-09), outside stroke (PF-10), center stroke (PF-11), content pan offset (PF-12), content scale factor (PF-13), release frame (PF-14), undo group encapsulation (PF-15), and base canvas preservation (`diff == 0.000000`, PF-16).
+- **Verification evidence** (Iteration 75):
+  1. `verify_config.py`: Section 6 passed with 67 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions PF-01 through PF-16 passing in Test Suite 68.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 75).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

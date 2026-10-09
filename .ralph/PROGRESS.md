@@ -1866,7 +1866,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (65 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 788 tests across 66 test suites in 147.15s.
     - Final quality gate: SUCCESS across all stages in 164.19s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `e1bc160`. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `e1bc160`. Outer repo `59ebf46`.
 - **Result**: Success.
 - **Next**: Phase 72 — History States & Edit Session Audit Log Plugin (`history-log`).
 

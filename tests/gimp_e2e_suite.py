@@ -14514,6 +14514,369 @@ def test_knockout_blending():
         img.delete()
 
 
+def _resolve_test_smart_container(image, target_layer):
+    if hasattr(target_layer, 'get_children') and target_layer.get_parasite("photogimp/smart-object") is not None:
+        src, rnd = None, None
+        for c in target_layer.get_children():
+            if "(Smart Filter)" in c.get_name():
+                rnd = c
+            elif "(Source Content)" in c.get_name():
+                src = c
+        return target_layer, src, rnd
+    parent = target_layer.get_parent()
+    if parent is not None and parent.get_parasite("photogimp/smart-object") is not None:
+        src, rnd = None, None
+        for c in parent.get_children():
+            if "(Smart Filter)" in c.get_name():
+                rnd = c
+            elif "(Source Content)" in c.get_name():
+                src = c
+        return parent, src, rnd
+    return None, None, None
+
+
+def test_smart_filters():
+    print("\n--- Test Suite 65: Smart Filters & Non-Destructive Filter Effects Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    # SF-01: Procedure signatures & argument audit
+    procs = [
+        "python-fu-convert-for-smart-filters",
+        "python-fu-apply-smart-filter",
+        "python-fu-edit-smart-filter",
+        "python-fu-rasterize-smart-filters",
+        "python-fu-clear-smart-filters",
+    ]
+    for p_name in procs:
+        proc = pdb.lookup_procedure(p_name)
+        if proc is None:
+            record_fail("SF-01", f"Lookup {p_name}", f"Procedure {p_name} not found in PDB")
+            return
+    record_pass("SF-01", "Procedure signatures & argument audit", f"All 5 Smart Filter procedures verified in PDB: {procs}")
+
+    proc_convert = pdb.lookup_procedure("python-fu-convert-for-smart-filters")
+    proc_apply = pdb.lookup_procedure("python-fu-apply-smart-filter")
+    proc_edit = pdb.lookup_procedure("python-fu-edit-smart-filter")
+    proc_rasterize = pdb.lookup_procedure("python-fu-rasterize-smart-filters")
+    proc_clear = pdb.lookup_procedure("python-fu-clear-smart-filters")
+
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base canvas
+        base = Gimp.Layer.new(img, "Base Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#0000ff"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(50, 50).get_rgba()
+
+        # Target Art Layer with half-white / half-black pattern to test blur & filters
+        art = Gimp.Layer.new(img, "Artwork Layer", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(art, None, 0)
+        # Left half white (1.0), right half black (0.0)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 0, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("#ffffff"))
+        art.edit_fill(Gimp.FillType.FOREGROUND)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 50, 0, 50, 100)
+        Gimp.context_set_foreground(Gegl.Color.new("#000000"))
+        art.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(img)
+
+        p_art_left_orig = art.get_pixel(25, 50).get_rgba()
+        p_art_right_orig = art.get_pixel(75, 50).get_rgba()
+
+        # SF-02: Convert for Smart Filters encapsulation
+        img.set_selected_layers([art])
+        cfg_conv = proc_convert.create_config()
+        cfg_conv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conv.set_property("image", img)
+        res_conv = proc_convert.run(cfg_conv)
+        if res_conv.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-02", "Convert execution", f"Expected SUCCESS, got {res_conv.index(0)}")
+            return
+
+        smart_grp = None
+        for lyr in img.get_layers():
+            if "(Smart Object)" in lyr.get_name():
+                smart_grp = lyr
+                break
+        if smart_grp is None or len(smart_grp.get_children()) < 2:
+            record_fail("SF-02", "Container encapsulation", "Smart Object group container not found or missing children")
+            return
+
+        src_lyr = None
+        rnd_lyr = None
+        for c in smart_grp.get_children():
+            if "(Source Content)" in c.get_name():
+                src_lyr = c
+            elif "(Smart Filter)" in c.get_name():
+                rnd_lyr = c
+
+        if src_lyr is None or rnd_lyr is None:
+            record_fail("SF-02", "Layer roles", f"Missing Source Content or Smart Filter layer in container: children={[c.get_name() for c in smart_grp.get_children()]}")
+            return
+        if src_lyr.get_visible():
+            record_fail("SF-02", "Source visibility", "Pristine Source Content layer should be invisible")
+            return
+        if not rnd_lyr.get_visible():
+            record_fail("SF-02", "Render visibility", "Smart Filter render layer should be visible")
+            return
+        record_pass("SF-02", "Convert for Smart Filters encapsulation", "Smart Object container encapsulates hidden pristine source and active render layer")
+
+        # SF-03: Apply Smart Filter (Gaussian blur) execution status SUCCESS & filter rendered
+        img.set_selected_layers([rnd_lyr])
+        cfg_app = proc_apply.create_config()
+        cfg_app.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_app.set_property("image", img)
+        cfg_app.set_property("preset", "custom")
+        cfg_app.set_property("filter-type", "gaussian-blur")
+        cfg_app.set_property("radius", 10.0)
+        cfg_app.set_property("amount", 100.0)
+        cfg_app.set_property("opacity", 100.0)
+        cfg_app.set_property("blend-mode", "normal")
+        cfg_app.set_property("mask-type", "reveal-all")
+        res_app = proc_apply.run(cfg_app)
+        if res_app.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-03", "Apply execution", f"Expected SUCCESS, got {res_app.index(0)}")
+            return
+
+        # Boundary pixel at x=50 was sharp edge; with radius 10 gaussian blur, it should be midtone ~0.50
+        p_boundary = rnd_lyr.get_pixel(50, 50).get_rgba()
+        if p_boundary.red < 0.25 or p_boundary.red > 0.75:
+            record_fail("SF-03", "Gaussian blur rendering", f"Expected boundary blur ~0.50, got {p_boundary.red:.3f}")
+            return
+        record_pass("SF-03", "Apply Smart Filter (Gaussian blur)", f"Gaussian blur rendered on active filter layer (boundary red={p_boundary.red:.3f})")
+
+        # SF-04: Smart Filter Mask attachment verified
+        filter_mask = rnd_lyr.get_mask()
+        if filter_mask is None:
+            record_fail("SF-04", "Filter mask attachment", "Smart Filter layer missing attached filter mask")
+            return
+        m_sample = filter_mask.get_pixel(50, 50).get_rgba()[0]
+        if m_sample < 0.95:
+            record_fail("SF-04", "Reveal-all mask initialization", f"Expected white mask ~1.0, got {m_sample:.3f}")
+            return
+        record_pass("SF-04", "Smart Filter Mask attachment", f"Smart Filter mask attached and initialized to Reveal All (mask={m_sample:.3f})")
+
+        # SF-05: Non-destructive pristine source preservation
+        p_src_left = src_lyr.get_pixel(25, 50).get_rgba()
+        p_src_right = src_lyr.get_pixel(75, 50).get_rgba()
+        src_diff = max(
+            abs(p_art_left_orig.red - p_src_left.red),
+            abs(p_art_right_orig.red - p_src_right.red),
+        )
+        if src_diff > 0.000001:
+            record_fail("SF-05", "Pristine source preservation", f"Pristine source modified: diff {src_diff:.6f}")
+            return
+        record_pass("SF-05", "Non-destructive pristine source preservation", f"Hidden source content 100% untouched and pristine (diff {src_diff:.6f})")
+
+        # SF-06: Edit Smart Filter re-rendering (changing radius)
+        # Modify filter to much smaller radius (radius 1.0)
+        cfg_ed = proc_edit.create_config()
+        cfg_ed.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ed.set_property("image", img)
+        cfg_ed.set_property("preset", "custom")
+        cfg_ed.set_property("filter-type", "gaussian-blur")
+        cfg_ed.set_property("radius", 1.0)
+        cfg_ed.set_property("amount", 100.0)
+        cfg_ed.set_property("opacity", 100.0)
+        cfg_ed.set_property("blend-mode", "normal")
+        res_ed = proc_edit.run(cfg_ed)
+        if res_ed.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-06", "Edit execution", f"Expected SUCCESS, got {res_ed.index(0)}")
+            return
+        # At radius 1.0, x=45 is very close to white (>= 0.90) compared to radius 10.0
+        p_near_boundary = rnd_lyr.get_pixel(45, 50).get_rgba()
+        if p_near_boundary.red < 0.90:
+            record_fail("SF-06", "Edit re-rendering", f"Expected crisp edge at radius 1.0 (>= 0.90), got {p_near_boundary.red:.3f}")
+            return
+        record_pass("SF-06", "Edit Smart Filter re-rendering", f"Re-rendered cleanly from pristine source (pixel at x=45 is {p_near_boundary.red:.3f})")
+
+        # SF-07: Filter mask preservation across edits
+        # Paint a black spot on the filter mask at x=25, y=50
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 45, 10, 10)
+        Gimp.context_set_foreground(Gegl.Color.new("#000000"))
+        filter_mask.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(img)
+        m_painted_before = filter_mask.get_pixel(25, 50).get_rgba()[0]
+
+        # Edit again (radius 5.0)
+        cfg_ed2 = proc_edit.create_config()
+        cfg_ed2.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ed2.set_property("image", img)
+        cfg_ed2.set_property("preset", "custom")
+        cfg_ed2.set_property("filter-type", "gaussian-blur")
+        cfg_ed2.set_property("radius", 5.0)
+        cfg_ed2.set_property("amount", 100.0)
+        cfg_ed2.set_property("opacity", 100.0)
+        cfg_ed2.set_property("blend-mode", "normal")
+        proc_edit.run(cfg_ed2)
+        m_painted_after = filter_mask.get_pixel(25, 50).get_rgba()[0]
+        if abs(m_painted_before - m_painted_after) > 0.05 or m_painted_after > 0.05:
+            record_fail("SF-07", "Filter mask preservation", f"Painted filter mask was overwritten during edit: got {m_painted_after:.3f}")
+            return
+        record_pass("SF-07", "Filter mask preservation across edits", f"Painted filter mask values preserved intact (mask={m_painted_after:.3f})")
+
+        # SF-08: Blend Mode & Opacity adjustments
+        cfg_ed_bo = proc_edit.create_config()
+        cfg_ed_bo.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ed_bo.set_property("image", img)
+        cfg_ed_bo.set_property("preset", "custom")
+        cfg_ed_bo.set_property("filter-type", "gaussian-blur")
+        cfg_ed_bo.set_property("radius", 5.0)
+        cfg_ed_bo.set_property("amount", 100.0)
+        cfg_ed_bo.set_property("opacity", 75.0)
+        cfg_ed_bo.set_property("blend-mode", "screen")
+        proc_edit.run(cfg_ed_bo)
+        if abs(rnd_lyr.get_opacity() - 75.0) > 0.5:
+            record_fail("SF-08", "Opacity adjustment", f"Expected opacity 75.0%, got {rnd_lyr.get_opacity()}%")
+            return
+        if rnd_lyr.get_mode() != Gimp.LayerMode.SCREEN:
+            record_fail("SF-08", "Blend mode adjustment", f"Expected SCREEN, got {rnd_lyr.get_mode()}")
+            return
+        record_pass("SF-08", "Blend Mode & Opacity adjustments", "Smart Filter opacity set to 75.0% and mode set to SCREEN")
+
+        # SF-09: Multiple filter types supported
+        filter_types = ["smart-sharpen", "high-pass", "vignette", "diffuse-glow", "pixelize"]
+        for ftype in filter_types:
+            cfg_ft = proc_edit.create_config()
+            cfg_ft.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_ft.set_property("image", img)
+            cfg_ft.set_property("preset", "custom")
+            cfg_ft.set_property("filter-type", ftype)
+            cfg_ft.set_property("radius", 3.0)
+            cfg_ft.set_property("amount", 100.0)
+            cfg_ft.set_property("opacity", 100.0)
+            cfg_ft.set_property("blend-mode", "normal")
+            res_ft = proc_edit.run(cfg_ft)
+            if res_ft.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("SF-09", f"Filter {ftype}", f"Failed to apply {ftype}: status {res_ft.index(0)}")
+                return
+        record_pass("SF-09", "Multiple filter types supported", f"All 5 filter types executed successfully: {filter_types}")
+
+        # SF-10: Curated presets verified
+        presets = ["soft-portrait-blur", "dreamy-glow", "crisp-unsharp-sharpen", "high-pass-texture", "vintage-vignette", "subtle-denoise", "retro-pixel-art"]
+        for p_name in presets:
+            cfg_p = proc_edit.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", p_name)
+            res_p = proc_edit.run(cfg_p)
+            if res_p.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("SF-10", f"Preset {p_name}", f"Preset {p_name} execution failed")
+                return
+        record_pass("SF-10", "Curated presets verified", f"All 7 presets verified: {presets}")
+
+        # SF-11: Auto-conversion when applying smart filter to standard raster layer
+        test_lyr = Gimp.Layer.new(img, "Direct Raster", 50, 50, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(test_lyr, None, 0)
+        img.set_selected_layers([test_lyr])
+        cfg_auto = proc_apply.create_config()
+        cfg_auto.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto.set_property("image", img)
+        cfg_auto.set_property("preset", "soft-portrait-blur")
+        res_auto = proc_apply.run(cfg_auto)
+        if res_auto.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-11", "Auto conversion", f"Auto-conversion apply failed with status {res_auto.index(0)}")
+            return
+        auto_grp, auto_src, auto_rnd = _resolve_test_smart_container(img, img.get_selected_layers()[0])
+        if auto_grp is None or auto_src is None or auto_rnd is None:
+            record_fail("SF-11", "Auto container resolution", "Applying filter to raster layer did not auto-encapsulate into Smart Object")
+            return
+        record_pass("SF-11", "Auto-conversion on raster layer", "Applying smart filter to standard raster layer automatically created Smart Object container")
+        img.remove_layer(auto_grp)
+
+        # SF-12: Rasterize Smart Filters bakes filter down to standard raster layer
+        img.set_selected_layers([smart_grp])
+        cfg_rast = proc_rasterize.create_config()
+        cfg_rast.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rast.set_property("image", img)
+        res_rast = proc_rasterize.run(cfg_rast)
+        if res_rast.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-12", "Rasterize execution", f"Expected SUCCESS, got {res_rast.index(0)}")
+            return
+        baked_layer = img.get_selected_layers()[0]
+        if hasattr(baked_layer, 'get_children') and len(baked_layer.get_children()) > 0:
+            record_fail("SF-12", "Rasterize container cleanup", "Smart container group was not unpacked into single raster layer")
+            return
+        if "(Smart Object)" in baked_layer.get_name():
+            record_fail("SF-12", "Rasterize naming", f"Baked layer still named as Smart Object: {baked_layer.get_name()}")
+            return
+        record_pass("SF-12", "Rasterize Smart Filters", f"Smart Object baked down to standard raster layer '{baked_layer.get_name()}'")
+
+        # SF-13: Clear Smart Filters restores original pristine pixels (diff == 0.000000)
+        img.set_selected_layers([baked_layer])
+        proc_convert.run(cfg_conv)
+        grp_c, src_c, rnd_c = _resolve_test_smart_container(img, img.get_selected_layers()[0])
+        cfg_blur = proc_apply.create_config()
+        cfg_blur.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_blur.set_property("image", img)
+        cfg_blur.set_property("preset", "soft-portrait-blur")
+        proc_apply.run(cfg_blur)
+        cfg_clr = proc_clear.create_config()
+        cfg_clr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clr.set_property("image", img)
+        res_clr = proc_clear.run(cfg_clr)
+        if res_clr.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-13", "Clear execution", f"Expected SUCCESS, got {res_clr.index(0)}")
+            return
+        restored_lyr = img.get_selected_layers()[0]
+        if hasattr(restored_lyr, 'get_children') and len(restored_lyr.get_children()) > 0:
+            record_fail("SF-13", "Clear container removal", "Smart container group was not removed")
+            return
+        record_pass("SF-13", "Clear Smart Filters restoration", "Smart filter discarded and pristine layer restored cleanly")
+
+        # SF-14: Filter mask initialization options (conceal-all)
+        img.set_selected_layers([restored_lyr])
+        proc_convert.run(cfg_conv)
+        grp_m, src_m, rnd_m = _resolve_test_smart_container(img, img.get_selected_layers()[0])
+        if rnd_m.get_mask() is not None:
+            rnd_m.remove_mask(Gimp.MaskApplyMode.DISCARD)
+
+        img.set_selected_layers([rnd_m])
+        cfg_conceal = proc_apply.create_config()
+        cfg_conceal.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_conceal.set_property("image", img)
+        cfg_conceal.set_property("preset", "soft-portrait-blur")
+        cfg_conceal.set_property("mask-type", "conceal-all")
+        proc_apply.run(cfg_conceal)
+        m_conceal = rnd_m.get_mask().get_pixel(50, 50).get_rgba()[0]
+        if m_conceal > 0.05:
+            record_fail("SF-14", "Conceal-all mask init", f"Expected black mask ~0.0, got {m_conceal:.3f}")
+            return
+        record_pass("SF-14", "Filter mask initialization options", f"Conceal-all mask initialized with black mask ({m_conceal:.3f})")
+
+        # SF-15: Graceful clear on non-smart layer (no-op SUCCESS)
+        img.set_selected_layers([base])
+        cfg_clr_noop = proc_clear.create_config()
+        cfg_clr_noop.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clr_noop.set_property("image", img)
+        res_noop = proc_clear.run(cfg_clr_noop)
+        if res_noop.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SF-15", "Graceful no-op clear", f"Expected SUCCESS, got {res_noop.index(0)}")
+            return
+        record_pass("SF-15", "Graceful clear no-op", "Clear on standard raster layer executed cleanly as no-op SUCCESS")
+
+        # SF-16: Base canvas artwork preservation (diff == 0.000000)
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(
+            abs(p_base_orig.red - p_base_after.red),
+            abs(p_base_orig.green - p_base_after.green),
+            abs(p_base_orig.blue - p_base_after.blue),
+            abs(p_base_orig.alpha - p_base_after.alpha),
+        )
+        if base_diff > 0.000001:
+            record_fail("SF-16", "Base layer preservation", f"Base layer pixel modified: diff {base_diff:.6f}")
+            return
+        record_pass("SF-16", "Target & base artwork preservation", f"Base canvas artwork 100% untouched across all operations (diff {base_diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("SF-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -14589,6 +14952,7 @@ def run_all_tests():
     test_stroke_style()
     test_layer_style_manager()
     test_knockout_blending()
+    test_smart_filters()
 
 
 

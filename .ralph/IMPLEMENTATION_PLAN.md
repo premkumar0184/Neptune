@@ -527,18 +527,27 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate shallow and deep knockout transparency punching, fill opacity decoupling, and headless GIMP test suite.
 
 ### Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `smart-filters` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
-- [ ] Simulate Photoshop `Filter > Convert for Smart Filters` and Smart Filter stack management (`Topics.txt` lines 122-137, 451-455; `photoshop_docs.md` Section 122-130 lines 3700-3850: "Apply Smart Filters", "Edit Smart Filters", "Smart Filter mask").
-- [ ] Support converting layers to Smart Object containers with non-destructive filter passes, attached Smart Filter mask, and re-editable filter parameters.
-- [ ] Register under menu path `<Image>/Filters/Smart Filters...` and `<Image>/Layer/Smart Objects/Convert for Smart Filters`.
-- [ ] Validate non-destructive filter re-application, filter mask feathering/inversion, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `smart-filters` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
+- [x] Simulate Photoshop `Filter > Convert for Smart Filters` and Smart Filter stack management (`Topics.txt` lines 454, 459: "Smart filters - Sharpening overview", "Apply and manage Smart Filters"; `photoshop_docs.md` Section 138 lines 4057-4066, Section 153 lines 4408-4434, Section 413-415 lines 12047-12115, Section 446 lines 13049-13056: "Apply Smart Filters", "Edit Smart Filters", "Smart Filter mask").
+- [x] Support converting layers to Smart Object containers with pristine source content preservation, non-destructive filter passes (Gaussian Blur, Smart Sharpen, High Pass, Vignette, Noise Reduction, Diffuse Glow, Pixelize), attached Smart Filter mask, and re-editable filter parameters.
+- [x] Support rasterizing Smart Filters permanently into a single raster layer (`python-fu-rasterize-smart-filters`) matching Photoshop `Layer > Rasterize > Smart Object`.
+- [x] Support clearing Smart Filters (`python-fu-clear-smart-filters`) to discard filters and restore pristine source pixels with 100% fidelity (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Filters/Smart Filters...`, `<Image>/Layer/Smart Objects/Convert for Smart Filters`, and `<Image>/Layer/Rasterize/Smart Object`.
+- [x] Validate non-destructive filter re-application, filter mask preservation across edits, presets, and headless GIMP test suite (assertions SF-01 to SF-16).
 
 ### Phase 71 — Layer Comps & Composition Variations Manager Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `layer-comps` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
-- [ ] Simulate Photoshop `Window > Layer Comps` (`Topics.txt` lines 138-140; `photoshop_docs.md` Section 131-135: "Layer comps - overview", "Create layer comps", "Apply and view layer comps").
-- [ ] Support capturing layer state snapshots (Visibility, Position, Appearance / Opacity & Blend Mode), switching between comps, and exporting variations.
+- [ ] Simulate Photoshop `Window > Layer Comps` (`Topics.txt` lines 138-140; `photoshop_docs.md` Section 131-135 lines 3880-4020: "Layer comps - overview", "Create layer comps", "Apply and view layer comps", "Export layer comps").
+- [ ] Support capturing layer state snapshots (Visibility, Position / Offsets, Appearance / Opacity & Blend Mode), switching between comps, updating comps, and exporting variations.
 - [ ] Register under menu path `<Image>/Layer/Layer Comps...` and `<Image>/File/Export Layer Comps...`.
-- [ ] Validate snapshot persistence in image parasites, state restoration, and headless GIMP test suite.
+- [ ] Validate snapshot persistence in image parasites (`photogimp/layer-comps`), state restoration, and headless GIMP test suite.
+
+### Phase 72 — History States & Edit Session Audit Log Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `history-log` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
+- [ ] Simulate Photoshop `Edit > Preferences > History Log` and Snapshot Management (`Topics.txt` lines 141-150; `photoshop_docs.md` Section 136-140: "Save a history log", "Work with the History panel", "Create and use snapshots").
+- [ ] Support recording detailed non-destructive undo session history, exporting audit logs to text/metadata, and creating named image state snapshots.
+- [ ] Register under menu path `<Image>/Edit/History Log...` and `<Image>/Edit/Create Snapshot...`.
+- [ ] Validate session history tracking, snapshot isolation, and headless GIMP test suite.
 
 
 

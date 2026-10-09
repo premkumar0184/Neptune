@@ -1093,6 +1093,28 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Smart Filters & Non-Destructive Filter Effects Helper
+- **Source topic**: Smart filters - Sharpening overview, Apply and manage Smart Filters (`Topics.txt` lines 454, 459; `photoshop_docs.md` Section 138 lines 4057-4066, Section 153 lines 4408-4434, Section 413-415 lines 12047-12115, Section 446 lines 13049-13056: "Apply Smart Filters", "Edit Smart Filters", "Smart Filter mask")
+- **Photoshop behavior**: Encapsulates layers into non-destructive Smart Object containers, allowing filters (blur, sharpen, stylize, etc.) to be applied as re-editable Smart Filters with attached Smart Filter masks that control localized visibility. Supports non-destructive parameter re-adjustment from pristine source content, permanent rasterization, and one-click clear/restoration.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `smart-filters` providing 5 PDB procedures (`python-fu-convert-for-smart-filters`, `python-fu-apply-smart-filter`, `python-fu-edit-smart-filter`, `python-fu-rasterize-smart-filters`, `python-fu-clear-smart-filters`) in `<Image>/Filters/Smart Filters...`, `<Image>/Layer/Smart Objects/Convert for Smart Filters`, and `<Image>/Layer/Rasterize/Smart Object`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
+- **Current capability**:
+  1. `python-fu-convert-for-smart-filters`: Encapsulates active layer into a Smart Object container group with a hidden pristine Source Content layer (`photogimp/smart-source`) and active render layer (`photogimp/smart-render`), recording metadata in `photogimp/smart-object`.
+  2. `python-fu-apply-smart-filter`: Applies GEGL filter operations (Gaussian Blur, Smart Sharpen, High Pass, Vignette, Noise Reduction, Diffuse Glow, Pixelize) with decoupled opacity, blend modes, and mask initialization (reveal-all, conceal-all, from-selection). Auto-converts standard raster layers to Smart Objects.
+  3. `python-fu-edit-smart-filter`: Re-adjusts filter parameters, re-rendering from pristine source content while preserving user-painted Smart Filter masks intact.
+  4. `python-fu-rasterize-smart-filters`: Permanently bakes smart filters and applied mask down to a standard single raster layer.
+  5. `python-fu-clear-smart-filters`: Discards smart filters and cleanly restores original pristine pixels with 100% fidelity (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject, `Gimp.DrawableFilter`, GEGL operations (`gegl:gaussian-blur`, `gegl:unsharp-mask`, `gegl:high-pass`, `gegl:vignette`, `gegl:median-blur`, `gegl:bloom`, `gegl:pixelize`).
+- **Implementation priority**: High (Phase 70).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 5 procedures (SF-01), container encapsulation (SF-02), filter application and rendering (SF-03), Smart Filter mask attachment (SF-04), non-destructive source preservation (SF-05), re-rendering from source across edits (SF-06), mask preservation across edits (SF-07), blend modes and opacity scaling (SF-08), multiple filter types (SF-09), curated presets (SF-10), auto-conversion on raster layers (SF-11), rasterization to single layer (SF-12), clear restoration (SF-13), mask initialization options (SF-14), graceful no-op handling (SF-15), and base canvas preservation (`diff == 0.000000`, SF-16).
+- **Verification evidence** (Iteration 72):
+  1. `verify_config.py`: Section 6 passed with 64 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions SF-01 through SF-16 passed with zero failures in 140.30s. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 72).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

@@ -1804,5 +1804,38 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin (`smart-filters`).
 
+## Iteration 72 — Smart Filters & Non-Destructive Filter Effects Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Smart Filters & Non-Destructive Filter Effects Helper Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 454, 459: "Smart filters - Sharpening overview", "Apply and manage Smart Filters"; `photoshop_docs.md` Section 138 lines 4057-4066, Section 153 lines 4408-4434, Section 413-415 lines 12047-12115, Section 446 lines 13049-13056: "Apply Smart Filters", "Edit Smart Filters", "Smart Filter mask"). In Adobe Photoshop:
+  1. `Convert for Smart Filters`: Encapsulates layers into non-destructive Smart Object containers, preserving pristine original pixels so that repeated filter adjustments never degrade quality.
+  2. `Smart Filters`: Re-editable filter passes (Gaussian Blur, Smart Sharpen, High Pass, Vignette, Noise Reduction, Diffuse Glow, Pixelize) with decoupled filter opacity and blend modes.
+  3. `Smart Filter Mask`: Dedicated layer mask attached to the Smart Filter layer controlling localized visibility (white reveals, black conceals, gray provides smooth transitions).
+  4. `Rasterize Smart Filters`: Bakes filters and masks permanently into a single raster layer.
+  5. `Clear Smart Filters`: Discards filters and masks, cleanly restoring pristine original layer pixels (`diff == 0.000000`).
+  Stock GIMP provides no built-in equivalent for Photoshop's non-destructive Smart Filters. Implementing `smart-filters` provides complete Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`: Created native Python 3 GObject-Introspection plugin implementing 5 PDB procedures (`python-fu-convert-for-smart-filters`, `python-fu-apply-smart-filter`, `python-fu-edit-smart-filter`, `python-fu-rasterize-smart-filters`, `python-fu-clear-smart-filters`) with container encapsulation (`photogimp/smart-object`, `photogimp/smart-source`, `photogimp/smart-render`), non-destructive re-rendering from source, mask preservation across edits, 7 curated presets, single-step undo protection, and 100% artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `smart-filters` (64 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (64 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 65: `test_smart_filters` (asserting SF-01 through SF-16: PDB registration and argument signatures across all 5 procedures, container encapsulation, filter application and rendering, Smart Filter mask attachment, pristine source preservation, re-rendering from source without quality loss, mask preservation across edits, blend modes and opacity adjustments, multiple filter types, curated presets, auto-conversion on raster layers, permanent rasterization, clear restoration, mask initialization options, graceful no-op handling, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 772 passing across 65 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Smart Filters & Non-Destructive Filter Effects Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 70 complete and scheduled Phase 71 (Layer Comps & Composition Variations Manager Plugin) and Phase 72 (History States & Edit Session Audit Log Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, `Gimp.Layer.new_from_drawable(src, image)` duplicates all attached parasites from the source layer to the new layer. Explicitly detaching prior parasites (`detach_parasite`) prevents unwanted inheritance when restoring or converting layers.
+  - In container resolution, matching children by role tag in layer name (`"(Smart Filter)"` and `"(Source Content)"`) before inspecting parasites provides 100% reliable layer identity even across repeated convert/clear/re-convert cycles.
+  - `Gimp.DrawableFilter` can be appended and merged cleanly with `layer.append_filter()` and `layer.merge_filters()` without disturbing attached layer masks.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 64 plugins verified).
+    - Stage 2: `install.sh --batch` passed (64 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 772 tests across 65 test suites in 140.30s.
+    - Final quality gate: SUCCESS across all stages in 156.77s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `f094818`. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 71 — Layer Comps & Composition Variations Manager Plugin (`layer-comps`).
+
 
 

@@ -1800,7 +1800,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (63 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 756 tests across 64 test suites in 134.52s.
     - Final quality gate: SUCCESS across all stages in 150.96s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `fa7b8ed`. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `fa7b8ed`. Outer repo `dad0ec4`.
 - **Result**: Success.
 - **Next**: Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin (`smart-filters`).
 

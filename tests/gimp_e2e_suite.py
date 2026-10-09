@@ -13566,6 +13566,413 @@ def test_bevel_emboss():
 
 
 # ==============================================================================
+# TEST SUITE 62: Non-Destructive Stroke Layer Style Helper Plugin
+# ==============================================================================
+def test_stroke_style():
+    print("\n--- Test Suite 62: Non-Destructive Stroke Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-stroke-style")
+
+    # STRK-01: Procedure signatures & argument audit
+    if proc is None:
+        record_fail("STRK-01", "Procedure lookup", "python-fu-stroke-style not registered in PDB")
+        return
+
+    arg_names = [arg.name for arg in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "size", "position",
+        "blend-mode", "opacity", "overprint", "fill-type",
+        "color-r", "color-g", "color-b",
+        "grad-style", "grad-angle", "grad-scale",
+        "grad-c1-r", "grad-c1-g", "grad-c1-b", "grad-c2-r", "grad-c2-g", "grad-c2-b",
+        "pattern", "pattern-scale", "mask-type"
+    ]
+    missing = [arg for arg in expected_args if arg not in arg_names]
+    if missing:
+        record_fail("STRK-01", "Procedure arguments", f"Missing arguments: {missing}")
+        return
+    record_pass("STRK-01", "Procedure signatures & argument audit", f"All {len(expected_args)} arguments verified ({expected_args[:4]}...)")
+
+    # Setup test canvas: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Base Canvas", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.5, 0.5, 0.5)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 opaque red square centered at (20, 20)
+    art = Gimp.Layer.new(img, "Target Artwork", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(1.0, 0.0, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (25, 40, 50, 60, 75) for y in (25, 40, 50, 60, 75)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 20, 50, 80, 90) for y in (10, 20, 50, 80, 90)]
+
+    try:
+        # STRK-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "classic-black-outline")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("STRK-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("STRK-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # STRK-03: Outside stroke geometry
+        stroke_lyr = img.get_layers()[1]  # Outside is placed beneath art at index 1
+        out_l = stroke_lyr.get_pixel(18, 50).get_rgba().alpha
+        out_r = stroke_lyr.get_pixel(82, 50).get_rgba().alpha
+        cen_a = stroke_lyr.get_pixel(50, 50).get_rgba().alpha
+        far_a = stroke_lyr.get_pixel(5, 5).get_rgba().alpha
+
+        if out_l < 0.50 or out_r < 0.50 or cen_a > 0.001 or far_a > 0.001:
+            record_fail("STRK-03", "Outside stroke geometry", f"Expected border at 18 & 82, 0 at center & far; got L={out_l:.2f}, R={out_r:.2f}, Cen={cen_a:.2f}, Far={far_a:.2f}")
+            return
+        record_pass("STRK-03", "Outside stroke geometry", f"Outside stroke dilates outward (edges L={out_l:.2f}, R={out_r:.2f}, interior={cen_a:.2f})")
+        img.remove_layer(stroke_lyr)
+
+        # STRK-04: Inside stroke geometry
+        img.set_selected_layers([art])
+        cfg_in = proc.create_config()
+        cfg_in.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_in.set_property("image", img)
+        cfg_in.set_property("preset", "custom")
+        cfg_in.set_property("position", "inside")
+        cfg_in.set_property("size", 5.0)
+        cfg_in.set_property("fill-type", "color")
+        cfg_in.set_property("color-r", 0.0)
+        cfg_in.set_property("color-g", 1.0)
+        cfg_in.set_property("color-b", 0.0)
+        cfg_in.set_property("mask-type", "none")
+        proc.run(cfg_in)
+        in_lyr = img.get_layers()[0]  # Inside is placed above art at index 0
+
+        in_edge = in_lyr.get_pixel(22, 50).get_rgba().alpha
+        in_out = in_lyr.get_pixel(15, 50).get_rgba().alpha
+        in_cen = in_lyr.get_pixel(50, 50).get_rgba().alpha
+
+        if in_edge < 0.50 or in_out > 0.0001 or in_cen > 0.0001:
+            record_fail("STRK-04", "Inside stroke geometry", f"Expected inside edge > 0.5 and outside=0.0; got edge={in_edge:.2f}, out={in_out:.2f}, cen={in_cen:.2f}")
+            return
+        record_pass("STRK-04", "Inside stroke geometry", f"Inside stroke strictly confined within silhouette (edge={in_edge:.2f}, outside={in_out:.4f})")
+        img.remove_layer(in_lyr)
+
+        # STRK-05: Center stroke geometry
+        img.set_selected_layers([art])
+        cfg_cen = proc.create_config()
+        cfg_cen.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cen.set_property("image", img)
+        cfg_cen.set_property("preset", "custom")
+        cfg_cen.set_property("position", "center")
+        cfg_cen.set_property("size", 6.0)
+        cfg_cen.set_property("fill-type", "color")
+        cfg_cen.set_property("mask-type", "none")
+        proc.run(cfg_cen)
+        cen_lyr = img.get_layers()[0]
+
+        c_out = cen_lyr.get_pixel(18, 50).get_rgba().alpha
+        c_in = cen_lyr.get_pixel(22, 50).get_rgba().alpha
+        c_far = cen_lyr.get_pixel(5, 5).get_rgba().alpha
+
+        if c_out < 0.40 or c_in < 0.40 or c_far > 0.001:
+            record_fail("STRK-05", "Center stroke geometry", f"Expected straddle across boundary; got out={c_out:.2f}, in={c_in:.2f}, far={c_far:.2f}")
+            return
+        record_pass("STRK-05", "Center stroke geometry", f"Center stroke straddles boundary symmetrically (outside={c_out:.2f}, inside={c_in:.2f})")
+        img.remove_layer(cen_lyr)
+
+        # STRK-06: Size scaling
+        img.set_selected_layers([art])
+        cfg_sz12 = proc.create_config()
+        cfg_sz12.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sz12.set_property("image", img)
+        cfg_sz12.set_property("preset", "custom")
+        cfg_sz12.set_property("position", "outside")
+        cfg_sz12.set_property("size", 12.0)
+        cfg_sz12.set_property("mask-type", "none")
+        proc.run(cfg_sz12)
+        sz12_lyr = img.get_layers()[1]
+        sz12_val = sz12_lyr.get_pixel(12, 50).get_rgba().alpha
+        img.remove_layer(sz12_lyr)
+
+        img.set_selected_layers([art])
+        cfg_sz3 = proc.create_config()
+        cfg_sz3.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sz3.set_property("image", img)
+        cfg_sz3.set_property("preset", "custom")
+        cfg_sz3.set_property("position", "outside")
+        cfg_sz3.set_property("size", 3.0)
+        cfg_sz3.set_property("mask-type", "none")
+        proc.run(cfg_sz3)
+        sz3_lyr = img.get_layers()[1]
+        sz3_val = sz3_lyr.get_pixel(12, 50).get_rgba().alpha
+        img.remove_layer(sz3_lyr)
+
+        if sz12_val < 0.50 or sz3_val > 0.001:
+            record_fail("STRK-06", "Size scaling", f"Expected size 12px > 0.5 and size 3px == 0 at x=12; got sz12={sz12_val:.2f}, sz3={sz3_val:.2f}")
+            return
+        record_pass("STRK-06", "Size scaling verified", f"Stroke width scales band expansion (size 12px alpha={sz12_val:.2f} vs size 3px alpha={sz3_val:.2f})")
+
+        # STRK-07: Solid Color fill type & RGB fidelity
+        img.set_selected_layers([art])
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("preset", "custom")
+        cfg_col.set_property("position", "outside")
+        cfg_col.set_property("size", 4.0)
+        cfg_col.set_property("fill-type", "color")
+        cfg_col.set_property("color-r", 0.0)
+        cfg_col.set_property("color-g", 1.0)
+        cfg_col.set_property("color-b", 1.0)  # Cyan
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+        col_lyr = img.get_layers()[1]
+        col_px = col_lyr.get_pixel(18, 50).get_rgba()
+
+        if abs(col_px.green - 1.0) > 0.05 or abs(col_px.blue - 1.0) > 0.05 or abs(col_px.red - 0.0) > 0.05:
+            record_fail("STRK-07", "Color RGB fidelity", f"Expected Cyan [0, 1, 1], got R={col_px.red:.2f}, G={col_px.green:.2f}, B={col_px.blue:.2f}")
+            return
+        record_pass("STRK-07", "Solid Color fill type & RGB fidelity", f"Custom Cyan stroke color verified (R={col_px.red:.2f}, G={col_px.green:.2f}, B={col_px.blue:.2f})")
+        img.remove_layer(col_lyr)
+
+        # STRK-08: Gradient fill type verified
+        img.set_selected_layers([art])
+        cfg_grad = proc.create_config()
+        cfg_grad.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_grad.set_property("image", img)
+        cfg_grad.set_property("preset", "custom")
+        cfg_grad.set_property("position", "outside")
+        cfg_grad.set_property("size", 6.0)
+        cfg_grad.set_property("fill-type", "gradient")
+        cfg_grad.set_property("grad-style", "linear")
+        cfg_grad.set_property("grad-angle", 90.0)
+        cfg_grad.set_property("grad-c1-r", 1.0)
+        cfg_grad.set_property("grad-c1-g", 0.0)
+        cfg_grad.set_property("grad-c1-b", 0.0)
+        cfg_grad.set_property("grad-c2-r", 0.0)
+        cfg_grad.set_property("grad-c2-g", 0.0)
+        cfg_grad.set_property("grad-c2-b", 1.0)
+        cfg_grad.set_property("mask-type", "none")
+        proc.run(cfg_grad)
+        grad_lyr = img.get_layers()[1]
+        px_top = grad_lyr.get_pixel(50, 16).get_rgba()
+        px_bot = grad_lyr.get_pixel(50, 84).get_rgba()
+
+        if px_top.alpha < 0.50 or px_bot.alpha < 0.50:
+            record_fail("STRK-08", "Gradient fill type", f"Stroke band empty; got top_a={px_top.alpha:.2f}, bot_a={px_bot.alpha:.2f}")
+            return
+        record_pass("STRK-08", "Gradient fill type verified", f"Linear gradient fill rendered inside stroke band (top alpha={px_top.alpha:.2f}, bot alpha={px_bot.alpha:.2f})")
+        img.remove_layer(grad_lyr)
+
+        # STRK-09: Pattern fill type verified
+        img.set_selected_layers([art])
+        cfg_pat = proc.create_config()
+        cfg_pat.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pat.set_property("image", img)
+        cfg_pat.set_property("preset", "custom")
+        cfg_pat.set_property("position", "outside")
+        cfg_pat.set_property("size", 6.0)
+        cfg_pat.set_property("fill-type", "pattern")
+        cfg_pat.set_property("pattern", "checkerboard")
+        cfg_pat.set_property("color-r", 1.0)
+        cfg_pat.set_property("color-g", 1.0)
+        cfg_pat.set_property("color-b", 1.0)
+        cfg_pat.set_property("mask-type", "none")
+        proc.run(cfg_pat)
+        pat_lyr = img.get_layers()[1]
+        pat_px1 = pat_lyr.get_pixel(18, 50).get_rgba()
+        pat_px2 = pat_lyr.get_pixel(18, 58).get_rgba()
+
+        if pat_px1.alpha < 0.50 or pat_px2.alpha < 0.50:
+            record_fail("STRK-09", "Pattern fill type", f"Pattern stroke band empty; got a1={pat_px1.alpha:.2f}, a2={pat_px2.alpha:.2f}")
+            return
+        record_pass("STRK-09", "Pattern fill type verified", f"Procedural pattern fill rendered into stroke band (alpha={pat_px1.alpha:.2f})")
+        img.remove_layer(pat_lyr)
+
+        # STRK-10: Curated presets verified across all choices
+        presets_to_test = [
+            "classic-black-outline", "white-sticker-border", "gold-luxury-rim",
+            "neon-cyan-glow-stroke", "comic-ink-border", "sunset-gradient-stroke", "carbon-pattern-border"
+        ]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyrs = img.get_layers()
+            if len(lyrs) < 3:
+                record_fail("STRK-10", f"Preset {pname}", "Failed to create stroke layer")
+                return
+            p_stroke = lyrs[0] if "Inside" in lyrs[0].get_name() else lyrs[1]
+            img.remove_layer(p_stroke)
+        record_pass("STRK-10", "Curated presets verified", f"All {len(presets_to_test)} curated stroke style presets verified")
+
+        # STRK-11: Blend modes validated
+        bmodes_to_test = [
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("lighten", Gimp.LayerMode.LIGHTEN_ONLY),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+        ]
+        for bm_str, bm_expected in bmodes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "custom")
+            cfg_bm.set_property("blend-mode", bm_str)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            bm_lyr = img.get_layers()[1]
+            mode_actual = bm_lyr.get_mode()
+            img.remove_layer(bm_lyr)
+            if mode_actual != bm_expected:
+                record_fail("STRK-11", f"Blend mode {bm_str}", f"Expected {bm_expected}, got {mode_actual}")
+                return
+        record_pass("STRK-11", "Blend modes validated", f"All {len(bmodes_to_test)} blend modes validated accurately")
+
+        # STRK-12: Opacity scaling verified
+        img.set_selected_layers([art])
+        cfg_op = proc.create_config()
+        cfg_op.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_op.set_property("image", img)
+        cfg_op.set_property("preset", "custom")
+        cfg_op.set_property("opacity", 65.0)
+        cfg_op.set_property("mask-type", "none")
+        proc.run(cfg_op)
+        op_lyr = img.get_layers()[1]
+        act_op = op_lyr.get_opacity()
+        img.remove_layer(op_lyr)
+        if abs(act_op - 65.0) > 0.01:
+            record_fail("STRK-12", "Opacity scaling", f"Expected 65.0, got {act_op}")
+            return
+        record_pass("STRK-12", "Opacity scaling verified", f"Layer opacity scaled to {act_op:.1f}%")
+
+        # STRK-13: Layer stack placement verified
+        # Outside stroke placed beneath art; Inside stroke placed above art
+        img.set_selected_layers([art])
+        cfg_out_stk = proc.create_config()
+        cfg_out_stk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_out_stk.set_property("image", img)
+        cfg_out_stk.set_property("preset", "custom")
+        cfg_out_stk.set_property("position", "outside")
+        cfg_out_stk.set_property("mask-type", "none")
+        proc.run(cfg_out_stk)
+        pos_out = img.get_item_position(img.get_layers()[1])
+        pos_art_out = img.get_item_position(art)
+        img.remove_layer(img.get_layers()[1])
+
+        img.set_selected_layers([art])
+        cfg_in_stk = proc.create_config()
+        cfg_in_stk.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_in_stk.set_property("image", img)
+        cfg_in_stk.set_property("preset", "custom")
+        cfg_in_stk.set_property("position", "inside")
+        cfg_in_stk.set_property("mask-type", "none")
+        proc.run(cfg_in_stk)
+        pos_in = img.get_item_position(img.get_layers()[0])
+        pos_art_in = img.get_item_position(art)
+        img.remove_layer(img.get_layers()[0])
+
+        if pos_out != 1 or pos_art_out != 0 or pos_in != 0 or pos_art_in != 1:
+            record_fail("STRK-13", "Layer stack placement", f"Expected Outside beneath art (out={pos_out}, art={pos_art_out}) and Inside above art (in={pos_in}, art={pos_art_in})")
+            return
+        record_pass("STRK-13", "Layer stack placement verified", "Outside stroke placed beneath art (index 1); Inside stroke placed above art (index 0)")
+
+        # STRK-14: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("preset", "classic-black-outline")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        lyr_auto_no = img.get_layers()[1]
+        if lyr_auto_no.get_mask() is not None:
+            record_fail("STRK-14", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(lyr_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 10, 10, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("preset", "classic-black-outline")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        lyr_auto_sel = img.get_layers()[1]
+        m_auto = lyr_auto_sel.get_mask()
+        if m_auto is None:
+            record_fail("STRK-14", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_val = m_auto.get_pixel(15, 15).get_rgba().red
+        if m_val < 0.99:
+            record_fail("STRK-14", "Auto layer mask", f"Expected white mask inside selection, got {m_val:.3f}")
+            return
+        record_pass("STRK-14", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(lyr_auto_sel)
+        Gimp.Selection.none(img)
+
+        # STRK-15: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (25, 40, 50, 60, 75) for y in (25, 40, 50, 60, 75)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 20, 50, 80, 90) for y in (10, 20, 50, 80, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("STRK-15", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("STRK-15", "Target & base pixel preservation", f"Source artwork 100% untouched across all operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+        # STRK-16: Overprint toggle verified
+        img.set_selected_layers([art])
+        cfg_ovr_true = proc.create_config()
+        cfg_ovr_true.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ovr_true.set_property("image", img)
+        cfg_ovr_true.set_property("preset", "custom")
+        cfg_ovr_true.set_property("position", "outside")
+        cfg_ovr_true.set_property("overprint", True)
+        cfg_ovr_true.set_property("mask-type", "none")
+        proc.run(cfg_ovr_true)
+        ovr_true_lyr = img.get_layers()[1]
+        ovr_cen = ovr_true_lyr.get_pixel(50, 50).get_rgba().alpha
+        img.remove_layer(ovr_true_lyr)
+
+        if ovr_cen < 0.90:
+            record_fail("STRK-16", "Overprint toggle", f"Expected overprint=True to cover interior, got {ovr_cen:.3f}")
+            return
+        record_pass("STRK-16", "Overprint toggle verified", f"Overprint toggle retains solid coverage beneath layer artwork (interior alpha {ovr_cen:.2f})")
+
+    except Exception as e:
+        record_fail("STRK-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -13578,6 +13985,7 @@ def run_all_tests():
     test_pdb_registration()
     test_frequency_separation()
     test_luminosity_masks()
+
     test_dodge_burn_layer()
     test_high_pass_sharpen()
     test_quick_export()
@@ -13636,6 +14044,7 @@ def run_all_tests():
     test_pattern_overlay()
     test_satin()
     test_bevel_emboss()
+    test_stroke_style()
 
 
 

@@ -1709,7 +1709,35 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (60 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 708 tests across 61 test suites in 121.20s.
     - Final quality gate: SUCCESS across all stages in 148.53s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `5da75df`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `5da75df`. Outer repo `c08c936`.
 - **Result**: Success.
 - **Next**: Phase 67 — Non-Destructive Stroke Layer Style Helper Plugin.
+
+## Iteration 69 — Non-Destructive Stroke Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Stroke Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Stroke: Size, Position [Outside, Inside, Center], Blend Mode, Opacity, Overprint, Fill Type [Color, Gradient, Pattern]"). In Adobe Photoshop, Stroke represents a foundational layer style in graphic design, icon fabrication, text styling, and UI borders. While Phase 54 introduced `stroke-layer` for `Edit > Stroke...` selection outlines, stock GIMP provides no built-in equivalent to Photoshop's dedicated Stroke Layer Style dialog. Specifically, it lacks Photoshop Layer Style positioning (Outside, Inside, Center), lacks 3 distinct Fill Types (Solid Color, Gradient with Linear/Radial/Reflected geometries and Angle/Scale controls, and seamless repeating Pattern textures), lacks Overprint coverage toggle, lacks curated stroke presets, lacks Photoshop blend modes and opacity scaling, and lacks dedicated non-destructive layer placement leaving underlying target artwork and canvas 100% untouched (`diff == 0.000000`). Implementing `stroke-style.py` brings complete Photoshop parity to Linux photo editing with `python-fu-stroke-style`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-stroke-style` with 3 positions (`outside`, `inside`, `center`), 3 fill types (`color`, `gradient`, `pattern`), Overprint toggle, Size (1.0 to 250.0px), Solid Color RGB swatch controls, Gradient controls (Linear/Radial/Reflected styles, Angle -180° to 180°, Scale 10% to 500%, dual-tone endpoints), Pattern controls (Checkerboard, Diagonal Stripes, Grid Mesh, Polka Dots, Carbon Fiber, Active Pattern with 10% to 500% scale), 7 curated presets (`classic-black-outline`, `white-sticker-border`, `gold-luxury-rim`, `neon-cyan-glow-stroke`, `comic-ink-border`, `sunset-gradient-stroke`, `carbon-pattern-border`, `custom`), 8 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Darken, Lighten, Color), opacity slider (0-100%), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), dedicated layer stack placement (Outside placed beneath target layer, Inside and Center placed above target layer), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `stroke-style` (61 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (61 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 62: `test_stroke_style` (asserting STRK-01 through STRK-16: PDB registration, procedure argument schema across 25 properties, SUCCESS status, outside stroke geometry dilation [edges L=1.00, R=1.00, interior=0.00], inside stroke boundary confinement [edge=1.00, outside=0.0000], center stroke symmetric straddle [outside=1.00, inside=1.00], size width expansion scaling [size 12px alpha=1.00 vs size 3px alpha=0.00 at x=12], solid color Cyan RGB fidelity [R=0.00, G=1.00, B=1.00], linear gradient fill rendering, procedural pattern fill rendering, all 7 curated presets, all 8 blend modes, opacity scaling [65.0%], layer stack placement [Outside beneath art at index 1, Inside above art at index 0], auto layer mask attachment behavior, overprint toggle interior coverage, and target/base layer pixel preservation `diff == 0.000000`). Total tests increased to 724 passing across 62 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Stroke Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 67 complete and scheduled Phase 68 (Global Lighting & Layer Style Effects Manager Plugin) and Phase 69 (Knockout Blending & Texture Cutout Effects Helper Plugin).
+- **Technical discoveries**:
+  - In Photoshop layer styles, Outside stroke is placed immediately beneath the target layer (`pos + 1` in stack), while Inside and Center stroke are placed immediately above the target layer (`pos` in stack).
+  - When `overprint` is False for Outside stroke, subtracting `chan_orig` leaves 0 pixels inside the silhouette boundary, guaranteeing that the target layer's interior remains completely untouched. When `overprint` is True, retaining `chan_outer` provides solid stroke coverage beneath semi-transparent or transparent artwork.
+  - Procedural pattern tiling directly masked by `stroke_band_channel` GeglBuffer alpha produces exact sub-pixel boundary confinement without seams or texture distortion.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 61 plugins verified).
+    - Stage 2: `install.sh --batch` passed (61 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 724 tests across 62 test suites in 137.65s.
+    - Final quality gate: SUCCESS across all stages in 167.65s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `8bfe377`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 68 — Global Lighting & Layer Style Effects Manager Plugin.
+
 

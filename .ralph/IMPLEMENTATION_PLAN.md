@@ -502,13 +502,13 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate bevel styles, lighting angle/altitude, highlight/shadow separation, soften blur falloff, and headless GIMP test suite (assertions BE-01 to BE-16).
 
 ### Phase 67 — Non-Destructive Stroke Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `stroke-style` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py`.
-- [ ] Create dedicated Stroke Layer Style helper simulating Photoshop `Layer > Layer Style > Stroke...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Stroke: Size, Position [Outside, Inside, Center], Blend Mode, Opacity, Overprint, Fill Type [Color, Gradient, Pattern]").
-- [ ] Support Photoshop Stroke positioning: Outside (stroke expands outward from silhouette boundary), Inside (stroke is inset strictly within layer content boundary), and Center (stroke is centered on boundary edge).
-- [ ] Support Fill Types: Solid Color RGB swatch, Gradient (Linear / Radial with dual tones), and Pattern texture repetition.
-- [ ] Support non-destructive overlay layer placement (outside placed beneath or inside placed above parent layer, or grouped container), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Stroke...`, `<Image>/Filters/Light and Shadow/Stroke (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate stroke positioning (Inside, Outside, Center), size dilation/erosion geometry, fill types, blend modes, opacity scaling, layer mask attachment, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `stroke-style` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/stroke-style/stroke-style.py`.
+- [x] Create dedicated Stroke Layer Style helper simulating Photoshop `Layer > Layer Style > Stroke...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Stroke: Size, Position [Outside, Inside, Center], Blend Mode, Opacity, Overprint, Fill Type [Color, Gradient, Pattern]").
+- [x] Support Photoshop Stroke positioning: Outside (stroke expands outward from silhouette boundary), Inside (stroke is inset strictly within layer content boundary), and Center (stroke is centered on boundary edge).
+- [x] Support Fill Types: Solid Color RGB swatch, Gradient (Linear / Radial / Reflected with dual tones and angle/scale), and Pattern texture repetition.
+- [x] Support non-destructive overlay layer placement (outside placed beneath target layer or inside placed above parent layer), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Stroke...`, `<Image>/Filters/Light and Shadow/Stroke (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate stroke positioning (Inside, Outside, Center), size dilation/erosion geometry, fill types, blend modes, opacity scaling, layer mask attachment, and headless GIMP test suite (assertions STRK-01 to STRK-16).
 
 ### Phase 68 — Global Lighting & Layer Style Effects Manager Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `layer-style-manager` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py`.
@@ -517,6 +517,15 @@ This file is the authoritative roadmap of product-development work to transform 
 - [ ] Support copying style parameters across layers, clearing applied layer style containers, toggling style visibility, and scaling layer effect radii proportionally (10% to 500%).
 - [ ] Register under menu path `<Image>/Layer/Layer Style/Global Light...`, `<Image>/Layer/Layer Style/Scale Effects...`, `<Image>/Layer/Layer Style/Copy Layer Style`, `<Image>/Layer/Layer Style/Paste Layer Style`, and `<Image>/Layer/Layer Style/Clear Layer Style`.
 - [ ] Validate global angle synchronization, effect scaling arithmetic, style copy/paste persistence, and headless GIMP test suite.
+
+### Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `knockout-blending` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
+- [ ] Simulate Photoshop `Layer > Layer Style > Blending Options > Knockout` (Shallow / Deep) (`Topics.txt` line 120: "Create texture effects with Knockout"; `photoshop_docs.md` Section 124 lines 3684-3698: "Learn how to use the Knockout blending option to punch through layers and reveal underlying content for texture effects in photoeditor desktop... Knockout: Shallow punches through to group boundary; Deep punches through to background/base layer").
+- [ ] Support Shallow Knockout (punches through layers inside active layer group to reveal parent group backdrop) and Deep Knockout (punches through all intermediate layers down to base canvas).
+- [ ] Support Fill Opacity separation (0% to 100%) allowing layer effects (strokes, bevels, shadows) to remain visible while layer fill punches through.
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate shallow and deep knockout transparency punching, fill opacity decoupling, and headless GIMP test suite.
+
 
 
 

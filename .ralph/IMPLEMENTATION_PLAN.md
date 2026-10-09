@@ -469,12 +469,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate solid color rendering, silhouette clipping, blend modes, opacity scaling, presets, layer mask attachment, and headless GIMP test suite.
 
 ### Phase 63 — Non-Destructive Gradient Overlay Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py`.
-- [ ] Create dedicated Gradient Overlay helper simulating Photoshop `Layer > Layer Style > Gradient Overlay...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
-- [ ] Support Photoshop Gradient Overlay parameters: Gradient Preset / Custom colors, Geometry (Linear, Radial, Angle, Reflected, Diamond), Angle (-180° to 180°), Scale (10% to 500%), Reverse toggle, Dither toggle, Blend Mode, Opacity, and strict silhouette clipping.
-- [ ] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Gradient Overlay...`, `<Image>/Filters/Light and Shadow/Gradient Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `gradient-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py`.
+- [x] Create dedicated Gradient Overlay helper simulating Photoshop `Layer > Layer Style > Gradient Overlay...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [x] Support Photoshop Gradient Overlay parameters: 5 Geometry styles (Linear, Radial, Angle, Reflected, Diamond), Angle (-180° to 180°), Scale (10% to 500%), Reverse toggle, Dither anti-banding toggle, Align with Layer centering, Presets (Black-White, FG-BG, Vintage Sepia, Sunset Horizon, Cyberpunk Neon, Ocean Breeze, Golden Glow, Custom dual-tone RGB), Blend Modes (Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten), Opacity (0 to 100%), and strict silhouette clipping to target layer pixels.
+- [x] Support non-destructive overlay layer placement immediately above target layer, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Gradient Overlay...`, `<Image>/Filters/Light and Shadow/Gradient Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, presets, and headless GIMP test suite (assertions GO-01 to GO-16).
+
+### Phase 64 — Non-Destructive Pattern Overlay Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `pattern-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py`.
+- [ ] Create dedicated Pattern Overlay helper simulating Photoshop `Layer > Layer Style > Pattern Overlay...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [ ] Support Photoshop Pattern Overlay parameters: Pattern selection (Checkerboard, Diagonal Stripes, Grid Mesh, Polka Dots, Halftone Dots, Carbon Fiber, Active GIMP Pattern), Scale (10% to 500%), Angle (-180° to 180°), Color 1 / Color 2 tinting swatches, Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color, Darken, Lighten), Opacity (0% to 100%), Snap to Origin / Align with Layer, and strict silhouette boundary clipping.
+- [ ] Support non-destructive overlay layer placement directly above target layer, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Filters/Light and Shadow/Pattern Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate pattern tiling, rotation, scaling, silhouette boundary clipping, blend modes, and headless GIMP test suite.
 
 
 

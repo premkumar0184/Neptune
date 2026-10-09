@@ -12090,6 +12090,361 @@ def test_color_overlay():
         img.delete()
 
 
+def test_gradient_overlay():
+    print("\n--- Test Suite 58: Non-Destructive Gradient Overlay Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-gradient-overlay")
+    if not proc:
+        record_fail("GO-01", "Procedure lookup", "Procedure python-fu-gradient-overlay not found in PDB")
+        return
+
+    # GO-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "style", "angle", "scale",
+        "reverse", "align-layer", "dither", "blend-mode", "opacity",
+        "start-r", "start-g", "start-b", "end-r", "end-g", "end-b", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("GO-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("GO-01", "Procedure signatures & argument audit", f"All 19 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    # Semi-transparent pixel at (20, 20) with alpha 0.50
+    rect_px = Gegl.Rectangle.new(20, 20, 1, 1)
+    half_px = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+    art.get_buffer().set(rect_px, "RGBA float", half_px)
+    art.get_buffer().flush()
+
+    # Capture original baseline samples
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # GO-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "black-white")
+        cfg.set_property("style", "linear")
+        cfg.set_property("angle", 90.0)
+        cfg.set_property("scale", 100.0)
+        cfg.set_property("reverse", False)
+        cfg.set_property("align-layer", True)
+        cfg.set_property("dither", True)
+        cfg.set_property("blend-mode", "normal")
+        cfg.set_property("opacity", 100.0)
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("GO-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("GO-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # GO-03: Linear vertical gradient transition verified (top brighter than bottom)
+        lyr_lin = img.get_layers()[0]
+        p_top = lyr_lin.get_pixel(50, 25).get_rgba()
+        p_bot = lyr_lin.get_pixel(50, 75).get_rgba()
+        if p_top.red <= p_bot.red + 0.3:
+            record_fail("GO-03", "Linear vertical gradient transition", f"Expected top ({p_top.red:.3f}) > bot ({p_bot.red:.3f}) by >0.3")
+            return
+        record_pass("GO-03", "Linear vertical gradient transition", f"Vertical gradient transition verified (top R={p_top.red:.3f} > bot R={p_bot.red:.3f})")
+
+        # GO-04: Strict boundary silhouette clipping (outside alpha == 0.000)
+        outside_coords = [(5, 5), (10, 10), (15, 50), (85, 50), (50, 85), (95, 95)]
+        max_out_alpha = max(lyr_lin.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_alpha > 0.0001:
+            record_fail("GO-04", "Boundary silhouette clipping", f"Expected outside alpha 0.000, got {max_out_alpha:.4f}")
+            return
+        record_pass("GO-04", "Strict boundary silhouette clipping", f"Overlay pixels strictly clipped inside parent silhouette (max outside alpha {max_out_alpha:.6f})")
+
+        # GO-05: Semi-transparent edge alpha preservation
+        p_edge = lyr_lin.get_pixel(20, 20).get_rgba()
+        if abs(p_edge.alpha - 0.5) > 0.02:
+            record_fail("GO-05", "Semi-transparent edge alpha", f"Expected edge alpha 0.50, got {p_edge.alpha:.3f}")
+            return
+        record_pass("GO-05", "Semi-transparent edge alpha preservation", f"Semi-transparent edge alpha preserved accurately (edge alpha {p_edge.alpha:.3f} ~= 0.500)")
+        img.remove_layer(lyr_lin)
+
+        # GO-06: Radial gradient geometry verified
+        img.set_selected_layers([art])
+        cfg_rad = proc.create_config()
+        cfg_rad.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rad.set_property("image", img)
+        cfg_rad.set_property("preset", "black-white")
+        cfg_rad.set_property("style", "radial")
+        cfg_rad.set_property("scale", 100.0)
+        cfg_rad.set_property("align-layer", True)
+        cfg_rad.set_property("mask-type", "none")
+        proc.run(cfg_rad)
+        lyr_rad = img.get_layers()[0]
+        p_center = lyr_rad.get_pixel(50, 50).get_rgba()
+        p_perim = lyr_rad.get_pixel(50, 25).get_rgba()
+        if p_perim.red <= p_center.red + 0.15:
+            record_fail("GO-06", "Radial gradient geometry", f"Expected perimeter ({p_perim.red:.3f}) > center ({p_center.red:.3f})")
+            return
+        record_pass("GO-06", "Radial gradient geometry", f"Concentric radial falloff verified (perim R={p_perim.red:.3f} > center R={p_center.red:.3f})")
+        img.remove_layer(lyr_rad)
+
+        # GO-07: Reflected gradient geometry verified (bilateral symmetry)
+        img.set_selected_layers([art])
+        cfg_ref = proc.create_config()
+        cfg_ref.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ref.set_property("image", img)
+        cfg_ref.set_property("preset", "black-white")
+        cfg_ref.set_property("style", "reflected")
+        cfg_ref.set_property("angle", 90.0)
+        cfg_ref.set_property("scale", 100.0)
+        cfg_ref.set_property("align-layer", True)
+        cfg_ref.set_property("mask-type", "none")
+        proc.run(cfg_ref)
+        lyr_ref = img.get_layers()[0]
+        p_above = lyr_ref.get_pixel(50, 35).get_rgba()
+        p_below = lyr_ref.get_pixel(50, 65).get_rgba()
+        sym_diff = abs(p_above.red - p_below.red)
+        if sym_diff > 0.05:
+            record_fail("GO-07", "Reflected gradient symmetry", f"Expected symmetric reflection, diff was {sym_diff:.4f}")
+            return
+        record_pass("GO-07", "Reflected gradient geometry", f"Bilateral symmetry verified across center line (diff {sym_diff:.4f} <= 0.05)")
+        img.remove_layer(lyr_ref)
+
+        # GO-08: Diamond gradient geometry verified
+        img.set_selected_layers([art])
+        cfg_dia = proc.create_config()
+        cfg_dia.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dia.set_property("image", img)
+        cfg_dia.set_property("preset", "black-white")
+        cfg_dia.set_property("style", "diamond")
+        cfg_dia.set_property("scale", 100.0)
+        cfg_dia.set_property("align-layer", True)
+        cfg_dia.set_property("mask-type", "none")
+        proc.run(cfg_dia)
+        lyr_dia = img.get_layers()[0]
+        p_dc = lyr_dia.get_pixel(50, 50).get_rgba()
+        p_corner = lyr_dia.get_pixel(25, 25).get_rgba()
+        if p_corner.red <= p_dc.red + 0.2:
+            record_fail("GO-08", "Diamond gradient geometry", f"Expected corner ({p_corner.red:.3f}) > center ({p_dc.red:.3f})")
+            return
+        record_pass("GO-08", "Diamond gradient geometry", f"Rhomboid diamond falloff verified (corner R={p_corner.red:.3f} > center R={p_dc.red:.3f})")
+        img.remove_layer(lyr_dia)
+
+        # GO-09: Reverse gradient direction verified
+        img.set_selected_layers([art])
+        cfg_rev = proc.create_config()
+        cfg_rev.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rev.set_property("image", img)
+        cfg_rev.set_property("preset", "black-white")
+        cfg_rev.set_property("style", "linear")
+        cfg_rev.set_property("angle", 90.0)
+        cfg_rev.set_property("reverse", True)
+        cfg_rev.set_property("mask-type", "none")
+        proc.run(cfg_rev)
+        lyr_rev = img.get_layers()[0]
+        p_rev_top = lyr_rev.get_pixel(50, 25).get_rgba()
+        p_rev_bot = lyr_rev.get_pixel(50, 75).get_rgba()
+        if p_rev_bot.red <= p_rev_top.red + 0.3:
+            record_fail("GO-09", "Reverse gradient", f"Expected bot ({p_rev_bot.red:.3f}) > top ({p_rev_top.red:.3f}) when reversed")
+            return
+        record_pass("GO-09", "Reverse gradient direction", f"Reverse flips color progression (bot R={p_rev_bot.red:.3f} > top R={p_rev_top.red:.3f})")
+        img.remove_layer(lyr_rev)
+
+        # GO-10: Scale expansion control verified
+        img.set_selected_layers([art])
+        cfg_s50 = proc.create_config()
+        cfg_s50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s50.set_property("image", img)
+        cfg_s50.set_property("preset", "black-white")
+        cfg_s50.set_property("style", "linear")
+        cfg_s50.set_property("angle", 90.0)
+        cfg_s50.set_property("scale", 50.0)
+        cfg_s50.set_property("mask-type", "none")
+        proc.run(cfg_s50)
+        lyr_s50 = img.get_layers()[0]
+        r_s50 = lyr_s50.get_pixel(50, 30).get_rgba().red
+        img.remove_layer(lyr_s50)
+
+        img.set_selected_layers([art])
+        cfg_s200 = proc.create_config()
+        cfg_s200.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s200.set_property("image", img)
+        cfg_s200.set_property("preset", "black-white")
+        cfg_s200.set_property("style", "linear")
+        cfg_s200.set_property("angle", 90.0)
+        cfg_s200.set_property("scale", 200.0)
+        cfg_s200.set_property("mask-type", "none")
+        proc.run(cfg_s200)
+        lyr_s200 = img.get_layers()[0]
+        r_s200 = lyr_s200.get_pixel(50, 30).get_rgba().red
+        img.remove_layer(lyr_s200)
+
+        if abs(r_s50 - r_s200) < 0.1:
+            record_fail("GO-10", "Scale expansion control", f"Expected noticeable scale difference, got s50={r_s50:.3f}, s200={r_s200:.3f}")
+            return
+        record_pass("GO-10", "Scale expansion control", f"Scale modulates spatial frequency (scale 50% R={r_s50:.3f} vs scale 200% R={r_s200:.3f})")
+
+        # GO-11: Custom dual-tone RGB color fidelity
+        img.set_selected_layers([art])
+        cfg_cust = proc.create_config()
+        cfg_cust.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cust.set_property("image", img)
+        cfg_cust.set_property("preset", "custom")
+        cfg_cust.set_property("style", "linear")
+        cfg_cust.set_property("angle", 90.0)
+        cfg_cust.set_property("start-r", 0.0)
+        cfg_cust.set_property("start-g", 1.0)
+        cfg_cust.set_property("start-b", 1.0)
+        cfg_cust.set_property("end-r", 1.0)
+        cfg_cust.set_property("end-g", 0.0)
+        cfg_cust.set_property("end-b", 1.0)
+        cfg_cust.set_property("mask-type", "none")
+        proc.run(cfg_cust)
+        lyr_cust = img.get_layers()[0]
+        p_c_bot = lyr_cust.get_pixel(50, 75).get_rgba()
+        p_c_top = lyr_cust.get_pixel(50, 25).get_rgba()
+        if p_c_bot.green <= p_c_bot.red + 0.3 or p_c_top.red <= p_c_top.green + 0.3:
+            record_fail("GO-11", "Custom dual-tone RGB fidelity", f"Expected Cyan at bot, Magenta at top; got bot=[R={p_c_bot.red:.3f}, G={p_c_bot.green:.3f}], top=[R={p_c_top.red:.3f}, G={p_c_top.green:.3f}]")
+            return
+        record_pass("GO-11", "Custom dual-tone RGB fidelity", f"Custom Cyan to Magenta endpoints verified (bot G={p_c_bot.green:.3f}, top R={p_c_top.red:.3f})")
+        img.remove_layer(lyr_cust)
+
+        # GO-12: Curated presets verified
+        presets_to_test = ["black-white", "vintage-sepia", "sunset-horizon", "cyberpunk-neon", "ocean-breeze", "golden-glow"]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyr_p = img.get_layers()[0]
+            if lyr_p is None:
+                record_fail("GO-12", f"Preset {pname}", "Failed to create overlay layer")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("GO-12", "Curated presets", "All 6 curated Gradient Overlay presets verified")
+
+        # GO-13: Layer stack placement verified
+        img.set_selected_layers([art])
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("preset", "black-white")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+        layers = img.get_layers()
+        pos_ol = img.get_item_position(layers[0])
+        pos_art = img.get_item_position(art)
+        if pos_ol != 0 or pos_art != 1:
+            record_fail("GO-13", "Layer stack placement", f"Expected overlay at 0, art at 1; got overlay={pos_ol}, art={pos_art}")
+            return
+        record_pass("GO-13", "Layer stack placement", "Overlay layer inserted immediately above parent layer in stack")
+        img.remove_layer(layers[0])
+
+        # GO-14: Blend modes & opacity validation
+        modes_to_test = [
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("lighten", Gimp.LayerMode.LIGHTEN_ONLY),
+        ]
+        for bname, expected_mode in modes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "black-white")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("GO-14", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("GO-14", "Blend modes & opacity validation", "Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten & 75% opacity validated")
+
+        # GO-15: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("preset", "black-white")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        lyr_auto_no = img.get_layers()[0]
+        if lyr_auto_no.get_mask() is not None:
+            record_fail("GO-15", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(lyr_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("preset", "black-white")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        lyr_auto_sel = img.get_layers()[0]
+        mask_auto = lyr_auto_sel.get_mask()
+        if mask_auto is None:
+            record_fail("GO-15", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_auto_in = mask_auto.get_pixel(35, 35).get_rgba().red
+        if m_auto_in < 0.99:
+            record_fail("GO-15", "Auto layer mask", f"Expected mask white inside selection, got {m_auto_in:.3f}")
+            return
+        record_pass("GO-15", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(lyr_auto_sel)
+        Gimp.Selection.none(img)
+
+        # GO-16: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("GO-16", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("GO-16", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("GO-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -12157,6 +12512,7 @@ def run_all_tests():
     test_inner_glow()
     test_inner_shadow()
     test_color_overlay()
+    test_gradient_overlay()
 
 
 

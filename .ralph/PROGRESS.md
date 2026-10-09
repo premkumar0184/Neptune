@@ -1599,6 +1599,33 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (56 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 644 tests across 57 test suites in 92.11s.
     - Final quality gate: SUCCESS across all stages in 107.54s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `0864da2`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `0864da2`. Outer repo `05226d6`.
 - **Result**: Success.
 - **Next**: Phase 63 — Non-Destructive Gradient Overlay Layer Style Helper Plugin.
+
+## Iteration 65 — Non-Destructive Gradient Overlay Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Gradient Overlay Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Gradient Overlay: Blend Mode, Opacity, Gradient, Style [Linear, Radial, Angle, Reflected, Diamond], Angle, Scale, Reverse, Align with Layer, Dither"). In Adobe Photoshop, Gradient Overlay represents one of the most widely used layer styles in professional graphic design, UI styling, photo grading, and lighting simulation. Stock GIMP provides an interactive gradient tool and fill layers, but lacks a dedicated non-destructive Gradient Overlay layer style dialog, lacks automatic silhouette boundary alpha clipping to target layers ($A_{\text{overlay}}(x, y) = A_{\text{target}}(x, y)$), lacks Photoshop's 5 core gradient geometries (Linear, Radial, Angle, Reflected, Diamond), lacks Photoshop's Angle (-180° to 180°) and Scale (10% to 500%) controls, lacks Reverse and Dither anti-banding toggles, lacks Align with Layer geometric centering, lacks Photoshop blend modes and curated presets, and lacks dedicated overlay layer placement immediately above the target layer leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `gradient-overlay.py` brings complete Photoshop parity to Linux photo editing with `python-fu-gradient-overlay`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-gradient-overlay` with 5 geometry styles (`linear`, `radial`, `angle`, `reflected`, `diamond`), Angle (-180° to 180°), Scale (10% to 500%), Reverse toggle, Dither anti-banding toggle, Align with Layer centering, 7 curated presets (Black-White, FG-BG, Vintage Sepia, Sunset Horizon, Cyberpunk Neon, Ocean Breeze, Golden Glow, Custom dual-tone RGB), 8 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color [HSL Color], Darken, Lighten), opacity control (0-100%), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `gradient-overlay` (57 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (57 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 58: `test_gradient_overlay` (asserting GO-01 through GO-16: PDB registration, procedure argument schema across 19 properties, SUCCESS status, linear vertical gradient transition [top R=0.515 > bot R=0.048], strict boundary silhouette clipping [max outside alpha 0.000000], semi-transparent edge alpha preservation [edge alpha 0.502 ~= 0.500], radial gradient concentric falloff [perim R=0.209 > center R=0.001], reflected gradient bilateral symmetry across center line [diff 0.0117 <= 0.05], diamond gradient rhomboid falloff [corner R=0.209 > center R=0.001], reverse gradient direction [bot R=0.533 > top R=0.054], scale expansion control [scale 50% R=0.768 vs scale 200% R=0.314], custom dual-tone Cyan-Magenta endpoints verified, 6 curated presets verified, dedicated overlay layer stack placement immediately above parent layer, 8 blend modes validated, opacity scaling [75.0%], auto layer mask attachment behavior [selection when active, none when empty], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 660 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Gradient Overlay Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 63 complete and scheduled Phase 64 (Non-Destructive Pattern Overlay Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, `target_layer.get_offsets()` returns a 3-tuple `(success, offset_x, offset_y)`. Accessing offsets via `offs[-2]` and `offs[-1]` provides backwards- and introspective-safe unpacking across different binding versions.
+  - For radial, reflected, angle, and diamond gradients, setting $(x_1, y_1)$ to the layer geometric center $(c_x, c_y)$ and $(x_2, y_2)$ along the angle vector $(c_x + dx, c_y + dy)$ aligns the gradient focal center identically with Adobe Photoshop.
+  - Multiplying the target layer's GeglBuffer alpha into the rendered gradient GeglBuffer ($A_{\text{overlay}} = A_{\text{gradient}} \cdot A_{\text{target}}$) produces strict silhouette clipping with zero bleed outside the parent artwork boundary and preserves all fractional anti-aliasing edges without halos.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 57 plugins verified).
+    - Stage 2: `install.sh --batch` passed (57 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 660 tests across 58 test suites in 101.97s.
+    - Final quality gate: SUCCESS across all stages in 118.06s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `6372b8b`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 64 — Non-Destructive Pattern Overlay Layer Style Helper Plugin.

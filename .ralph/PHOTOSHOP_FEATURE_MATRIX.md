@@ -1138,6 +1138,30 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: History States & Edit Session Audit Log Plugin
+- **Source topic**: History panel settings / Set History Log preferences / Manage image states (`Topics.txt` lines 34-40; `photoshop_docs.md` Section 41, 42, 45, 46, 47 lines 1040-1210: "Configure History Log settings: Customize History Log preferences in photoeditor to save logs in metadata, a text file, or both... Manage image states... Create temporary versions without saving to disk")
+- **Photoshop behavior**: Configures automated session and edit action logging saved to document metadata, an external disk text file, or both, with selectable detail levels ('sessions-only', 'concise', 'detailed'). Provides named snapshot creation (Full Document, Merged Layers, Current Layer), snapshot restoration, spawning new independent documents from snapshots, and clearing snapshots.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `history-log` (`python-fu-set-history-log-prefs`, `python-fu-record-history-entry`, `python-fu-view-history-log`, `python-fu-create-snapshot`, `python-fu-apply-snapshot`, `python-fu-new-document-from-snapshot`, `python-fu-delete-snapshot`) registered in `<Image>/Edit`, `<Image>/Edit/Preferences`, `<Image>/Window/History`, `<Image>/File/New`, and `<Image>/File/Export`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
+- **Current capability**:
+  1. `python-fu-set-history-log-prefs`: Configures logging destination (metadata, text_file, both) and detail levels in `photogimp/history-log-prefs`.
+  2. `python-fu-record-history-entry`: Appends timestamped audit entries to metadata parasite `photogimp/history-log-entries` and/or external text file.
+  3. `python-fu-view-history-log`: Formats and exports audit log trail to disk.
+  4. `python-fu-create-snapshot`: Captures named snapshots (Full Document stack, Merged Layers composite, or Current Layer) into `photogimp/history-snapshots`.
+  5. `python-fu-apply-snapshot`: Restores document layer states from any captured snapshot.
+  6. `python-fu-new-document-from-snapshot`: Clones snapshot state into an independent new GIMP image document.
+  7. `python-fu-delete-snapshot`: Deletes single snapshot by name or clears all (`__ALL__`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject, `Gimp.Layer.new_from_visible`, PDB API.
+- **Implementation priority**: High (Phase 72).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 7 procedures (HL-01), preferences persistence (HL-02), metadata audit logging (HL-03), text file logging (HL-04), log export (HL-05), full document snapshot creation (HL-06), snapshot parasite persistence (HL-07), snapshot state restoration (HL-08), merged layers snapshot (HL-09), current layer snapshot (HL-10), new document from snapshot (HL-11), single snapshot deletion (HL-12), clear all snapshots (HL-13), missing snapshot error handling (HL-14), undo group encapsulation (HL-15), and base canvas preservation (`diff == 0.000000`, HL-16).
+- **Verification evidence** (Iteration 74):
+  1. `verify_config.py`: Section 6 passed with 66 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions HL-01 through HL-16 passing in Test Suite 67.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 74).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

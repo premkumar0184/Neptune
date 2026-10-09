@@ -543,11 +543,11 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate snapshot persistence in image parasites (`photogimp/layer-comps`), selective property recording, missing layer resilience, file export, and headless GIMP test suite (assertions LC-01 to LC-16).
 
 ### Phase 72 — History States & Edit Session Audit Log Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `history-log` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
-- [ ] Simulate Photoshop `Edit > Preferences > History Log` and Snapshot Management (`Topics.txt` lines 35-40; `photoshop_docs.md` Section 136-140: "Save a history log", "Work with the History panel", "Create and use snapshots", "Manage image states").
-- [ ] Support recording detailed non-destructive undo session history, exporting audit logs to text/metadata, and creating named image state snapshots.
-- [ ] Register under menu path `<Image>/Edit/History Log...` and `<Image>/Edit/Create Snapshot...`.
-- [ ] Validate session history tracking, snapshot isolation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `history-log` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
+- [x] Simulate Photoshop `Edit > Preferences > History Log` and Snapshot Management (`Topics.txt` lines 34-40; `photoshop_docs.md` Section 41, 42, 45, 46, 47 lines 1040-1210: "Configure History Log settings: Customize History Log preferences in photoeditor to save logs in metadata, a text file, or both... Manage image states... Create temporary versions without saving to disk").
+- [x] Support recording detailed non-destructive edit session history (metadata and external disk file), exporting audit logs, and creating named image state snapshots (Full Document, Merged Layers, Current Layer), with snapshot restoration and spawning new documents from snapshots.
+- [x] Register under menu path `<Image>/Edit`, `<Image>/Edit/Preferences`, `<Image>/Window/History`, `<Image>/File/New`, and `<Image>/File/Export`.
+- [x] Validate session history tracking, snapshot isolation, and headless GIMP test suite (assertions HL-01 to HL-16).
 
 ### Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `placeholder-frames` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/placeholder-frames/placeholder-frames.py`.
@@ -555,6 +555,13 @@ This file is the authoritative roadmap of product-development work to transform 
 - [ ] Support creating rectangular / elliptical placeholder frames, placing images into frames with auto-fitting (Fill, Fit, Stretch), and stroke boundary styling.
 - [ ] Register under menu path `<Image>/Layer/Frames...` and `<Image>/Tools/Transform Tools/Frame...`.
 - [ ] Validate frame container hierarchy, clipping mask geometry, and headless GIMP test suite.
+
+### Phase 74 — Image Stacks Statistical Blending Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `image-stacks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
+- [ ] Simulate Photoshop Image Stacks (`Topics.txt` line 145: "Create and process image stacks"; `photoshop_docs.md`: "Image Stacks: Median, Mean, Maximum, Minimum, Range, Standard Deviation").
+- [ ] Support statistical stack modes to remove moving pedestrians/cars (Median), reduce noise (Mean), and exposure blending (Max/Min).
+- [ ] Register under menu path `<Image>/Layer/Smart Objects/Stack Mode...` and `<Image>/Filters/Combine/Image Stacks...`.
+- [ ] Validate stack mode algorithms and headless GIMP test suite.
 
 
 

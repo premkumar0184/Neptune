@@ -1870,6 +1870,38 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 72 — History States & Edit Session Audit Log Plugin (`history-log`).
 
-
-
-
+## Iteration 74 — History States & Edit Session Audit Log Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 History States & Edit Session Audit Log Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 34-40: "History panel settings", "Set History Log preferences", "View history logs", "Use snapshots in the History panel", "Manage image states"; `photoshop_docs.md` Section 41, 42, 45, 46, 47 lines 1040-1210: "Configure History Log settings: Customize History Log preferences in photoeditor to save logs in metadata, a text file, or both... Sessions Only, Concise, Detailed", "Manage image states: Create documents from image states, Revert to previous image states, Delete image states, Clear History", "Use snapshots in the History panel: Create temporary versions without saving to disk"). In Adobe Photoshop:
+  1. `History Log Preferences`: Configures automated tracking of image edits and operations across editing sessions (`Edit > Preferences > History Log`).
+  2. `Save Log Items To`: Supports saving logs to Metadata (embedded image parasite `photogimp/history-log-entries`), Text File (disk append), or Both.
+  3. `Detail Level`: Supports `Sessions Only` (session boundaries), `Concise` (action overview and timestamps), and `Detailed` (full operational details, layer targets, parameters).
+  4. `View/Export History Log`: Formats recorded history entries and exports session audit log to disk.
+  5. `Create Snapshot`: Captures named snapshots with comments and timestamps: Full Document (all layers, visibility, positions, opacities, modes), Merged Layers (composite raster snapshot via `Gimp.Layer.new_from_visible`), and Current Layer (active layer duplicate).
+  6. `Apply Snapshot`: Reverts document to any earlier captured snapshot state.
+  7. `New Document from Snapshot`: Clones document at snapshot state into an independent new GIMP image (`add_image_return_value`).
+  8. `Delete Snapshot`: Removes individual snapshots or clears all snapshots (`__ALL__`).
+  Stock GIMP provides no built-in equivalent for Photoshop's History Log preferences, text file audit logging, or persistent named history snapshots. Implementing `history-log` provides complete Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/history-log/history-log.py`: Created native Python 3 GObject-Introspection plugin implementing 7 PDB procedures (`python-fu-set-history-log-prefs`, `python-fu-record-history-entry`, `python-fu-view-history-log`, `python-fu-create-snapshot`, `python-fu-apply-snapshot`, `python-fu-new-document-from-snapshot`, `python-fu-delete-snapshot`) with persistent image parasite storage (`photogimp/history-log-prefs`, `photogimp/history-log-entries`, `photogimp/history-snapshots`), external text file logging, snapshot types (`full-document`, `merged-layers`, `current-layer`), full layer state restoration, new document spawning from snapshot state, single-step undo protection, and 100% base artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `history-log` (66 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (66 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 67: `test_history_log` (asserting HL-01 through HL-16: PDB registration and argument signatures across all 7 procedures, preferences configuration, metadata audit entry recording, disk text file logging, history log formatting/export, full document snapshot creation, snapshot parasite persistence, snapshot layer state restoration, merged layers composite snapshot, current layer duplicate snapshot, new document spawning with matching dimensions, single snapshot deletion, clear all snapshots with `__ALL__`, missing snapshot error resilience, undo group encapsulation, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 804 passing across 67 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added History States & Edit Session Audit Log entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 72 complete and scheduled Phase 73 (Placeholder Frames & Clipping Masks Layout Helper Plugin) and Phase 74 (Image Stacks & Multi-Exposure Statistical Blending Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, `procedure.add_image_return_value(name, nick, blurb, none_ok, flags)` requires exactly 5 arguments, including `none_ok: bool` preceding `GObject.ParamFlags`.
+  - When returning values from procedures with registered return values, using `ret = procedure.new_return_values(status, GLib.Error())`, `ret.remove(1)`, and `ret.insert(1, GObject.Value(Gimp.Image, img))` cleanly places the image object into the return value array without PyGObject conversion errors.
+  - `Gimp.Layer.new_from_visible(image, dest_image, name)` composites all currently visible layers in `image` into a new layer for `dest_image`, providing an exact raster representation for Photoshop's "Merged Layers" history snapshots.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 66 plugins verified).
+    - Stage 2: `install.sh --batch` passed (66 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 804 tests across 67 test suites in 145.37s.
+    - Final quality gate: SUCCESS across all stages in 161.84s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `c2e9dc7`. Outer repo `PENDING`.
+- **Result**: Success.
+- **Next**: Phase 73 — Placeholder Frames & Clipping Masks Layout Helper Plugin (`placeholder-frames`).

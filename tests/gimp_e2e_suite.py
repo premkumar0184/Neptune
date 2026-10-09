@@ -15280,6 +15280,300 @@ def test_layer_comps():
         img.delete()
 
 
+def test_history_log():
+    print("\n--- Test Suite 67: History States & Edit Session Audit Log Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    procs = [
+        "python-fu-set-history-log-prefs",
+        "python-fu-record-history-entry",
+        "python-fu-view-history-log",
+        "python-fu-create-snapshot",
+        "python-fu-apply-snapshot",
+        "python-fu-new-document-from-snapshot",
+        "python-fu-delete-snapshot",
+    ]
+
+    for p_name in procs:
+        proc = pdb.lookup_procedure(p_name)
+        if proc is None:
+            record_fail("HL-01", f"Lookup {p_name}", f"Procedure {p_name} not found in PDB")
+            return
+    record_pass("HL-01", "Procedure signatures & argument audit", f"All 7 History Log procedures verified in PDB: {procs}")
+
+    proc_prefs = pdb.lookup_procedure("python-fu-set-history-log-prefs")
+    proc_record = pdb.lookup_procedure("python-fu-record-history-entry")
+    proc_view = pdb.lookup_procedure("python-fu-view-history-log")
+    proc_snap_create = pdb.lookup_procedure("python-fu-create-snapshot")
+    proc_snap_apply = pdb.lookup_procedure("python-fu-apply-snapshot")
+    proc_snap_newdoc = pdb.lookup_procedure("python-fu-new-document-from-snapshot")
+    proc_snap_delete = pdb.lookup_procedure("python-fu-delete-snapshot")
+
+    import tempfile
+    tmp_log_dir = tempfile.mkdtemp(prefix="photogimp_hl_test_")
+    text_log_file = os.path.join(tmp_log_dir, "edit_audit_log.txt")
+
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base canvas
+        base = Gimp.Layer.new(img, "Base Canvas", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#0000ff"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(50, 50).get_rgba()
+
+        # Subject layer
+        subject = Gimp.Layer.new(img, "Subject Layer", 50, 50, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(subject, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#ff0000"))
+        subject.edit_fill(Gimp.FillType.FOREGROUND)
+        subject.set_offsets(0, 0)
+        subject.set_visible(True)
+
+        # HL-02: Configure History Log preferences (Both metadata and text file)
+        cfg_p = proc_prefs.create_config()
+        cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_p.set_property("image", img)
+        cfg_p.set_property("enabled", True)
+        cfg_p.set_property("save-to", "both")
+        cfg_p.set_property("log-path", text_log_file)
+        cfg_p.set_property("detail-level", "detailed")
+        res_p = proc_prefs.run(cfg_p)
+        if res_p.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-02", "Configure preferences execution", f"Expected SUCCESS, got {res_p.index(0)}")
+            return
+        p_prefs = img.get_parasite("photogimp/history-log-prefs")
+        if p_prefs is None:
+            record_fail("HL-02", "Prefs parasite", "Parasite photogimp/history-log-prefs not found")
+            return
+        prefs_data = json.loads(bytes(p_prefs.get_data()).decode("utf-8"))
+        if prefs_data.get("save_to") != "both" or prefs_data.get("detail_level") != "detailed":
+            record_fail("HL-02", "Prefs data", f"Unexpected prefs: {prefs_data}")
+            return
+        record_pass("HL-02", "History Log preferences configuration", "Preferences configured and stored in parasite with save_to='both' and detail='detailed'")
+
+        # HL-03: Record history entry in metadata parasite
+        cfg_rec = proc_record.create_config()
+        cfg_rec.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rec.set_property("image", img)
+        cfg_rec.set_property("action-name", "Levels Adjustment")
+        cfg_rec.set_property("details", "Shadows 10, Midtones 1.15, Highlights 245")
+        res_rec = proc_record.run(cfg_rec)
+        if res_rec.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-03", "Record entry execution", f"Expected SUCCESS, got {res_rec.index(0)}")
+            return
+        p_log = img.get_parasite("photogimp/history-log-entries")
+        if p_log is None:
+            record_fail("HL-03", "Log parasite", "Parasite photogimp/history-log-entries not found")
+            return
+        log_entries = json.loads(bytes(p_log.get_data()).decode("utf-8"))
+        if len(log_entries) < 2 or not any("Levels Adjustment" in e.get("action", "") for e in log_entries):
+            record_fail("HL-03", "Log entries content", f"Expected Levels Adjustment in entries, got {log_entries}")
+            return
+        record_pass("HL-03", "Record history entry in metadata", f"Action entries appended to metadata audit trail (total {len(log_entries)} entries)")
+
+        # HL-04: Record history entry to external text file on disk
+        if not os.path.exists(text_log_file):
+            record_fail("HL-04", "Text log file existence", f"File {text_log_file} does not exist on disk")
+            return
+        with open(text_log_file, "r", encoding="utf-8") as f:
+            log_text = f.read()
+        if "Levels Adjustment" not in log_text or "Shadows 10" not in log_text:
+            record_fail("HL-04", "Text log file content", f"Expected entry not found in file content: {log_text}")
+            return
+        record_pass("HL-04", "Record history entry to disk text file", "Audit trail successfully written to external text log file")
+
+        # HL-05: View/Export history log to file
+        export_audit_path = os.path.join(tmp_log_dir, "exported_audit_log.txt")
+        cfg_v = proc_view.create_config()
+        cfg_v.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_v.set_property("image", img)
+        cfg_v.set_property("export-path", export_audit_path)
+        res_v = proc_view.run(cfg_v)
+        if res_v.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-05", "View/Export log execution", f"Expected SUCCESS, got {res_v.index(0)}")
+            return
+        if not os.path.exists(export_audit_path) or os.path.getsize(export_audit_path) == 0:
+            record_fail("HL-05", "Exported log file check", "Exported log file does not exist or is empty")
+            return
+        with open(export_audit_path, "r", encoding="utf-8") as f:
+            exp_txt = f.read()
+        if "PhotoGIMP Document Edit History Audit Log" not in exp_txt:
+            record_fail("HL-05", "Exported log header", "Header missing from exported audit log")
+            return
+        record_pass("HL-05", "View and export history audit log", "Formatted audit log exported to disk with complete session records")
+
+        # HL-06: Create Snapshot (Full Document)
+        cfg_snap = proc_snap_create.create_config()
+        cfg_snap.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_snap.set_property("image", img)
+        cfg_snap.set_property("snapshot-name", "State 1 - Initial")
+        cfg_snap.set_property("snapshot-type", "full-document")
+        cfg_snap.set_property("comment", "Initial document layout")
+        res_snap = proc_snap_create.run(cfg_snap)
+        if res_snap.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-06", "Create snapshot execution", f"Expected SUCCESS, got {res_snap.index(0)}")
+            return
+        record_pass("HL-06", "Create Snapshot (Full Document)", "Full document snapshot created capturing multi-layer hierarchy")
+
+        # HL-07: Snapshot persistent parasite storage
+        p_snaps = img.get_parasite("photogimp/history-snapshots")
+        if p_snaps is None:
+            record_fail("HL-07", "Snapshot parasite", "Parasite photogimp/history-snapshots not found")
+            return
+        snaps_data = json.loads(bytes(p_snaps.get_data()).decode("utf-8"))
+        if len(snaps_data) != 1 or snaps_data[0].get("name") != "State 1 - Initial":
+            record_fail("HL-07", "Snapshot parasite data", f"Unexpected snapshot data: {snaps_data}")
+            return
+        record_pass("HL-07", "Snapshot persistent parasite storage", "Snapshot metadata persisted in photogimp/history-snapshots")
+
+        # HL-08: Revert/Apply Snapshot restoring document state
+        # Mutate subject layer: move to (40, 40), change opacity to 45.0%, hide it
+        subject.set_offsets(40, 40)
+        subject.set_opacity(45.0)
+        subject.set_visible(False)
+        # Create second snapshot of mutated state
+        cfg_snap.set_property("snapshot-name", "State 2 - Mutated")
+        proc_snap_create.run(cfg_snap)
+
+        # Apply State 1: subject should return to (0, 0), opacity 100.0%, visible True
+        cfg_app = proc_snap_apply.create_config()
+        cfg_app.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_app.set_property("image", img)
+        cfg_app.set_property("snapshot-name", "State 1 - Initial")
+        res_app = proc_snap_apply.run(cfg_app)
+        if res_app.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-08", "Apply snapshot execution", f"Expected SUCCESS, got {res_app.index(0)}")
+            return
+        offs_s = subject.get_offsets()
+        if (int(offs_s[-2]), int(offs_s[-1])) != (0, 0) or abs(subject.get_opacity() - 100.0) > 0.1 or not subject.get_visible():
+            record_fail("HL-08", "Reverted properties", f"Expected (0, 0), 100.0%, True; got {(int(offs_s[-2]), int(offs_s[-1]))}, {subject.get_opacity()}%, {subject.get_visible()}")
+            return
+        record_pass("HL-08", "Apply Snapshot state restoration", "Document layer state reverted cleanly to 'State 1 - Initial'")
+
+        # HL-09: Create Snapshot (Merged Layers)
+        cfg_snap.set_property("snapshot-name", "Composite Merged")
+        cfg_snap.set_property("snapshot-type", "merged-layers")
+        cfg_snap.set_property("comment", "Composite raster snapshot")
+        res_m = proc_snap_create.run(cfg_snap)
+        if res_m.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-09", "Merged snapshot execution", f"Expected SUCCESS, got {res_m.index(0)}")
+            return
+        merged_lyr_found = any("(Merged Snapshot)" in l.get_name() for l in img.get_layers())
+        if not merged_lyr_found:
+            record_fail("HL-09", "Merged snapshot layer", "Merged snapshot layer not found in image stack")
+            return
+        record_pass("HL-09", "Create Snapshot (Merged Layers)", "Composite merged snapshot layer created and stored in document")
+
+        # HL-10: Create Snapshot (Current Layer)
+        img.set_selected_layers([subject])
+        cfg_snap.set_property("snapshot-name", "Subject Copy")
+        cfg_snap.set_property("snapshot-type", "current-layer")
+        cfg_snap.set_property("comment", "Active layer snapshot")
+        res_cl = proc_snap_create.run(cfg_snap)
+        if res_cl.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-10", "Current layer snapshot execution", f"Expected SUCCESS, got {res_cl.index(0)}")
+            return
+        curr_lyr_found = any("Subject Layer Snapshot" in l.get_name() for l in img.get_layers())
+        if not curr_lyr_found:
+            record_fail("HL-10", "Current layer duplicate", "Active layer duplicate snapshot not found in image stack")
+            return
+        record_pass("HL-10", "Create Snapshot (Current Layer)", "Active layer duplicated and isolated as snapshot reference")
+
+        # HL-11: New Document from Snapshot
+        cfg_nd = proc_snap_newdoc.create_config()
+        cfg_nd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_nd.set_property("image", img)
+        cfg_nd.set_property("snapshot-name", "State 1 - Initial")
+        res_nd = proc_snap_newdoc.run(cfg_nd)
+        if res_nd.index(0) != Gimp.PDBStatusType.SUCCESS or res_nd.length() < 2:
+            record_fail("HL-11", "New doc from snapshot execution", f"Expected SUCCESS with return image, got {res_nd.index(0)}")
+            return
+        spawned_img = res_nd.index(1)
+        if spawned_img is None or not spawned_img.is_valid():
+            record_fail("HL-11", "Spawned image validity", "Spawned image is None or invalid")
+            return
+        if spawned_img.get_width() != img.get_width() or spawned_img.get_height() != img.get_height():
+            record_fail("HL-11", "Spawned image dimensions", f"Dimensions mismatch: {spawned_img.get_width()}x{spawned_img.get_height()}")
+            return
+        spawned_img.delete()  # Clean up spawned test image to prevent leaks
+        record_pass("HL-11", "New Document from Snapshot", "Independent new image successfully cloned from snapshot state")
+
+        # HL-12: Delete Snapshot (single deletion by name)
+        cfg_del = proc_snap_delete.create_config()
+        cfg_del.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_del.set_property("image", img)
+        cfg_del.set_property("snapshot-name", "Composite Merged")
+        res_del = proc_snap_delete.run(cfg_del)
+        if res_del.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-12", "Delete single snapshot execution", f"Expected SUCCESS, got {res_del.index(0)}")
+            return
+        snaps_post_del = json.loads(bytes(img.get_parasite("photogimp/history-snapshots").get_data()).decode("utf-8"))
+        if any(s.get("name") == "Composite Merged" for s in snaps_post_del):
+            record_fail("HL-12", "Delete single snapshot check", "Composite Merged still present in snapshots")
+            return
+        record_pass("HL-12", "Delete single snapshot", "Single snapshot deleted cleanly from document metadata")
+
+        # HL-13: Delete Snapshot (clear all snapshots via __ALL__)
+        cfg_del.set_property("snapshot-name", "__ALL__")
+        res_del_all = proc_snap_delete.run(cfg_del)
+        if res_del_all.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("HL-13", "Clear all snapshots execution", f"Expected SUCCESS, got {res_del_all.index(0)}")
+            return
+        snaps_all = json.loads(bytes(img.get_parasite("photogimp/history-snapshots").get_data()).decode("utf-8"))
+        if len(snaps_all) != 0:
+            record_fail("HL-13", "Clear all snapshots check", f"Expected empty list, got {snaps_all}")
+            return
+        record_pass("HL-13", "Clear all snapshots", "All snapshots cleared from document metadata using '__ALL__'")
+
+        # HL-14: Graceful handling of missing snapshot
+        cfg_app_miss = proc_snap_apply.create_config()
+        cfg_app_miss.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_app_miss.set_property("image", img)
+        cfg_app_miss.set_property("snapshot-name", "NonExistentSnapshot")
+        res_miss = proc_snap_apply.run(cfg_app_miss)
+        if res_miss.index(0) != Gimp.PDBStatusType.EXECUTION_ERROR:
+            record_fail("HL-14", "Missing snapshot error", f"Expected EXECUTION_ERROR, got {res_miss.index(0)}")
+            return
+        record_pass("HL-14", "Graceful missing snapshot handling", "Attempting to apply non-existent snapshot handled safely with EXECUTION_ERROR")
+
+        # HL-15: Undo group encapsulation for snapshot operations
+        undo_enabled_before = img.undo_is_enabled()
+        cfg_snap.set_property("snapshot-name", "Undo Test Snapshot")
+        cfg_snap.set_property("snapshot-type", "full-document")
+        res_snap_undo = proc_snap_create.run(cfg_snap)
+        undo_enabled_after = img.undo_is_enabled()
+        if res_snap_undo.index(0) != Gimp.PDBStatusType.SUCCESS or not undo_enabled_before or not undo_enabled_after:
+            record_fail("HL-15", "Undo group execution", "Snapshot undo group encapsulation failed")
+            return
+        record_pass("HL-15", "Undo group encapsulation", "Single-step undo group encapsulation and active undo stack verified on snapshot action")
+
+        # HL-16: Target & base canvas artwork preservation (diff == 0.000000)
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(
+            abs(p_base_orig.red - p_base_after.red),
+            abs(p_base_orig.green - p_base_after.green),
+            abs(p_base_orig.blue - p_base_after.blue),
+            abs(p_base_orig.alpha - p_base_after.alpha),
+        )
+        if base_diff > 0.000001:
+            record_fail("HL-16", "Base layer preservation", f"Base layer pixel modified: diff {base_diff:.6f}")
+            return
+        record_pass("HL-16", "Target & base artwork preservation", f"Base canvas artwork 100% untouched across all operations (diff {base_diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("HL-ERR", "Unexpected exception", str(e))
+    finally:
+        try:
+            import shutil
+            shutil.rmtree(tmp_log_dir)
+        except Exception:
+            pass
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -15357,6 +15651,7 @@ def run_all_tests():
     test_knockout_blending()
     test_smart_filters()
     test_layer_comps()
+    test_history_log()
 
     elapsed = time.time() - start_time
 

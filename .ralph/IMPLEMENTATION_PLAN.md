@@ -519,12 +519,12 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate global angle synchronization, effect scaling arithmetic, style copy/paste persistence, and headless GIMP test suite.
 
 ### Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `knockout-blending` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
-- [ ] Simulate Photoshop `Layer > Layer Style > Blending Options > Knockout` (Shallow / Deep) (`Topics.txt` line 120: "Create texture effects with Knockout"; `photoshop_docs.md` Section 124 lines 3684-3698: "Learn how to use the Knockout blending option to punch through layers and reveal underlying content for texture effects in photoeditor desktop... Knockout: Shallow punches through to group boundary; Deep punches through to background/base layer").
-- [ ] Support Shallow Knockout (punches through layers inside active layer group to reveal parent group backdrop) and Deep Knockout (punches through all intermediate layers down to base canvas).
-- [ ] Support Fill Opacity separation (0% to 100%) allowing layer effects (strokes, bevels, shadows) to remain visible while layer fill punches through.
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate shallow and deep knockout transparency punching, fill opacity decoupling, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `knockout-blending` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
+- [x] Simulate Photoshop `Layer > Layer Style > Blending Options > Knockout` (Shallow / Deep) (`Topics.txt` line 120: "Create texture effects with Knockout"; `photoshop_docs.md` Section 124 lines 3684-3698: "Learn how to use the Knockout blending option to punch through layers and reveal underlying content for texture effects in photoeditor desktop... Knockout: Shallow punches through to group boundary; Deep punches through to background/base layer").
+- [x] Support Shallow Knockout (punches through layers inside active layer group to reveal parent group backdrop) and Deep Knockout (punches through all intermediate layers down to base canvas).
+- [x] Support Fill Opacity separation (0% to 100%) allowing layer effects (strokes, bevels, shadows) to remain visible while layer fill punches through.
+- [x] Register under menu path `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`.
+- [x] Validate shallow and deep knockout transparency punching, fill opacity decoupling, and headless GIMP test suite.
 
 ### Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `smart-filters` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/smart-filters/smart-filters.py`.
@@ -532,6 +532,13 @@ This file is the authoritative roadmap of product-development work to transform 
 - [ ] Support converting layers to Smart Object containers with non-destructive filter passes, attached Smart Filter mask, and re-editable filter parameters.
 - [ ] Register under menu path `<Image>/Filters/Smart Filters...` and `<Image>/Layer/Smart Objects/Convert for Smart Filters`.
 - [ ] Validate non-destructive filter re-application, filter mask feathering/inversion, and headless GIMP test suite.
+
+### Phase 71 — Layer Comps & Composition Variations Manager Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `layer-comps` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-comps/layer-comps.py`.
+- [ ] Simulate Photoshop `Window > Layer Comps` (`Topics.txt` lines 138-140; `photoshop_docs.md` Section 131-135: "Layer comps - overview", "Create layer comps", "Apply and view layer comps").
+- [ ] Support capturing layer state snapshots (Visibility, Position, Appearance / Opacity & Blend Mode), switching between comps, and exporting variations.
+- [ ] Register under menu path `<Image>/Layer/Layer Comps...` and `<Image>/File/Export Layer Comps...`.
+- [ ] Validate snapshot persistence in image parasites, state restoration, and headless GIMP test suite.
 
 
 

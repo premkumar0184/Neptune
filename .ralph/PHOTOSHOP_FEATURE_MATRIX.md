@@ -1074,6 +1074,25 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Knockout Blending & Texture Cutout Effects Helper Plugin
+- **Source topic**: Create texture effects with Knockout / Set layer opacity and blending modes (`Topics.txt` lines 120-121; `photoshop_docs.md` Section 124 lines 3684-3698 and Section 125 lines 3701-3730: "Layer > Layer Style > Blending Options > Knockout: Shallow / Deep" and "Adjust Fill Opacity")
+- **Photoshop behavior**: Uses the active layer's silhouette shape to punch through intermediate layers underneath it, revealing underlying textures, images, or backgrounds. Deep Knockout punches through all intermediate layers down to the base canvas/background layer; Shallow Knockout confines the cutout punch strictly to sibling layers inside the active layer's parent group, revealing the group backdrop. Supports separated Fill Opacity (0% to 100%) allowing layer artwork fill to become transparent while attached layer styles (strokes, bevels, shadows) remain visible, edge feathering (0-50px), cutout inversion, curated presets, and one-click knockout clearing.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `knockout-blending` providing `python-fu-knockout-blending` and `python-fu-clear-knockout` in `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
+- **Current capability**:
+  1. `python-fu-knockout-blending`: Deep and Shallow knockout modes, decoupled Fill Opacity (0-100%), edge feathering (0-50px via separable Gaussian convolution), cutout inversion toggle, master opacity control, style preservation toggle (protecting attached strokes, shadows, bevels), 5 curated presets (Stencil Cutout, Textured Text, Soft Punch, Glass Etched, Translucent Knockout, Custom), and single-step undo group encapsulation.
+  2. `python-fu-clear-knockout`: Restores target layer fill opacity to 100% and cleanly discards knockout layer masks from punched intermediate layers.
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.get_layers`, `layer.get_mask`, `layer.create_mask`, `layer.remove_mask`, `layer.attach_parasite`, GeglBuffer `"RGBA float"` and `"Y float"`, NumPy array processing).
+- **Implementation priority**: High (Phase 69).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across both procedures (KB-01, KB-02), Deep knockout transparency hole punching and base reveal (KB-03, KB-04), Shallow knockout group sibling punch and backdrop reveal (KB-05, KB-06), Decoupled Fill Opacity at 0% and 50% (KB-07, KB-08), attached style preservation (KB-09), edge feathering (KB-10), cutout inversion (KB-11), all 5 curated presets (KB-12), Clear Knockout restoration (KB-13), bottom-layer graceful no-op handling (KB-14), action clear parameter (KB-15), and non-destructive base layer pixel preservation (`diff == 0.000000`, KB-16).
+- **Verification evidence** (Iteration 71):
+  1. `verify_config.py`: Section 6 passed with 63 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified across both procedures (KB-01, KB-02), Deep knockout verified punching mid layer (mask center 0.000, outside 1.000) and revealing base blue (B=1.000) while mid red intact outside (R=1.000, KB-03, KB-04), Shallow knockout verified punching group sibling while preserving layer outside group (KB-05, KB-06), Decoupled Fill Opacity verified at 0.0% and 50.0% (KB-07, KB-08), attached stroke layer preserved at 100.0% (KB-09), edge feathering verified with soft gradient boundary (KB-10), cutout inversion verified (center intact, outside punched, KB-11), all 5 curated presets verified (KB-12), Clear Knockout verified cleanly removing mask and restoring opacity (KB-13), bottom layer no-op verified (KB-14), action clear verified (KB-15), and base layer pixels 100% untouched (`diff == 0.000000`, KB-16).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 71).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

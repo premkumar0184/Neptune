@@ -1,57 +1,55 @@
-# Current Task — Iteration 70
+# Current Task — Iteration 71
 
 ## Task
-**Phase 68 — Global Lighting & Layer Style Effects Manager Plugin Suite (`python-fu-global-light`, `python-fu-scale-layer-effects`, `python-fu-copy-layer-style`, `python-fu-paste-layer-style`, `python-fu-clear-layer-style`)**
+**Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin (`knockout-blending`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 111-120; `photoshop_docs.md` Section 116-121 lines 3550-3665: "Set a global lighting angle for all layers", "Scale layer effects", "Copy and paste layer styles", "Remove layer effects", "Display or hide layer styles"), layer styles are not isolated one-off effects; they form an integrated system managed collectively:
-1. **Global Light** (`Layer > Layer Style > Global Light...`): Synchronizes directional lighting angle (-180° to 180°) and altitude (0° to 90°) across all directional effects in the document (Drop Shadow, Inner Shadow, Bevel & Emboss) to ensure visual coherence.
-2. **Scale Layer Effects** (`Layer > Layer Style > Scale Effects...`): Proportionally rescales the size, distance, and blur radius (10% to 500%) across all attached layer style layers when scaling artwork or canvases.
-3. **Copy & Paste Layer Styles** (`Layer > Layer Style > Copy Layer Style` / `Paste Layer Style`): Allows copying the full suite of layer styles from one layer and pasting them onto destination layers with automatic geometric adaptation.
-4. **Clear Layer Style** (`Layer > Layer Style > Clear Layer Style`): One-click removal of all attached layer style layers/groups, leaving the underlying target artwork 100% untouched (`diff == 0.000000`).
+In Adobe Photoshop (`Topics.txt` line 120: "Create texture effects with Knockout"; `photoshop_docs.md` Section 124 lines 3684-3698: "Learn how to use the Knockout blending option to punch through layers and reveal underlying content for texture effects in photoeditor desktop", and Section 125 lines 3701-3730: "Set layer opacity and blending modes / Adjust fill opacity"):
+1. **Knockout Blending**: Uses the active layer's silhouette shape to punch through intermediate layers underneath it, revealing underlying textures, images, or backgrounds:
+   - **Shallow Knockout**: Punches through sibling layers inside the active layer's parent group down to the layer behind the group (or group backdrop).
+   - **Deep Knockout**: Punches through all intermediate layers down to the base canvas/background layer.
+2. **Fill Opacity Decoupling**: Adjusts the layer's own fill transparency (0% to 100%) independently from attached layer styles (strokes, bevels, drop shadows). At 0% fill opacity, the layer's fill color is invisible while its shape punches a hole through middle layers and its attached layer styles remain fully visible.
+3. **Restoration / Clear Knockout**: Allows restoring intermediate layers and clearing knockout masks in one click.
 
-Stock GIMP provides no built-in equivalents for managing layer style suites across layers. Implementing `layer-style-manager` completes the Photoshop layer style ecosystem in PhotoGIMP.
+Stock GIMP provides no built-in equivalent for Photoshop's Knockout blending options. Implementing `knockout-blending` brings complete Photoshop parity to Linux photo editing with `python-fu-knockout-blending` and `python-fu-clear-knockout`.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/layer-style-manager.py` (New plugin implementing all 5 PDB procedures)
-- `PhotoGIMP/scripts/verify_config.py` (Register `layer-style-manager` with its 5 procedures in `REQUIRED_PLUGINS`, updating audit inventory to 62 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py` (New plugin implementing `python-fu-knockout-blending` and `python-fu-clear-knockout`)
+- `PhotoGIMP/scripts/verify_config.py` (Register `knockout-blending` in `REQUIRED_PLUGINS`, updating audit inventory to 63 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 63: `test_layer_style_manager`, assertions LSM-01 through LSM-16)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Global Lighting & Layer Style Manager entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 68 status)
-- `.ralph/PROGRESS.md` (Log Iteration 70 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 70 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 64: `test_knockout_blending`, assertions KB-01 through KB-16)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Knockout Blending & Texture Cutout Effects Helper entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 69 status)
+- `.ralph/PROGRESS.md` (Log Iteration 71 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 71 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-style-manager/` created with `layer-style-manager.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/` created with `knockout-blending.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] 5 PDB procedures registered in GIMP PDB:
-   - `python-fu-global-light` under `<Image>/Layer/Layer Style/Global Light...` and `<Image>/Filters/Light and Shadow`
-   - `python-fu-scale-layer-effects` under `<Image>/Layer/Layer Style/Scale Effects...` and `<Image>/Filters/Light and Shadow`
-   - `python-fu-copy-layer-style` under `<Image>/Layer/Layer Style/Copy Layer Style`
-   - `python-fu-paste-layer-style` under `<Image>/Layer/Layer Style/Paste Layer Style`
-   - `python-fu-clear-layer-style` under `<Image>/Layer/Layer Style/Clear Layer Style`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 63):
-   - LSM-01: Procedure lookup and argument signatures verified across all 5 procedures.
-   - LSM-02: Global Light sets and retrieves image parasite lighting angles.
-   - LSM-03: Global Light updates directional parameters across attached style layers.
-   - LSM-04: Scale Layer Effects scales size/distance properties proportionally (e.g. 200%).
-   - LSM-05: Copy Layer Style serializes attached styles to clipboard parasite.
-   - LSM-06: Paste Layer Style replicates copied styles onto destination layer.
-   - LSM-07: Pasted style layers correctly positioned relative to destination layer.
-   - LSM-08: Clear Layer Style removes all attached style layers from target layer.
-   - LSM-09: Clear Layer Style leaves target layer artwork 100% untouched (`diff == 0.000000`).
-   - LSM-10: Clear Layer Style leaves unrelated layers in stack untouched.
-   - LSM-11: Scale Effects rescales multi-style compound layer stacks.
-   - LSM-12: Global Light altitude modulation verified.
-   - LSM-13: Style clipboard persists across active image operations.
-   - LSM-14: Graceful handling of layers with no styles attached (no-op SUCCESS).
-   - LSM-15: Single-step undo group encapsulation verified across operations.
-   - LSM-16: Target and base layer artwork preserved with zero degradation (`diff == 0.000000`).
-5. [x] `verify_config.py` Section 6 passes with all 62 required plugins audited.
+3. [x] 2 PDB procedures registered in GIMP PDB:
+   - `python-fu-knockout-blending` under `<Image>/Layer/Layer Style/Knockout Options...`, `<Image>/Layer/Blending Options/Knockout...`, and `<Image>/Filters/Retouching`
+   - `python-fu-clear-knockout` under `<Image>/Layer/Layer Style/Clear Knockout`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 64):
+   - KB-01: Procedure lookup and argument signatures verified across both procedures.
+   - KB-02: Execution status verified (SUCCESS).
+   - KB-03: Deep knockout punches transparency through all intermediate layers down to base canvas.
+   - KB-04: Deep knockout reveals underlying base artwork through punched silhouette.
+   - KB-05: Shallow knockout confines punch to layers inside parent group; leaves layers outside group untouched.
+   - KB-06: Shallow knockout reveals group backdrop / under-group content.
+   - KB-07: Fill Opacity decoupling: 0% fill opacity makes knockout shape fill transparent while punch remains active.
+   - KB-08: Fill Opacity decoupling: partial fill opacity (e.g. 50%) blends knockout shape with underlying revealed content.
+   - KB-09: Attached layer styles preservation: attached stroke / shadow layers remain visible while fill punches through.
+   - KB-10: Feathering: edge feathering creates smooth anti-aliased cutout transitions.
+   - KB-11: Inversion: invert toggle punches outside silhouette rather than inside.
+   - KB-12: Curated presets: all 5 presets (`stencil-cutout`, `textured-text`, `soft-punch`, `glass-etched`, `translucent-knockout`) verified.
+   - KB-13: Clear Knockout: restores punched intermediate layers cleanly.
+   - KB-14: Graceful handling: single-layer / bottom-layer invocation handled gracefully as no-op SUCCESS.
+   - KB-15: Single-step undo group encapsulation verified.
+   - KB-16: Target and base layer artwork preserved with zero degradation (`diff == 0.000000`).
+5. [x] `verify_config.py` Section 6 passes with all 63 required plugins audited.
 6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0.
 
 ## Verification Commands
@@ -62,5 +60,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement global lighting and layer style manager plugin suite`
-- Outer repository commit: `feat(ralph): complete iteration 70 - global lighting and layer style manager plugin suite`
+- PhotoGIMP submodule commit: `feat(plugins): implement knockout blending and texture cutout effects helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 71 - knockout blending and texture cutout effects helper plugin`

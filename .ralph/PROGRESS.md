@@ -1768,9 +1768,41 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (62 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 740 tests across 63 test suites in 138.39s.
     - Final quality gate: SUCCESS across all stages in 155.91s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `5d29ce3`. Outer repo `7f734f2`.
+- **Commit**: PhotoGIMP sub-repo `5d29ce3`. Outer repo `36f62df`.
 - **Result**: Success.
 - **Next**: Phase 69 — Knockout Blending & Texture Cutout Effects Helper Plugin.
+
+## Iteration 71 — Knockout Blending & Texture Cutout Effects Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Knockout Blending & Texture Cutout Effects Helper Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 120-121; `photoshop_docs.md` Section 124 lines 3684-3698: "Learn how to use the Knockout blending option to punch through layers and reveal underlying content for texture effects in photoeditor desktop", and Section 125 lines 3701-3730: "Set layer opacity and blending modes / Adjust fill opacity"). In Adobe Photoshop:
+  1. `Knockout`: Uses the active layer's silhouette shape to punch through intermediate layers underneath it, revealing underlying textures, images, or backgrounds. Deep knockout punches through all intermediate layers down to the base canvas/background layer; Shallow knockout punches through sibling layers inside the active layer's parent group down to the layer behind the group (or group backdrop).
+  2. `Fill Opacity Decoupling`: Decouples the layer's fill transparency (0% to 100%) from attached layer styles (strokes, bevels, drop shadows). At 0% fill opacity, the layer's fill color is transparent while its shape punches a hole through middle layers and its attached layer styles remain fully visible.
+  3. `Edge Feathering & Inversion`: Supports Gaussian feathering (0-50px) for soft cutouts and inversion toggles.
+  4. `Clear Knockout`: Restores punched intermediate layers and target layer fill opacity in one click.
+  Stock GIMP provides no built-in equivalent for Photoshop's Knockout blending options. Implementing `knockout-blending` brings complete Photoshop parity to Linux photo editing.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/knockout-blending/knockout-blending.py`: Created native Python 3 GObject-Introspection plugin implementing 2 PDB procedures (`python-fu-knockout-blending` and `python-fu-clear-knockout`) with Deep & Shallow knockout modes, decoupled Fill Opacity, Gaussian feather convolution, cutout inversion, style preservation, 5 curated presets (`stencil-cutout`, `textured-text`, `soft-punch`, `glass-etched`, `translucent-knockout`), layer-level parasite persistence (`photogimp/knockout-target`, `photogimp/knockout-punched`), single-step undo group encapsulation, and 100% artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `knockout-blending` (63 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (63 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 64: `test_knockout_blending` (asserting KB-01 through KB-16: PDB registration and argument signatures across both procedures, execution status, deep knockout transparency hole punching, base blue reveal through punched red layer, shallow knockout group containment and backdrop reveal, decoupled 0% and 50% fill opacity, attached stroke style preservation, soft feathering gradient transition, cutout inversion toggle, all 5 curated presets, clean restoration via `Clear Knockout`, graceful bottom layer no-op handling, action='clear' parameter handling, and target/base layer pixel preservation `diff == 0.000000`). Total tests increased to 756 passing across 64 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Knockout Blending & Texture Cutout Effects Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 69 complete and scheduled Phase 70 (Smart Filters & Non-Destructive Filter Effects Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, `Drawable.get_offsets()` returns a 3-tuple `(bool, offset_x: int, offset_y: int)`; safe unpacking requires `offs = layer.get_offsets(); ox, oy = int(offs[-2]), int(offs[-1])`.
+  - When storing layer-specific original opacity for non-destructive restoration, attaching `photogimp/knockout-target` parasite directly to the target layer ensures correct restoration even when multiple layers or group hierarchies are punched or deleted.
+  - GEGL color hex strings (e.g. `#ff00ff`) parse reliably without fallback warnings across all headless test environments.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 63 plugins verified).
+    - Stage 2: `install.sh --batch` passed (63 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 756 tests across 64 test suites in 134.52s.
+    - Final quality gate: SUCCESS across all stages in 150.96s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `fa7b8ed`. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 70 — Smart Filters & Non-Destructive Filter Effects Helper Plugin (`smart-filters`).
 
 
 

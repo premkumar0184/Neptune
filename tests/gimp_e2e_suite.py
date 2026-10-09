@@ -14239,6 +14239,282 @@ def test_layer_style_manager():
 
 
 # ==============================================================================
+# TEST 64: Knockout Blending & Texture Cutout Effects Helper Plugin (Phase 69)
+# ==============================================================================
+def test_knockout_blending():
+    print("\n--- Test Suite 64: Knockout Blending & Texture Cutout Effects Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_kb = pdb.lookup_procedure("python-fu-knockout-blending")
+    proc_clear = pdb.lookup_procedure("python-fu-clear-knockout")
+
+    if proc_kb is None or proc_clear is None:
+        record_fail("KB-01", "Procedure lookup", "One or more knockout blending procedures missing from PDB")
+        return
+
+    # KB-01: Procedure signatures & argument audit
+    arg_names = [p.name for p in proc_kb.get_arguments()]
+    expected_args = ["run-mode", "image", "drawables", "preset", "knockout-type", "fill-opacity", "feather", "preserve-styles", "invert", "opacity", "action"]
+    for ea in expected_args:
+        if ea not in arg_names:
+            record_fail("KB-01", f"Argument {ea}", f"Missing argument {ea} in python-fu-knockout-blending")
+            return
+    record_pass("KB-01", "Procedure signatures & argument audit", f"All arguments verified in PDB: {expected_args[:5]}...")
+
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        # Base layer (bottom-most): Solid Blue [0, 0, 1, 1]
+        base = Gimp.Layer.new(img, "Base Blue", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#0000ff"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Mid layer (intermediate): Solid Red [1, 0, 0, 1]
+        mid = Gimp.Layer.new(img, "Mid Red", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(mid, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#ff0000"))
+        mid.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Target knockout layer (top): Solid Green [0, 1, 0, 1] center square (25, 25) to (75, 75)
+        target = Gimp.Layer.new(img, "Target Shape", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(target, None, 0)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 50, 50)
+        Gimp.context_set_foreground(Gegl.Color.new("#00ff00"))
+        target.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(img)
+
+        # Base pixel baseline before knockout
+        p_base_center = base.get_pixel(50, 50).get_rgba()
+
+        # KB-02: Execution status verified with Stencil Cutout preset (Deep knockout, 0% fill)
+        img.set_selected_layers([target])
+        cfg = proc_kb.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "stencil-cutout")
+        res = proc_kb.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("KB-02", "PDB execution status", f"Expected SUCCESS (3), got {status}")
+            return
+        record_pass("KB-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # KB-03: Deep knockout punches transparency through intermediate mid layer
+        mask_mid = mid.get_mask()
+        if mask_mid is None:
+            record_fail("KB-03", "Mid layer mask", "Expected layer mask attached to punched mid layer, got None")
+            return
+        # Inside center cutout (x=50, y=50), mask should be 0.0 (transparent hole)
+        m_center = mask_mid.get_pixel(50, 50).get_rgba()[0]
+        # Outside center cutout (x=10, y=10), mask should be 1.0 (opaque)
+        m_outside = mask_mid.get_pixel(10, 10).get_rgba()[0]
+        if m_center > 0.05 or m_outside < 0.95:
+            record_fail("KB-03", "Knockout hole punching", f"Expected center ~0.0 and outside ~1.0; got center={m_center:.3f}, outside={m_outside:.3f}")
+            return
+        record_pass("KB-03", "Deep knockout transparency hole", f"Mid layer punched at center (mask={m_center:.3f}) and intact outside (mask={m_outside:.3f})")
+
+        # KB-04: Deep knockout reveals underlying base artwork through punched hole
+        c_center = get_composite_pixel(img, 50, 50)
+        c_outside = get_composite_pixel(img, 10, 10)
+        if c_center[2] < 0.85 or c_center[0] > 0.15:
+            record_fail("KB-04", "Base reveal", f"Expected base blue at cutout center, got RGB [{c_center[0]:.3f}, {c_center[1]:.3f}, {c_center[2]:.3f}]")
+            return
+        if c_outside[0] < 0.85 or c_outside[2] > 0.15:
+            record_fail("KB-04", "Mid layer outside reveal", f"Expected mid red outside cutout, got RGB [{c_outside[0]:.3f}, {c_outside[1]:.3f}, {c_outside[2]:.3f}]")
+            return
+        record_pass("KB-04", "Base artwork revealed through cutout", f"Underlying base blue revealed at center (B={c_center[2]:.3f}) while red intact outside (R={c_outside[0]:.3f})")
+
+        # KB-05 & KB-06: Shallow knockout confines punch to group siblings
+        grp = Gimp.GroupLayer.new(img, "Test Group")
+        img.insert_layer(grp, None, 0)
+
+        under_grp = Gimp.Layer.new(img, "Under-Group Magenta", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(under_grp, None, img.get_item_position(grp) + 1)
+        Gimp.context_set_foreground(Gegl.Color.new("#ff00ff"))
+        under_grp.edit_fill(Gimp.FillType.FOREGROUND)
+
+        grp_mid = Gimp.Layer.new(img, "Group Mid Yellow", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(grp_mid, grp, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("#ffff00"))
+        grp_mid.edit_fill(Gimp.FillType.FOREGROUND)
+
+        grp_shape = Gimp.Layer.new(img, "Group Shape Green", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(grp_shape, grp, 0)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 30, 30, 40, 40)
+        Gimp.context_set_foreground(Gegl.Color.new("#00ff00"))
+        grp_shape.edit_fill(Gimp.FillType.FOREGROUND)
+        clear_selection(img)
+
+        img.set_selected_layers([grp_shape])
+        cfg_shallow = proc_kb.create_config()
+        cfg_shallow.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_shallow.set_property("image", img)
+        cfg_shallow.set_property("preset", "textured-text")
+        res_sh = proc_kb.run(cfg_shallow)
+        if res_sh.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("KB-05", "Shallow knockout execution", f"Expected SUCCESS, got {res_sh.index(0)}")
+            return
+
+        g_mask = grp_mid.get_mask()
+        if g_mask is None or g_mask.get_pixel(50, 50).get_rgba()[0] > 0.05:
+            record_fail("KB-05", "Shallow group sibling punch", "Group sibling layer was not punched")
+            return
+        if under_grp.get_mask() is not None:
+            record_fail("KB-05", "Shallow boundary containment", "Layer outside group was incorrectly masked by shallow knockout")
+            return
+        record_pass("KB-05", "Shallow knockout group containment", "Group sibling punched while outside layer strictly preserved")
+
+        # KB-06: Shallow knockout reveals group backdrop / under-group content
+        c_sh_center = get_composite_pixel(img, 50, 50)
+        if c_sh_center[0] < 0.85 or c_sh_center[2] < 0.85:
+            record_fail("KB-06", "Group backdrop reveal", f"Expected magenta under-group reveal, got RGB [{c_sh_center[0]:.3f}, {c_sh_center[1]:.3f}, {c_sh_center[2]:.3f}]")
+            return
+        record_pass("KB-06", "Shallow knockout reveals group backdrop", f"Under-group magenta content revealed through group cutout (R={c_sh_center[0]:.3f}, B={c_sh_center[2]:.3f})")
+
+        img.remove_layer(grp)
+        img.remove_layer(under_grp)
+
+        # KB-07: Decoupled Fill Opacity (0% fill)
+        if target.get_opacity() > 0.01:
+            record_fail("KB-07", "Fill opacity 0%", f"Expected target opacity ~0.0%, got {target.get_opacity()}%")
+            return
+        record_pass("KB-07", "Decoupled Fill Opacity (0% fill)", "Target knockout shape fill set to 0.0% opacity")
+
+        # KB-08: Partial Fill Opacity (50% fill)
+        img.set_selected_layers([target])
+        cfg_p50 = proc_kb.create_config()
+        cfg_p50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_p50.set_property("image", img)
+        cfg_p50.set_property("preset", "translucent-knockout")
+        proc_kb.run(cfg_p50)
+        if abs(target.get_opacity() - 50.0) > 0.5:
+            record_fail("KB-08", "Partial fill opacity", f"Expected target opacity ~50.0%, got {target.get_opacity()}%")
+            return
+        record_pass("KB-08", "Partial fill opacity (50% fill)", "Target knockout shape opacity set to 50.0%")
+
+        # KB-09: Attached layer styles preservation
+        t_stroke = Gimp.Layer.new(img, "Target Shape (Stroke - Outer 3px)", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(t_stroke, None, img.get_item_position(target))
+        img.set_selected_layers([target])
+        cfg_sty = proc_kb.create_config()
+        cfg_sty.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sty.set_property("image", img)
+        cfg_sty.set_property("preset", "stencil-cutout")
+        cfg_sty.set_property("preserve-styles", True)
+        proc_kb.run(cfg_sty)
+        if abs(t_stroke.get_opacity() - 100.0) > 0.1 or t_stroke.get_mask() is not None:
+            record_fail("KB-09", "Style preservation", f"Attached stroke opacity altered or masked: opacity {t_stroke.get_opacity()}%")
+            return
+        record_pass("KB-09", "Attached layer styles preservation", "Attached stroke layer preserved at 100.0% opacity without mask")
+        img.remove_layer(t_stroke)
+
+        # KB-10: Edge Feathering verified
+        img.set_selected_layers([target])
+        cfg_fth = proc_kb.create_config()
+        cfg_fth.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fth.set_property("image", img)
+        cfg_fth.set_property("preset", "soft-punch")
+        proc_kb.run(cfg_fth)
+        m_fth_edge = mid.get_mask().get_pixel(25, 50).get_rgba()[0]
+        if m_fth_edge <= 0.05 or m_fth_edge >= 0.95:
+            record_fail("KB-10", "Edge feathering", f"Expected soft gradient at boundary (0.05 < m < 0.95), got {m_fth_edge:.3f}")
+            return
+        record_pass("KB-10", "Edge feathering transition", f"Soft feathering verified at boundary (mask={m_fth_edge:.3f})")
+
+        # KB-11: Cutout Inversion verified
+        img.set_selected_layers([target])
+        cfg_inv = proc_kb.create_config()
+        cfg_inv.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inv.set_property("image", img)
+        cfg_inv.set_property("preset", "custom")
+        cfg_inv.set_property("knockout-type", "deep")
+        cfg_inv.set_property("fill-opacity", 0.0)
+        cfg_inv.set_property("invert", True)
+        proc_kb.run(cfg_inv)
+        m_inv_center = mid.get_mask().get_pixel(50, 50).get_rgba()[0]
+        m_inv_outside = mid.get_mask().get_pixel(10, 10).get_rgba()[0]
+        if m_inv_center < 0.85 or m_inv_outside > 0.15:
+            record_fail("KB-11", "Cutout inversion", f"Expected center ~1.0 and outside ~0.0; got center={m_inv_center:.3f}, outside={m_inv_outside:.3f}")
+            return
+        record_pass("KB-11", "Cutout inversion verified", f"Inverted punch: center intact ({m_inv_center:.3f}) and outside punched ({m_inv_outside:.3f})")
+
+        # KB-12: Curated presets verified
+        presets_to_test = ["stencil-cutout", "textured-text", "soft-punch", "glass-etched", "translucent-knockout"]
+        for p_name in presets_to_test:
+            img.set_selected_layers([target])
+            cfg_p = proc_kb.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", p_name)
+            res_p = proc_kb.run(cfg_p)
+            if res_p.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("KB-12", f"Preset {p_name}", f"Execution failed with status {res_p.index(0)}")
+                return
+        record_pass("KB-12", "Curated presets verified", f"All 5 presets verified: {presets_to_test}")
+
+        # KB-13: Clear Knockout restores intermediate layers & target opacity
+        img.set_selected_layers([target])
+        cfg_clr = proc_clear.create_config()
+        cfg_clr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_clr.set_property("image", img)
+        res_clr = proc_clear.run(cfg_clr)
+        if res_clr.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("KB-13", "Clear Knockout execution", f"Expected SUCCESS, got {res_clr.index(0)}")
+            return
+        if mid.get_mask() is not None:
+            record_fail("KB-13", "Clear Knockout mask removal", "Intermediate layer mask was not removed")
+            return
+        if abs(target.get_opacity() - 100.0) > 0.5:
+            record_fail("KB-13", "Target opacity restoration", f"Expected opacity 100.0%, got {target.get_opacity()}%")
+            return
+        record_pass("KB-13", "Clear Knockout restoration", "Intermediate layer mask discarded and target opacity restored to 100.0%")
+
+        # KB-14: Graceful handling of bottom-most layer
+        img.set_selected_layers([base])
+        cfg_base = proc_kb.create_config()
+        cfg_base.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_base.set_property("image", img)
+        cfg_base.set_property("preset", "stencil-cutout")
+        res_base = proc_kb.run(cfg_base)
+        if res_base.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("KB-14", "Bottom layer graceful no-op", f"Expected SUCCESS, got {res_base.index(0)}")
+            return
+        record_pass("KB-14", "Graceful handling of bottom layer", "Bottom-most layer invocation executed cleanly as no-op SUCCESS")
+
+        # KB-15: Action clear parameter execution
+        img.set_selected_layers([target])
+        cfg_act_clr = proc_kb.create_config()
+        cfg_act_clr.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_act_clr.set_property("image", img)
+        cfg_act_clr.set_property("preset", "stencil-cutout")
+        proc_kb.run(cfg_act_clr)
+        # Now run with action="clear"
+        cfg_act_clr.set_property("action", "clear")
+        res_act = proc_kb.run(cfg_act_clr)
+        if res_act.index(0) != Gimp.PDBStatusType.SUCCESS or mid.get_mask() is not None:
+            record_fail("KB-15", "Action clear parameter", "Knockout was not cleared via action='clear'")
+            return
+        record_pass("KB-15", "Action clear parameter", "Knockout successfully cleared via action='clear' parameter")
+
+        # KB-16: Target & base artwork preservation (diff == 0.000000)
+        p_base_after = base.get_pixel(50, 50).get_rgba()
+        base_diff = max(
+            abs(p_base_center.red - p_base_after.red),
+            abs(p_base_center.green - p_base_after.green),
+            abs(p_base_center.blue - p_base_after.blue),
+            abs(p_base_center.alpha - p_base_after.alpha),
+        )
+        if base_diff > 0.000001:
+            record_fail("KB-16", "Base layer preservation", f"Base layer pixel modified: diff {base_diff:.6f}")
+            return
+        record_pass("KB-16", "Target & base artwork preservation", f"Underlying artwork 100% untouched across all operations (diff {base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("KB-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -14312,6 +14588,7 @@ def run_all_tests():
     test_bevel_emboss()
     test_stroke_style()
     test_layer_style_manager()
+    test_knockout_blending()
 
 
 

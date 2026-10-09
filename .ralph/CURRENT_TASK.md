@@ -1,29 +1,26 @@
-# Current Task — Iteration 65
+# Current Task — Iteration 66
 
 ## Task
-**Phase 63 — Non-Destructive Gradient Overlay Layer Style Helper Plugin (`python-fu-gradient-overlay`)**
+**Phase 64 — Non-Destructive Pattern Overlay Layer Style Helper Plugin (`python-fu-pattern-overlay`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Gradient Overlay: Blend Mode, Opacity, Gradient, Style [Linear, Radial, Angle, Reflected, Diamond], Angle, Scale, Reverse, Align with Layer, Dither"), Gradient Overlay represents one of the most widely used layer styles in professional graphic design, UI styling, photo grading, and lighting simulation.
+In Adobe Photoshop (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Pattern Overlay: Blend Mode, Opacity, Pattern, Scale, Link with Layer"), Pattern Overlay represents one of the core non-destructive layer styles in graphic design, textile simulation, UI element styling, and architectural texturing.
 
-Stock GIMP provides an interactive gradient tool and fill layers, but lacks a dedicated non-destructive Gradient Overlay layer style dialog, lacks automatic silhouette boundary alpha clipping to target layers ($A_{\text{overlay}}(x, y) = A_{\text{target}}(x, y)$), lacks Photoshop's 5 core gradient geometries (Linear, Radial, Angle, Reflected, Diamond), lacks Photoshop's Angle (-180° to 180°) and Scale (10% to 500%) controls, lacks Reverse and Dither anti-banding toggles, lacks Align with Layer geometric centering, lacks Photoshop blend modes and curated presets, and lacks dedicated overlay layer placement immediately above the target layer leaving underlying artwork 100% untouched (`diff == 0.000000`).
+Stock GIMP provides pattern bucket fills and native pattern brushes, but lacks a dedicated non-destructive Pattern Overlay layer style dialog, lacks automatic silhouette boundary alpha clipping to target layers ($A_{\text{overlay}}(x, y) = A_{\text{pattern}}(x, y) \cdot A_{\text{target}}(x, y)$), lacks arbitrary mathematical scaling (10% to 500%) and continuous angle rotation (-180° to 180°), lacks Link with Layer geometric offset alignment, lacks dual-tone customizable palette swatches, lacks Photoshop blend modes and curated seamless pattern presets, and lacks dedicated overlay layer placement immediately above the target layer leaving underlying artwork 100% untouched (`diff == 0.000000`).
 
-Implementing native GIMP 3.x Python 3 plugin `gradient-overlay` closes this gap with complete Photoshop parity:
-1. `python-fu-gradient-overlay`:
-   - Geometry Styles & Controls:
-     - `style`: Choice (`linear`, `radial`, `angle`, `reflected`, `diamond`).
-     - `angle`: Rotation angle in degrees (-180.0° to 180.0°, default 90.0° vertical).
-     - `scale`: Scale factor percentage (10.0% to 500.0%, default 100.0%).
-     - `reverse`: Reverse gradient direction toggle (default False).
-     - `align-layer`: Center gradient to target layer bounds (default True).
-     - `dither`: Anti-banding dithering toggle (default True).
-   - Presets & Custom Palette:
-     - `preset`: Choice (`black-white`, `fg-to-bg`, `vintage-sepia`, `sunset-horizon`, `cyberpunk-neon`, `ocean-breeze`, `golden-glow`, `custom`).
-     - `start-r`, `start-g`, `start-b`: Custom start RGB (0.0 to 1.0, default 0.0).
-     - `end-r`, `end-g`, `end-b`: Custom end RGB (0.0 to 1.0, default 1.0).
+Implementing native GIMP 3.x Python 3 plugin `pattern-overlay` closes this gap with complete Photoshop parity:
+1. `python-fu-pattern-overlay`:
+   - Pattern Selection & Geometry:
+     - `pattern`: Choice (`checkerboard`, `diagonal-stripes`, `grid-mesh`, `polka-dots`, `halftone-dots`, `carbon-fiber`, `active-pattern`).
+     - `scale`: Scaling factor percentage (10.0% to 500.0%, default 100.0%).
+     - `angle`: Rotation angle in degrees (-180.0° to 180.0%, default 0.0°).
+     - `link-layer`: Link with layer origin toggle (default True).
+   - Custom Palette Swatches:
+     - `c1-r`, `c1-g`, `c1-b`: Primary pattern color RGB (0.0 to 1.0, default 1.0).
+     - `c2-r`, `c2-g`, `c2-b`: Secondary pattern color RGB (0.0 to 1.0, default 0.0).
    - Blending & Opacity:
      - `blend-mode`: Choice (`normal`, `multiply`, `screen`, `overlay`, `soft-light`, `color`, `darken`, `lighten`).
      - `opacity`: Percentage slider (0.0% to 100.0%, default 100.0%).
@@ -36,39 +33,39 @@ Implementing native GIMP 3.x Python 3 plugin `gradient-overlay` closes this gap 
      - Single-step `Ctrl+Z` undo protection.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py` (New plugin implementing `python-fu-gradient-overlay`)
-- `PhotoGIMP/scripts/verify_config.py` (Register `gradient-overlay` in `REQUIRED_PLUGINS`, updating audit inventory to 57 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py` (New plugin implementing `python-fu-pattern-overlay`)
+- `PhotoGIMP/scripts/verify_config.py` (Register `pattern-overlay` in `REQUIRED_PLUGINS`, updating audit inventory to 58 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment handles all subdirectories in `plug-ins/`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 58: `test_gradient_overlay`, assertions GO-01 through GO-16)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Gradient Overlay Layer Style entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 63 status)
-- `.ralph/PROGRESS.md` (Log Iteration 65 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 65 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 59: `test_pattern_overlay`, assertions PO-01 through PO-16)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Pattern Overlay Layer Style entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 64 status)
+- `.ralph/PROGRESS.md` (Log Iteration 66 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 66 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/` created with `gradient-overlay.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/` created with `pattern-overlay.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
 3. [x] PDB procedure registered in GIMP PDB:
-   - `python-fu-gradient-overlay` under `<Image>/Layer/Layer Style/Gradient Overlay...`, `<Image>/Filters/Light and Shadow/Gradient Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 58):
-   - GO-01: Procedure lookup and argument signatures verified across all 19 properties.
-   - GO-02: Execution status verified (PDB status SUCCESS).
-   - GO-03: Linear vertical gradient transition verified (top pixel brighter/different from bottom pixel according to angle 90°).
-   - GO-04: Strict boundary silhouette clipping (pixels outside target layer silhouette are strictly alpha 0.000).
-   - GO-05: Semi-transparent edge alpha preservation (feathered edge alpha matches target layer alpha).
-   - GO-06: Radial gradient geometry verified (center pixel differs from outer radial perimeter).
-   - GO-07: Reflected gradient geometry verified (bilateral symmetry from center line).
-   - GO-08: Diamond gradient geometry verified (rhomboid geometric falloff).
-   - GO-09: Reverse gradient direction verified (reversing flips start and end color endpoints).
-   - GO-10: Scale expansion control verified (scaling compresses or expands gradient transition).
-   - GO-11: Custom dual-tone RGB color fidelity verified (e.g. cyan to magenta).
-   - GO-12: Curated presets verified (Black-White, Vintage Sepia, Sunset Horizon, Cyberpunk Neon, Ocean Breeze, Golden Glow).
-   - GO-13: Layer stack placement verified (overlay layer inserted immediately above parent layer in stack).
-   - GO-14: Blend modes & opacity validation (Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten & 75% opacity validated).
-   - GO-15: Auto layer mask attachment behavior verified (attaches selection mask when active and none when empty).
-   - GO-16: Target and base layer artwork 100% untouched across all operations (`diff == 0.000000`).
-5. [x] `verify_config.py` Section 6 passes with all 57 required plugins audited.
-6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (660/660 assertions across 58 test suites).
+   - `python-fu-pattern-overlay` under `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Filters/Light and Shadow/Pattern Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 59):
+   - PO-01: Procedure lookup and argument signatures verified across all properties.
+   - PO-02: Execution status verified (PDB status SUCCESS).
+   - PO-03: Checkerboard pattern geometry verified (alternating matrix).
+   - PO-04: Strict boundary silhouette clipping (pixels outside target layer silhouette are strictly alpha 0.000).
+   - PO-05: Semi-transparent edge alpha preservation (feathered edge alpha matches target layer alpha).
+   - PO-06: Diagonal stripes pattern geometry verified (45-degree pinstripes).
+   - PO-07: Grid mesh pattern geometry verified (orthogonal drafting grid).
+   - PO-08: Polka dots pattern geometry verified (circular dots array).
+   - PO-09: Pattern scale control verified (modulates spatial frequency).
+   - PO-10: Pattern angle rotation verified (rotates pattern orientation).
+   - PO-11: Custom dual-tone palette color fidelity verified.
+   - PO-12: Curated pattern presets verified across all choices.
+   - PO-13: Layer stack placement verified (overlay layer inserted immediately above parent layer in stack).
+   - PO-14: Blend modes & opacity validation (Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten & 75% opacity validated).
+   - PO-15: Auto layer mask attachment behavior verified (attaches selection mask when active and none when empty).
+   - PO-16: Target and base layer artwork 100% untouched across all operations (`diff == 0.000000`).
+5. [x] `verify_config.py` Section 6 passes with all 58 required plugins audited.
+6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0 (676/676 assertions across 59 test suites).
 
 ## Verification Commands
 ```bash
@@ -78,5 +75,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive gradient overlay layer style helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 65 - gradient overlay layer style helper plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement non-destructive pattern overlay layer style helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 66 - pattern overlay layer style helper plugin`

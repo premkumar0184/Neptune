@@ -477,12 +477,20 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, presets, and headless GIMP test suite (assertions GO-01 to GO-16).
 
 ### Phase 64 — Non-Destructive Pattern Overlay Layer Style Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `pattern-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py`.
-- [ ] Create dedicated Pattern Overlay helper simulating Photoshop `Layer > Layer Style > Pattern Overlay...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500).
-- [ ] Support Photoshop Pattern Overlay parameters: Pattern selection (Checkerboard, Diagonal Stripes, Grid Mesh, Polka Dots, Halftone Dots, Carbon Fiber, Active GIMP Pattern), Scale (10% to 500%), Angle (-180° to 180°), Color 1 / Color 2 tinting swatches, Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color, Darken, Lighten), Opacity (0% to 100%), Snap to Origin / Align with Layer, and strict silhouette boundary clipping.
-- [ ] Support non-destructive overlay layer placement directly above target layer, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Filters/Light and Shadow/Pattern Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate pattern tiling, rotation, scaling, silhouette boundary clipping, blend modes, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `pattern-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py`.
+- [x] Create dedicated Pattern Overlay helper simulating Photoshop `Layer > Layer Style > Pattern Overlay...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [x] Support Photoshop Pattern Overlay parameters: Pattern selection (Checkerboard, Diagonal Stripes, Grid Mesh, Polka Dots, Halftone Dots, Carbon Fiber, Active GIMP Pattern), Scale (10% to 500%), Angle (-180° to 180°), Color 1 / Color 2 tinting swatches, Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, HSL Color, Darken, Lighten), Opacity (0% to 100%), Link with Layer coordinate alignment, and strict silhouette boundary clipping.
+- [x] Support non-destructive overlay layer placement directly above target layer, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Pattern Overlay...`, `<Image>/Filters/Light and Shadow/Pattern Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate pattern tiling, rotation, scaling, silhouette boundary clipping, blend modes, and headless GIMP test suite (assertions PO-01 to PO-16).
+
+### Phase 65 — Non-Destructive Satin Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `satin` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/satin/satin.py`.
+- [ ] Create dedicated Satin Layer Style helper simulating Photoshop `Layer > Layer Style > Satin...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500: "Satin: Blend Mode, Opacity, Angle, Distance, Size, Contour, Invert").
+- [ ] Support Photoshop Satin parameters: Blend Mode (Multiply, Normal, Darken, Color Burn, Linear Burn, Soft Light, Overlay), Opacity (0% to 100%), Solid Color RGB swatch, Angle (-180° to 180° with dual directional offset trigonometry), Distance (0 to 200px), Size / Blur Radius (0 to 200px), Invert toggle (creates interior silk/satin specular sheen vs matte shadow), and Contour falloff modulation.
+- [ ] Support non-destructive overlay layer placement directly above target layer, strict silhouette boundary clipping ($A_{\text{overlay}} = A_{\text{satin}} \cdot A_{\text{target}}$), editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Satin...`, `<Image>/Filters/Light and Shadow/Satin (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate dual offset distance casting, angle trigonometry, Gaussian blur size, invert specular sheen, silhouette boundary clipping, and headless GIMP test suite.
 
 
 

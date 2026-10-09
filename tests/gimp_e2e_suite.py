@@ -12445,6 +12445,359 @@ def test_gradient_overlay():
         img.delete()
 
 
+def test_pattern_overlay():
+    print("\n--- Test Suite 59: Non-Destructive Pattern Overlay Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-pattern-overlay")
+    if not proc:
+        record_fail("PO-01", "Procedure lookup", "Procedure python-fu-pattern-overlay not found in PDB")
+        return
+
+    # PO-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "pattern", "scale", "angle",
+        "link-layer", "blend-mode", "opacity", "c1-r", "c1-g", "c1-b",
+        "c2-r", "c2-g", "c2-b", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("PO-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("PO-01", "Procedure signatures & argument audit", f"All 16 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    # Semi-transparent pixel at (20, 20) with alpha 0.50
+    rect_px = Gegl.Rectangle.new(20, 20, 1, 1)
+    half_px = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+    art.get_buffer().set(rect_px, "RGBA float", half_px)
+    art.get_buffer().flush()
+
+    # Capture original baseline samples
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # PO-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("pattern", "checkerboard")
+        cfg.set_property("scale", 100.0)
+        cfg.set_property("angle", 0.0)
+        cfg.set_property("link-layer", False)
+        cfg.set_property("blend-mode", "normal")
+        cfg.set_property("opacity", 100.0)
+        cfg.set_property("c1-r", 1.0)
+        cfg.set_property("c1-g", 1.0)
+        cfg.set_property("c1-b", 1.0)
+        cfg.set_property("c2-r", 0.0)
+        cfg.set_property("c2-g", 0.0)
+        cfg.set_property("c2-b", 0.0)
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("PO-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("PO-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # PO-03: Checkerboard pattern geometry verified
+        lyr_chk = img.get_layers()[0]
+        p_white = lyr_chk.get_pixel(50, 50).get_rgba()
+        p_black = lyr_chk.get_pixel(58, 50).get_rgba()
+        if p_white.red <= p_black.red + 0.8:
+            record_fail("PO-03", "Checkerboard pattern geometry", f"Expected white at (50,50) and black at (58,50), got white={p_white.red:.2f}, black={p_black.red:.2f}")
+            return
+        record_pass("PO-03", "Checkerboard pattern geometry", f"Alternating checker matrix verified (white R={p_white.red:.2f}, black R={p_black.red:.2f})")
+
+        # PO-04: Strict boundary silhouette clipping (outside alpha == 0.000)
+        outside_coords = [(5, 5), (10, 10), (15, 50), (85, 50), (50, 85), (95, 95)]
+        max_out_alpha = max(lyr_chk.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_alpha > 0.0001:
+            record_fail("PO-04", "Boundary silhouette clipping", f"Expected outside alpha 0.000, got {max_out_alpha:.4f}")
+            return
+        record_pass("PO-04", "Strict boundary silhouette clipping", f"Overlay pixels strictly clipped inside parent silhouette (max outside alpha {max_out_alpha:.6f})")
+
+        # PO-05: Semi-transparent edge alpha preservation
+        p_edge = lyr_chk.get_pixel(20, 20).get_rgba()
+        if abs(p_edge.alpha - 0.5) > 0.02:
+            record_fail("PO-05", "Semi-transparent edge alpha", f"Expected edge alpha 0.50, got {p_edge.alpha:.3f}")
+            return
+        record_pass("PO-05", "Semi-transparent edge alpha preservation", f"Semi-transparent edge alpha preserved accurately (edge alpha {p_edge.alpha:.3f} ~= 0.500)")
+        img.remove_layer(lyr_chk)
+
+        # PO-06: Diagonal stripes pattern geometry verified
+        img.set_selected_layers([art])
+        cfg_diag = proc.create_config()
+        cfg_diag.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_diag.set_property("image", img)
+        cfg_diag.set_property("pattern", "diagonal-stripes")
+        cfg_diag.set_property("mask-type", "none")
+        proc.run(cfg_diag)
+        lyr_diag = img.get_layers()[0]
+        p_d1 = lyr_diag.get_pixel(40, 40).get_rgba().red
+        p_d2 = lyr_diag.get_pixel(41, 39).get_rgba().red
+        diag_diff = abs(p_d1 - p_d2)
+        if diag_diff > 0.05:
+            record_fail("PO-06", "Diagonal stripes geometry", f"Expected 45° diagonal invariance, diff was {diag_diff:.3f}")
+            return
+        record_pass("PO-06", "Diagonal stripes pattern geometry", f"45-degree diagonal stripe coherence verified (diff {diag_diff:.4f} <= 0.05)")
+        img.remove_layer(lyr_diag)
+
+        # PO-07: Grid mesh pattern geometry verified
+        img.set_selected_layers([art])
+        cfg_grid = proc.create_config()
+        cfg_grid.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_grid.set_property("image", img)
+        cfg_grid.set_property("pattern", "grid-mesh")
+        cfg_grid.set_property("mask-type", "none")
+        proc.run(cfg_grid)
+        lyr_grid = img.get_layers()[0]
+        grid_vals = [lyr_grid.get_pixel(x, 50).get_rgba().red for x in range(40, 56)]
+        if max(grid_vals) <= min(grid_vals) + 0.5:
+            record_fail("PO-07", "Grid mesh geometry", f"Expected high-contrast grid lines, range was {max(grid_vals) - min(grid_vals):.3f}")
+            return
+        record_pass("PO-07", "Grid mesh pattern geometry", f"Orthogonal grid mesh lines verified (contrast delta {max(grid_vals) - min(grid_vals):.2f})")
+        img.remove_layer(lyr_grid)
+
+        # PO-08: Polka dots pattern geometry verified
+        img.set_selected_layers([art])
+        cfg_polka = proc.create_config()
+        cfg_polka.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_polka.set_property("image", img)
+        cfg_polka.set_property("pattern", "polka-dots")
+        cfg_polka.set_property("mask-type", "none")
+        proc.run(cfg_polka)
+        lyr_polka = img.get_layers()[0]
+        polka_vals = [lyr_polka.get_pixel(x, 50).get_rgba().red for x in range(40, 60)]
+        if max(polka_vals) <= min(polka_vals) + 0.5:
+            record_fail("PO-08", "Polka dots geometry", f"Expected circular polka dot contrast, range was {max(polka_vals) - min(polka_vals):.3f}")
+            return
+        record_pass("PO-08", "Polka dots pattern geometry", f"Circular polka dots array verified (contrast delta {max(polka_vals) - min(polka_vals):.2f})")
+        img.remove_layer(lyr_polka)
+
+        # PO-09: Pattern scale control verified
+        img.set_selected_layers([art])
+        cfg_s50 = proc.create_config()
+        cfg_s50.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s50.set_property("image", img)
+        cfg_s50.set_property("pattern", "checkerboard")
+        cfg_s50.set_property("scale", 50.0)
+        cfg_s50.set_property("mask-type", "none")
+        proc.run(cfg_s50)
+        lyr_s50 = img.get_layers()[0]
+        p_s50_a = lyr_s50.get_pixel(50, 50).get_rgba().red
+        p_s50_b = lyr_s50.get_pixel(54, 50).get_rgba().red
+        img.remove_layer(lyr_s50)
+
+        img.set_selected_layers([art])
+        cfg_s200 = proc.create_config()
+        cfg_s200.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_s200.set_property("image", img)
+        cfg_s200.set_property("pattern", "checkerboard")
+        cfg_s200.set_property("scale", 200.0)
+        cfg_s200.set_property("mask-type", "none")
+        proc.run(cfg_s200)
+        lyr_s200 = img.get_layers()[0]
+        p_s200_a = lyr_s200.get_pixel(50, 50).get_rgba().red
+        p_s200_b = lyr_s200.get_pixel(54, 50).get_rgba().red
+        img.remove_layer(lyr_s200)
+
+        if abs(p_s50_a - p_s50_b) <= 0.8 or abs(p_s200_a - p_s200_b) > 0.1:
+            record_fail("PO-09", "Pattern scale control", f"Scale 50% diff={abs(p_s50_a - p_s50_b):.2f}, Scale 200% diff={abs(p_s200_a - p_s200_b):.2f}")
+            return
+        record_pass("PO-09", "Pattern scale control", "Scale accurately modulates spatial tile frequency (scale 50% alternating vs scale 200% uniform)")
+
+        # PO-10: Pattern angle rotation verified
+        img.set_selected_layers([art])
+        cfg_rot0 = proc.create_config()
+        cfg_rot0.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rot0.set_property("image", img)
+        cfg_rot0.set_property("pattern", "diagonal-stripes")
+        cfg_rot0.set_property("angle", 0.0)
+        cfg_rot0.set_property("mask-type", "none")
+        proc.run(cfg_rot0)
+        lyr_rot0 = img.get_layers()[0]
+        p_r0 = lyr_rot0.get_pixel(55, 45).get_rgba().red
+        img.remove_layer(lyr_rot0)
+
+        img.set_selected_layers([art])
+        cfg_rot90 = proc.create_config()
+        cfg_rot90.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rot90.set_property("image", img)
+        cfg_rot90.set_property("pattern", "diagonal-stripes")
+        cfg_rot90.set_property("angle", 90.0)
+        cfg_rot90.set_property("mask-type", "none")
+        proc.run(cfg_rot90)
+        lyr_rot90 = img.get_layers()[0]
+        p_r90 = lyr_rot90.get_pixel(55, 45).get_rgba().red
+        img.remove_layer(lyr_rot90)
+
+        if abs(p_r0 - p_r90) < 0.5:
+            record_fail("PO-10", "Pattern angle rotation", f"Angle 0° vs 90° did not rotate pattern, r0={p_r0:.2f}, r90={p_r90:.2f}")
+            return
+        record_pass("PO-10", "Pattern angle rotation", f"Rotation angle rotates pattern orientation (angle 0° R={p_r0:.2f} vs angle 90° R={p_r90:.2f})")
+
+        # PO-11: Custom dual-tone palette color fidelity
+        img.set_selected_layers([art])
+        cfg_col = proc.create_config()
+        cfg_col.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_col.set_property("image", img)
+        cfg_col.set_property("pattern", "checkerboard")
+        cfg_col.set_property("link-layer", False)
+        cfg_col.set_property("c1-r", 0.0)
+        cfg_col.set_property("c1-g", 0.8)
+        cfg_col.set_property("c1-b", 1.0)
+        cfg_col.set_property("c2-r", 1.0)
+        cfg_col.set_property("c2-g", 0.0)
+        cfg_col.set_property("c2-b", 0.5)
+        cfg_col.set_property("mask-type", "none")
+        proc.run(cfg_col)
+        lyr_col = img.get_layers()[0]
+        p_cyan = lyr_col.get_pixel(50, 50).get_rgba()
+        p_rose = lyr_col.get_pixel(58, 50).get_rgba()
+        if abs(p_cyan.blue - 1.0) > 0.05 or abs(p_cyan.red - 0.0) > 0.05 or abs(p_rose.red - 1.0) > 0.05 or abs(p_rose.blue - 0.5) > 0.05:
+            record_fail("PO-11", "Custom dual-tone RGB fidelity", f"Expected Cyan and Rose; got cyan=[R={p_cyan.red:.2f}, B={p_cyan.blue:.2f}], rose=[R={p_rose.red:.2f}, B={p_rose.blue:.2f}]")
+            return
+        record_pass("PO-11", "Custom dual-tone RGB fidelity", f"Custom Cyan and Rose palette swatches verified (cyan B={p_cyan.blue:.2f}, rose R={p_rose.red:.2f})")
+        img.remove_layer(lyr_col)
+
+        # PO-12: Curated pattern presets verified
+        presets_to_test = ["checkerboard", "diagonal-stripes", "grid-mesh", "polka-dots", "halftone-dots", "carbon-fiber", "active-pattern"]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("pattern", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyr_p = img.get_layers()[0]
+            if lyr_p is None:
+                record_fail("PO-12", f"Pattern preset {pname}", "Failed to create overlay layer")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("PO-12", "Curated pattern presets", f"All {len(presets_to_test)} pattern presets verified")
+
+        # PO-13: Layer stack placement verified
+        img.set_selected_layers([art])
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("pattern", "checkerboard")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+        layers = img.get_layers()
+        pos_ol = img.get_item_position(layers[0])
+        pos_art = img.get_item_position(art)
+        if pos_ol != 0 or pos_art != 1:
+            record_fail("PO-13", "Layer stack placement", f"Expected overlay at 0, art at 1; got overlay={pos_ol}, art={pos_art}")
+            return
+        record_pass("PO-13", "Layer stack placement", "Overlay layer inserted immediately above parent layer in stack")
+        img.remove_layer(layers[0])
+
+        # PO-14: Blend modes & opacity validation
+        modes_to_test = [
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("lighten", Gimp.LayerMode.LIGHTEN_ONLY),
+        ]
+        for bname, expected_mode in modes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("pattern", "checkerboard")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("opacity", 75.0)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode or abs(lyr_bm.get_opacity() - 75.0) > 0.01:
+                record_fail("PO-14", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}, opacity {lyr_bm.get_opacity()}%")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("PO-14", "Blend modes & opacity validation", "Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten & 75% opacity validated")
+
+        # PO-15: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("pattern", "checkerboard")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        lyr_auto_no = img.get_layers()[0]
+        if lyr_auto_no.get_mask() is not None:
+            record_fail("PO-15", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(lyr_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("pattern", "checkerboard")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        lyr_auto_sel = img.get_layers()[0]
+        mask_auto = lyr_auto_sel.get_mask()
+        if mask_auto is None:
+            record_fail("PO-15", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_auto_in = mask_auto.get_pixel(35, 35).get_rgba().red
+        if m_auto_in < 0.99:
+            record_fail("PO-15", "Auto layer mask", f"Expected mask white inside selection, got {m_auto_in:.3f}")
+            return
+        record_pass("PO-15", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(lyr_auto_sel)
+        Gimp.Selection.none(img)
+
+        # PO-16: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("PO-16", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("PO-16", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("PO-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -12513,6 +12866,7 @@ def run_all_tests():
     test_inner_shadow()
     test_color_overlay()
     test_gradient_overlay()
+    test_pattern_overlay()
 
 
 

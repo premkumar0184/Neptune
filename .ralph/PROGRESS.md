@@ -1626,6 +1626,32 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (57 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 660 tests across 58 test suites in 101.97s.
     - Final quality gate: SUCCESS across all stages in 118.06s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `6372b8b`. Outer repo will be committed.
+- **Commit**: PhotoGIMP sub-repo `6372b8b`. Outer repo `e55110c`.
 - **Result**: Success.
 - **Next**: Phase 64 — Non-Destructive Pattern Overlay Layer Style Helper Plugin.
+
+## Iteration 66 — Non-Destructive Pattern Overlay Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Pattern Overlay Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 361, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Pattern Overlay: Blend Mode, Opacity, Pattern, Scale, Link with Layer"). In Adobe Photoshop, Pattern Overlay is one of the core layer styles in graphic design, UI styling, textile simulation, and architectural texturing. Stock GIMP provides pattern bucket fills and native pattern brushes, but lacks a dedicated non-destructive Pattern Overlay layer style dialog, lacks automatic silhouette boundary alpha clipping to target layers ($A_{\text{overlay}}(x, y) = A_{\text{pattern}}(x, y) \cdot A_{\text{target}}(x, y)$), lacks arbitrary mathematical scaling (10% to 500%) and continuous angle rotation (-180° to 180°), lacks Link with Layer geometric offset alignment, lacks dual-tone customizable palette swatches, lacks Photoshop blend modes and curated seamless pattern presets, and lacks dedicated overlay layer placement immediately above the target layer leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `pattern-overlay.py` brings complete Photoshop parity to Linux photo editing with `python-fu-pattern-overlay`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/pattern-overlay/pattern-overlay.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-pattern-overlay` with 7 pattern choices (`checkerboard`, `diagonal-stripes`, `grid-mesh`, `polka-dots`, `halftone-dots`, `carbon-fiber`, `active-pattern`), arbitrary Scale (10% to 500%), Angle (-180° to 180°), Link with Layer coordinate origin anchoring, customizable dual-tone Color 1 / Color 2 RGB swatches, 8 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color [HSL Color], Darken, Lighten), opacity control (0-100%), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `pattern-overlay` (58 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (58 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 59: `test_pattern_overlay` (asserting PO-01 through PO-16: PDB registration, procedure argument schema across 16 properties, SUCCESS status, checkerboard alternating matrix verified [white R=1.00, black R=0.00], strict boundary silhouette clipping [max outside alpha 0.000000], semi-transparent edge alpha preservation [edge alpha 0.502 ~= 0.500], diagonal stripes 45° coherence verified, grid mesh orthogonal lines verified, circular polka dots array verified, scale frequency modulation verified, angle rotation verified, custom dual-tone Cyan and Rose swatches verified, all 7 pattern presets verified, dedicated overlay layer stack placement immediately above parent layer, 8 blend modes validated, opacity scaling [75.0%], auto layer mask attachment behavior [selection when active, none when empty], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 676 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Pattern Overlay Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 64 complete and scheduled Phase 65 (Non-Destructive Satin Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - Tiling patterns via vectorized 2D indexing using affine transform inverse mapping $(u, v) = R(-\theta) \cdot ((x, y) - c) / s + c$ allows arbitrary continuous rotation and scaling while maintaining seamless repetition without seams or edge distortions.
+  - Anchoring $(c_x, c_y)$ to `target_layer.get_offsets()` when `link-layer` is active ensures that moving or positioning the layer retains the pattern alignment exactly like Adobe Photoshop's "Link with Layer" option.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 58 plugins verified).
+    - Stage 2: `install.sh --batch` passed (58 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 676 tests across 59 test suites in 111.66s.
+    - Final quality gate: SUCCESS across all stages in 128.32s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `6049833`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 65 — Non-Destructive Satin Layer Style Helper Plugin.

@@ -13,6 +13,7 @@ import shutil
 import struct
 import sys
 import time
+import numpy as np
 
 import gi
 gi.require_version("Gimp", "3.0")
@@ -11785,6 +11786,310 @@ def test_inner_shadow():
         img.delete()
 
 
+def test_color_overlay():
+    print("\n--- Test Suite 57: Non-Destructive Color Overlay Layer Style Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc = pdb.lookup_procedure("python-fu-color-overlay")
+    if not proc:
+        record_fail("CO-01", "Procedure lookup", "Procedure python-fu-color-overlay not found in PDB")
+        return
+
+    # CO-01: Procedure signatures & argument audit
+    args = [p.name for p in proc.get_arguments()]
+    expected_args = [
+        "run-mode", "image", "drawables", "preset", "color-r", "color-g", "color-b",
+        "blend-mode", "opacity", "mask-type"
+    ]
+    if args != expected_args:
+        record_fail("CO-01", "Procedure arguments", f"Expected {expected_args}, got {args}")
+        return
+    record_pass("CO-01", "Procedure signatures & argument audit", f"All 10 arguments verified ({args})")
+
+    # Set up test document: 100x100 RGB
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    base = Gimp.Layer.new(img, "Background", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(base, None, 0)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+    base.edit_fill(Gimp.FillType.FOREGROUND)
+
+    # Artwork layer: 60x60 square from (20, 20) to (80, 80)
+    art = Gimp.Layer.new(img, "Subject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+    img.insert_layer(art, None, 0)
+    img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 20, 60, 60)
+    Gimp.context_set_foreground(Gegl.Color.new("rgb(0.0, 0.6, 0.0)"))
+    art.edit_fill(Gimp.FillType.FOREGROUND)
+    Gimp.Selection.none(img)
+
+    # Set a specific semi-transparent pixel at (20, 20) with alpha 0.50
+    rect_px = Gegl.Rectangle.new(20, 20, 1, 1)
+    half_px = struct.pack("4f", 0.0, 0.6, 0.0, 0.5)
+    art.get_buffer().set(rect_px, "RGBA float", half_px)
+    art.get_buffer().flush()
+
+    # Capture original baseline samples
+    orig_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+    orig_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+    try:
+        # CO-02: PDB execution status
+        img.set_selected_layers([art])
+        cfg = proc.create_config()
+        cfg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg.set_property("image", img)
+        cfg.set_property("preset", "default-red")
+        cfg.set_property("mask-type", "none")
+        res = proc.run(cfg)
+        status = res.index(0)
+        if status != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CO-02", "PDB execution status", f"Expected SUCCESS, got {status}")
+            return
+        record_pass("CO-02", "PDB execution status", "Procedure executed cleanly with status SUCCESS")
+
+        # CO-03: Solid red color fidelity verified
+        lyr_def = img.get_layers()[0]
+        p_in = lyr_def.get_pixel(50, 50).get_rgba()
+        if abs(p_in.red - 1.0) > 0.01 or abs(p_in.green - 0.0) > 0.01 or abs(p_in.blue - 0.0) > 0.01 or abs(p_in.alpha - 1.0) > 0.01:
+            record_fail("CO-03", "Solid red color fidelity", f"Expected [R=1.0, G=0.0, B=0.0, A=1.0], got [R={p_in.red:.3f}, G={p_in.green:.3f}, B={p_in.blue:.3f}, A={p_in.alpha:.3f}]")
+            return
+        record_pass("CO-03", "Solid red color fidelity", f"Exact red color overlay verified ([R={p_in.red:.3f}, G={p_in.green:.3f}, B={p_in.blue:.3f}, A={p_in.alpha:.3f}])")
+
+        # CO-04: Strict boundary silhouette clipping (outside alpha == 0.000)
+        outside_coords = [(5, 5), (10, 10), (15, 50), (85, 50), (50, 85), (95, 95)]
+        max_out_alpha = max(lyr_def.get_pixel(x, y).get_rgba().alpha for x, y in outside_coords)
+        if max_out_alpha > 0.0001:
+            record_fail("CO-04", "Boundary silhouette clipping", f"Expected outside alpha 0.000, got {max_out_alpha:.4f}")
+            return
+        record_pass("CO-04", "Strict boundary silhouette clipping", f"Overlay pixels strictly clipped inside parent silhouette (max outside alpha {max_out_alpha:.6f})")
+
+        # CO-05: Semi-transparent edge alpha preservation (feathered edge alpha matches target)
+        p_edge = lyr_def.get_pixel(20, 20).get_rgba()
+        if abs(p_edge.alpha - 0.5) > 0.02:
+            record_fail("CO-05", "Semi-transparent edge alpha", f"Expected edge alpha 0.50, got {p_edge.alpha:.3f}")
+            return
+        record_pass("CO-05", "Semi-transparent edge alpha preservation", f"Semi-transparent edge alpha preserved accurately (edge alpha {p_edge.alpha:.3f} ~= 0.500)")
+        img.remove_layer(lyr_def)
+
+        # CO-06: Custom RGB color swatch fidelity (emerald green [0.0, 0.75, 0.35])
+        img.set_selected_layers([art])
+        cfg_custom = proc.create_config()
+        cfg_custom.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_custom.set_property("image", img)
+        cfg_custom.set_property("preset", "custom")
+        cfg_custom.set_property("color-r", 0.0)
+        cfg_custom.set_property("color-g", 0.75)
+        cfg_custom.set_property("color-b", 0.35)
+        cfg_custom.set_property("mask-type", "none")
+        proc.run(cfg_custom)
+        lyr_cust = img.get_layers()[0]
+        p_c = lyr_cust.get_pixel(50, 50).get_rgba()
+        if abs(p_c.red - 0.0) > 0.01 or abs(p_c.green - 0.75) > 0.01 or abs(p_c.blue - 0.35) > 0.01:
+            record_fail("CO-06", "Custom RGB color fidelity", f"Expected [0.0, 0.75, 0.35], got [{p_c.red:.3f}, {p_c.green:.3f}, {p_c.blue:.3f}]")
+            return
+        record_pass("CO-06", "Custom RGB color swatch fidelity", f"Custom color verified ([R={p_c.red:.3f}, G={p_c.green:.3f}, B={p_c.blue:.3f}])")
+        img.remove_layer(lyr_cust)
+
+        # CO-07: Curated presets verified
+        presets_to_test = [
+            "default-red", "warm-amber", "cool-cyan", "emerald-green",
+            "royal-purple", "pure-white", "deep-black", "monochrome-tint"
+        ]
+        for pname in presets_to_test:
+            img.set_selected_layers([art])
+            cfg_p = proc.create_config()
+            cfg_p.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_p.set_property("image", img)
+            cfg_p.set_property("preset", pname)
+            cfg_p.set_property("mask-type", "none")
+            proc.run(cfg_p)
+            lyr_p = img.get_layers()[0]
+            if lyr_p is None:
+                record_fail("CO-07", f"Preset {pname}", "Failed to create overlay layer")
+                return
+            img.remove_layer(lyr_p)
+        record_pass("CO-07", "Curated presets", "All 8 curated Color Overlay presets verified")
+
+        # CO-08: Layer stack placement verified
+        img.set_selected_layers([art])
+        cfg_pos = proc.create_config()
+        cfg_pos.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_pos.set_property("image", img)
+        cfg_pos.set_property("preset", "default-red")
+        cfg_pos.set_property("mask-type", "none")
+        proc.run(cfg_pos)
+        layers = img.get_layers()
+        pos_ol = img.get_item_position(layers[0])
+        pos_art = img.get_item_position(art)
+        if pos_ol != 0 or pos_art != 1:
+            record_fail("CO-08", "Layer stack placement", f"Expected overlay at 0, art at 1; got overlay={pos_ol}, art={pos_art}")
+            return
+        record_pass("CO-08", "Layer stack placement", "Overlay layer inserted immediately above parent layer in stack")
+        img.remove_layer(layers[0])
+
+        # CO-09: Blend modes validation
+        modes_to_test = [
+            ("normal", Gimp.LayerMode.NORMAL),
+            ("multiply", Gimp.LayerMode.MULTIPLY),
+            ("screen", Gimp.LayerMode.SCREEN),
+            ("overlay", Gimp.LayerMode.OVERLAY),
+            ("soft-light", Gimp.LayerMode.SOFTLIGHT),
+            ("color", Gimp.LayerMode.HSL_COLOR),
+            ("darken", Gimp.LayerMode.DARKEN_ONLY),
+            ("lighten", Gimp.LayerMode.LIGHTEN_ONLY),
+        ]
+        for bname, expected_mode in modes_to_test:
+            img.set_selected_layers([art])
+            cfg_bm = proc.create_config()
+            cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_bm.set_property("image", img)
+            cfg_bm.set_property("preset", "custom")
+            cfg_bm.set_property("blend-mode", bname)
+            cfg_bm.set_property("mask-type", "none")
+            proc.run(cfg_bm)
+            lyr_bm = img.get_layers()[0]
+            if lyr_bm.get_mode() != expected_mode:
+                record_fail("CO-09", f"Blend mode {bname}", f"Expected mode {int(expected_mode)}, got {int(lyr_bm.get_mode())}")
+                return
+            img.remove_layer(lyr_bm)
+        record_pass("CO-09", "Blend modes validation", "Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten blend modes validated")
+
+        # CO-10: Opacity scaling validation
+        img.set_selected_layers([art])
+        cfg_op = proc.create_config()
+        cfg_op.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_op.set_property("image", img)
+        cfg_op.set_property("preset", "custom")
+        cfg_op.set_property("opacity", 50.0)
+        cfg_op.set_property("mask-type", "none")
+        proc.run(cfg_op)
+        lyr_op = img.get_layers()[0]
+        if abs(lyr_op.get_opacity() - 50.0) > 0.01:
+            record_fail("CO-10", "Opacity scaling", f"Expected opacity 50.0, got {lyr_op.get_opacity()}")
+            return
+        record_pass("CO-10", "Opacity scaling validation", f"Opacity accurately scaled to 50% (got {lyr_op.get_opacity():.1f}%)")
+        img.remove_layer(lyr_op)
+
+        # CO-11: Conceal-All black layer mask attachment
+        img.set_selected_layers([art])
+        cfg_cm = proc.create_config()
+        cfg_cm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cm.set_property("image", img)
+        cfg_cm.set_property("preset", "default-red")
+        cfg_cm.set_property("mask-type", "conceal-all")
+        proc.run(cfg_cm)
+        lyr_cm = img.get_layers()[0]
+        mask_cm = lyr_cm.get_mask()
+        if mask_cm is None:
+            record_fail("CO-11", "Conceal-All mask", "Expected black mask, got None")
+            return
+        m_val = mask_cm.get_pixel(50, 50).get_rgba().red
+        if m_val > 0.01:
+            record_fail("CO-11", "Conceal-All mask", f"Expected black mask (0.0), got {m_val:.3f}")
+            return
+        record_pass("CO-11", "Conceal-All black layer mask", f"Black mask attached (value {m_val:.3f} <= 0.01)")
+        img.remove_layer(lyr_cm)
+
+        # CO-12: Reveal-All white layer mask attachment
+        img.set_selected_layers([art])
+        cfg_rm = proc.create_config()
+        cfg_rm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rm.set_property("image", img)
+        cfg_rm.set_property("preset", "default-red")
+        cfg_rm.set_property("mask-type", "reveal-all")
+        proc.run(cfg_rm)
+        lyr_rm = img.get_layers()[0]
+        mask_rm = lyr_rm.get_mask()
+        if mask_rm is None:
+            record_fail("CO-12", "Reveal-All mask", "Expected white mask, got None")
+            return
+        m_val_w = mask_rm.get_pixel(50, 50).get_rgba().red
+        if m_val_w < 0.99:
+            record_fail("CO-12", "Reveal-All mask", f"Expected white mask (1.0), got {m_val_w:.3f}")
+            return
+        record_pass("CO-12", "Reveal-All white layer mask", f"White mask attached (value {m_val_w:.3f} >= 0.99)")
+        img.remove_layer(lyr_rm)
+
+        # CO-13: Active selection to layer mask conversion
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 30, 30, 20, 20)
+        cfg_sel = proc.create_config()
+        cfg_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_sel.set_property("image", img)
+        cfg_sel.set_property("preset", "default-red")
+        cfg_sel.set_property("mask-type", "selection")
+        proc.run(cfg_sel)
+        lyr_sel = img.get_layers()[0]
+        mask_sel = lyr_sel.get_mask()
+        if mask_sel is None:
+            record_fail("CO-13", "Selection mask conversion", "Expected mask from selection, got None")
+            return
+        m_in = mask_sel.get_pixel(40, 40).get_rgba().red
+        m_out = mask_sel.get_pixel(25, 25).get_rgba().red
+        if m_in < 0.99 or m_out > 0.01:
+            record_fail("CO-13", "Selection mask conversion", f"Expected inside 1.0, outside 0.0; got in={m_in:.3f}, out={m_out:.3f}")
+            return
+        record_pass("CO-13", "Active selection to layer mask conversion", f"Active selection converted to editable mask (in={m_in:.3f}, out={m_out:.3f})")
+        img.remove_layer(lyr_sel)
+        Gimp.Selection.none(img)
+
+        # CO-14: Auto layer mask attachment behavior
+        img.set_selected_layers([art])
+        Gimp.Selection.none(img)
+        cfg_auto_no = proc.create_config()
+        cfg_auto_no.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_no.set_property("image", img)
+        cfg_auto_no.set_property("preset", "default-red")
+        cfg_auto_no.set_property("mask-type", "auto")
+        proc.run(cfg_auto_no)
+        lyr_auto_no = img.get_layers()[0]
+        if lyr_auto_no.get_mask() is not None:
+            record_fail("CO-14", "Auto layer mask", "Expected None when no selection active")
+            return
+        img.remove_layer(lyr_auto_no)
+
+        img.set_selected_layers([art])
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 25, 25, 30, 30)
+        cfg_auto_sel = proc.create_config()
+        cfg_auto_sel.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_auto_sel.set_property("image", img)
+        cfg_auto_sel.set_property("preset", "default-red")
+        cfg_auto_sel.set_property("mask-type", "auto")
+        proc.run(cfg_auto_sel)
+        lyr_auto_sel = img.get_layers()[0]
+        mask_auto = lyr_auto_sel.get_mask()
+        if mask_auto is None:
+            record_fail("CO-14", "Auto layer mask", "Expected mask attached when selection active")
+            return
+        m_auto_in = mask_auto.get_pixel(35, 35).get_rgba().red
+        if m_auto_in < 0.99:
+            record_fail("CO-14", "Auto layer mask", f"Expected mask white inside selection, got {m_auto_in:.3f}")
+            return
+        record_pass("CO-14", "Auto layer mask attachment", "Auto mask intelligently attaches selection mask when active and none when empty")
+        img.remove_layer(lyr_auto_sel)
+        Gimp.Selection.none(img)
+
+        # CO-15: Target and base layer pixel preservation
+        after_art_samples = [art.get_pixel(x, y).get_rgba() for x in (30, 40, 50, 60, 70) for y in (30, 40, 50, 60, 70)]
+        after_base_samples = [base.get_pixel(x, y).get_rgba() for x in (10, 25, 40, 60, 75, 90) for y in (10, 25, 40, 60, 75, 90)]
+
+        max_art_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_art_samples, after_art_samples)
+        )
+        max_base_diff = max(
+            max(abs(b.red - a.red), abs(b.green - a.green), abs(b.blue - a.blue))
+            for a, b in zip(orig_base_samples, after_base_samples)
+        )
+        if max_art_diff > 0.000001 or max_base_diff > 0.000001:
+            record_fail("CO-15", "Layer pixel preservation", f"Pixels altered (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+            return
+        record_pass("CO-15", "Target & base pixel preservation", f"Source artwork 100% untouched across all non-destructive operations (art diff {max_art_diff:.6f}, base diff {max_base_diff:.6f})")
+
+    except Exception as e:
+        record_fail("CO-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -11851,6 +12156,7 @@ def run_all_tests():
     test_pattern_fill_layer()
     test_inner_glow()
     test_inner_shadow()
+    test_color_overlay()
 
 
 

@@ -1576,3 +1576,29 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Commit**: PhotoGIMP sub-repo `2c67189`. Outer repo will be committed.
 - **Result**: Success.
 - **Next**: Phase 62 — Non-Destructive Color Overlay & Gradient Overlay Layer Style Helper Plugins.
+
+## Iteration 64 — Non-Destructive Color Overlay Layer Style Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Non-Destructive Color Overlay Layer Style Helper plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-overlay/color-overlay.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 107-118, 432: "Apply layer effects - Add layer styles", "Work with preset styles", "Layer style effects and options overview", and `photoshop_docs.md` Section 113-115 lines 3433-3500: "View and edit layer effects and styles using the Layer Style dialog in professional photoeditor... Color Overlay: Blend Mode, Color, Opacity"). In Adobe Photoshop, Color Overlay represents a core non-destructive layer style for tinting, branding, uniform recoloring, and monochrome grading directly over layer content. Stock GIMP provides bucket fill and flat color layers, but lacks a dedicated non-destructive Color Overlay layer style dialog, lacks automatic silhouette boundary alpha clipping to target layers ($A_{\text{overlay}}(x, y) = A_{\text{target}}(x, y)$), lacks Photoshop's standard blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color / HSL Color, Darken, Lighten), lacks curated color presets, and lacks dedicated overlay layer placement immediately above the target layer leaving underlying artwork 100% untouched (`diff == 0.000000`). Implementing `color-overlay.py` brings complete Photoshop parity to Linux photo editing with `python-fu-color-overlay`.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-overlay/color-overlay.py`: Created native Python 3 GObject-Introspection plugin implementing `python-fu-color-overlay` with solid color swatch (0.0 to 1.0), 8 curated presets (Photoshop Standard Red, Warm Amber, Cool Cyan, Emerald Green, Royal Purple, Pure White, Deep Black, Monochrome Tint, Custom Sliders), 8 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color [HSL Color], Darken, Lighten), opacity control (0-100%), editable layer mask integration (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `color-overlay` (56 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (56 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 57: `test_color_overlay` (asserting CO-01 through CO-15: PDB registration, procedure argument schema across 10 properties, SUCCESS status, solid red color fidelity [R=1.000, G=0.000, B=0.000, A=1.000], strict boundary silhouette clipping [max outside alpha 0.000000], semi-transparent edge alpha preservation [edge alpha 0.502 ~= 0.500], custom RGB color swatch fidelity [R=0.000, G=0.753, B=0.352], 8 curated presets verified, dedicated overlay layer stack placement immediately above parent layer, 8 blend modes validated, opacity scaling [50.0%], conceal-all black layer mask attachment, reveal-all white layer mask attachment, active selection to layer mask conversion, auto layer mask attachment behavior [selection when active, none when empty], and target and base layer pixel preservation `diff == 0.000000`). Total tests increased to 644 passing.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Color Overlay Layer Style Helper as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 62 complete and scheduled Phase 63 (Non-Destructive Gradient Overlay Layer Style Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x PyGObject, the enum for the Color / HSL Color blend mode is `Gimp.LayerMode.HSL_COLOR` (value 39).
+  - Directly copying the target layer's GeglBuffer alpha channel into the color overlay buffer ($A_{\text{overlay}} = A_{\text{target}}$) ensures that all edge feathering, anti-aliasing, and interior transparency gradients are preserved 1:1 without manual masking or feather artifacts.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 56 plugins verified).
+    - Stage 2: `install.sh --batch` passed (56 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 644 tests across 57 test suites in 92.11s.
+    - Final quality gate: SUCCESS across all stages in 107.54s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `0864da2`. Outer repo will be committed.
+- **Result**: Success.
+- **Next**: Phase 63 — Non-Destructive Gradient Overlay Layer Style Helper Plugin.

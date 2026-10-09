@@ -460,14 +460,21 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Register under menu path `<Image>/Layer/Layer Style/Inner Shadow...`, `<Image>/Filters/Light and Shadow/Inner Shadow (Layer Style)...`, and `<Image>/Filters/Retouching`.
 - [x] Validate angle offset trigonometry, distance translation, choke contraction, size gaussian falloff, silhouette clipping, noise injection, and headless GIMP test suite.
 
-### Phase 62 — Non-Destructive Color Overlay & Gradient Overlay Layer Style Helper Plugins
-- [ ] Implement native GIMP 3.x Python 3 plugins `color-overlay` and `gradient-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/`.
-- [ ] Create dedicated Color Overlay & Gradient Overlay helpers simulating Photoshop `Layer > Layer Style > Color Overlay...` and `Layer > Layer Style > Gradient Overlay...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
-- [ ] Support Photoshop Color Overlay parameters: Solid Color RGB swatch, Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, Color), Opacity (0 to 100%), and strict silhouette clipping to target layer pixels.
+### Phase 62 — Non-Destructive Color Overlay Layer Style Helper Plugin
+- [x] Implement native GIMP 3.x Python 3 plugin `color-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-overlay/color-overlay.py`.
+- [x] Create dedicated Color Overlay helper simulating Photoshop `Layer > Layer Style > Color Overlay...` (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500).
+- [x] Support Photoshop Color Overlay parameters: Solid Color RGB swatch (0.0 to 1.0), Blend Mode (Normal, Multiply, Screen, Overlay, Soft Light, Color, Darken, Lighten), Opacity (0 to 100%), Curated Presets (Standard Red, Warm Amber, Cool Cyan, Emerald Green, Royal Purple, Pure White, Deep Black, Monochrome Tint, Custom), and strict silhouette clipping to target layer pixels.
+- [x] Support non-destructive overlay layer placement directly above target layer, editable layer mask attachment (Auto, None, Reveal-All, Conceal-All, Selection), and 100% preservation of source layer artwork (`diff == 0.000000`).
+- [x] Register under menu path `<Image>/Layer/Layer Style/Color Overlay...`, `<Image>/Filters/Light and Shadow/Color Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [x] Validate solid color rendering, silhouette clipping, blend modes, opacity scaling, presets, layer mask attachment, and headless GIMP test suite.
+
+### Phase 63 — Non-Destructive Gradient Overlay Layer Style Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `gradient-overlay` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/gradient-overlay/gradient-overlay.py`.
+- [ ] Create dedicated Gradient Overlay helper simulating Photoshop `Layer > Layer Style > Gradient Overlay...` (`Topics.txt` lines 107-118; `photoshop_docs.md` Section 113-115 lines 3433-3500).
 - [ ] Support Photoshop Gradient Overlay parameters: Gradient Preset / Custom colors, Geometry (Linear, Radial, Angle, Reflected, Diamond), Angle (-180° to 180°), Scale (10% to 500%), Reverse toggle, Dither toggle, Blend Mode, Opacity, and strict silhouette clipping.
 - [ ] Support non-destructive overlay layer placement, editable layer mask attachment, and 100% preservation of source layer artwork (`diff == 0.000000`).
-- [ ] Register under menu path `<Image>/Layer/Layer Style/Color Overlay...`, `<Image>/Layer/Layer Style/Gradient Overlay...`, and `<Image>/Filters/Retouching`.
-- [ ] Validate color/gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, and headless GIMP test suite.
+- [ ] Register under menu path `<Image>/Layer/Layer Style/Gradient Overlay...`, `<Image>/Filters/Light and Shadow/Gradient Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- [ ] Validate gradient rendering, geometry scaling/rotation, silhouette clipping, blend modes, and headless GIMP test suite.
 
 
 

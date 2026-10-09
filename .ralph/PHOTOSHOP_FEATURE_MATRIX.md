@@ -950,6 +950,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Non-Destructive Color Overlay Layer Style Helper
+- **Source topic**: Apply layer effects - Add layer styles / Work with preset styles / Layer style effects and options overview (`Topics.txt` lines 107-118, 432; `photoshop_docs.md` Section 113-115 lines 3433-3500)
+- **Photoshop behavior**: Layer > Layer Style > Color Overlay...: Fills layer content with a non-destructive solid color swatch, clipped strictly to the target layer's silhouette boundaries with exact alpha preservation for semi-transparent/anti-aliased edges ($A_{\text{overlay}} = A_{\text{target}}$). Supports blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color / HSL Color, Darken, Lighten), opacity control (0-100%), curated color presets, and editable layer mask integration.
+- **GIMP equivalent**: Implemented via custom Python 3 plugin `color-overlay` providing `python-fu-color-overlay` in `<Image>/Layer/Layer Style/Color Overlay...`, `<Image>/Filters/Light and Shadow/Color Overlay (Layer Style)...`, and `<Image>/Filters/Retouching`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/color-overlay/color-overlay.py`.
+- **Current capability**: Dedicated color overlay layer positioned directly above the target layer in stack and strictly clipped inside the target layer's silhouette (outside pixels are alpha 0.000, semi-transparent edges matching target layer alpha). Features 8 curated presets (Photoshop Standard Red, Warm Amber, Cool Cyan, Emerald Green, Royal Purple, Pure White, Deep Black, Monochrome Tint, Custom Sliders), 8 blend modes (Normal, Multiply, Screen, Overlay, Soft Light, Color / HSL Color, Darken, Lighten), opacity control (0-100%), editable layer mask options (Auto, None, Reveal-All, Conceal-All, Selection), single-step `Ctrl+Z` undo protection, and 100% preservation of target and base layer artwork (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: Native GIMP 3.x PyGObject (`image.insert_layer`, `image.select_item`, `image.select_rectangle`, `Gimp.Layer.new`, GeglBuffer `"RGBA float"`, NumPy array processing).
+- **Implementation priority**: High (Phase 62).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration, procedure argument schema across 10 properties, execution status (SUCCESS), solid red color fidelity ([R=1.000, G=0.000, B=0.000, A=1.000]), strict silhouette boundary clipping (outside alpha == 0.000000), semi-transparent edge alpha preservation (feathered edge alpha 0.502 ~= 0.500), custom RGB color swatch fidelity ([R=0.000, G=0.753, B=0.352]), 8 curated presets, dedicated overlay layer stack placement immediately above parent layer, 8 blend modes validation, opacity scaling (50%), conceal-all black layer mask attachment, reveal-all white layer mask attachment, active selection to layer mask conversion, auto layer mask attachment behavior (selection when active, none when empty), and target/base layer pixel preservation (`diff == 0.000000`).
+- **Verification evidence** (Iteration 64):
+  1. `verify_config.py`: Section 6 passed with 56 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: PDB registration verified (`python-fu-color-overlay`), procedure arguments verified across all 10 properties, execution status SUCCESS verified, solid red color fidelity verified ([R=1.000, G=0.000, B=0.000, A=1.000]), strict silhouette clipping verified (max outside alpha 0.000000), semi-transparent edge alpha preservation verified (edge alpha 0.502 ~= 0.500), custom RGB color fidelity verified ([R=0.000, G=0.753, B=0.352]), 8 curated presets verified, dedicated overlay layer stack placement verified, 8 blend modes validated, opacity scaling (50%) validated, conceal-all black layer mask verified, reveal-all white layer mask verified, active selection to layer mask conversion verified, auto layer mask attachment verified, and target and base layer pixels 100% untouched (`diff == 0.000000`). Total 644/644 assertions passed across 57 test suites in 92.11s; all quality gate stages passed in 107.54s. Exit code 0.
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 64).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

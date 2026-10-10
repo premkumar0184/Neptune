@@ -1217,6 +1217,21 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
   2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 18 assertions AB-01 through AB-18 passing in Test Suite 70 (856/856 total assertions passing across 70 test suites in 154.72s).
 - **Status**: IMPLEMENTED_VERIFIED (Iteration 77).
 
+### Feature: Content-Aware Scale & Intelligent Seam Carving Helper
+- **Source topic**: Resize images - Preserve visual content when scaling images / Specify content to protect when scaling (`Topics.txt` lines 163-164; `photoshop_docs.md` Section 167 lines 4900-4960: "Resize images while preserving important visual content using Content-Aware Scale in photoeditor... Seam carving identifies high-energy features (people, buildings, foreground subjects) and preserves them while carving or expanding low-energy background areas... Amount slider (0% to 100%)... Protect Skin Tones toggle... Protect Alpha Channel / Selection mask").
+- **Photoshop behavior**: Retargets image dimensions (reduction or expansion in width and height) using intelligent dynamic programming seam carving. Carves or duplicates low-energy paths across the image while locking high-energy subjects. Protects human skin tones using chromaticity detection rules and shields user-selected areas with an infinite energy barrier. The Amount slider provides continuous blending between pure seam carving retargeting (100%) and uniform bilinear scaling (0%). Reference point anchors layer alignment.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `content-aware-scale` with 2 PDB procedures: `python-fu-content-aware-scale` and `python-fu-content-aware-energy-map`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/content-aware-scale/content-aware-scale.py`.
+- **Current capability**: Implements vectorized dynamic programming seam carving over central differences gradient energy $E(x, y) = |\frac{\partial I}{\partial x}| + |\frac{\partial I}{\partial y}|$, human skin tone chrominance detector injecting $W_{\text{skin}} = 1000.0$ barrier, selection mask alignment injecting $W_{\text{mask}} = 10000.0$ barrier, Amount slider (0% to 100%) blending seam-carved array with uniform bilinear resampled array, 2D retargeting (width and height), reference point anchoring (Center, Top-Left, Bottom-Right, etc.), energy map heatmap visualization inspection layer (`python-fu-content-aware-energy-map`), single-step undo group encapsulation, active undo stack maintenance, non-destructive output layer `"<Layer Name> (Content-Aware Scaled)"`, and 100% preservation of base canvas artwork underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 76).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across both procedures (CAS-01), seam removal width reduction preserving high-energy subject (CAS-02), seam insertion width expansion preserving subject (CAS-03), seam removal height reduction preserving aspect fidelity (CAS-04), seam insertion height expansion (CAS-05), skin tone protection preserving human portraits (CAS-06), skin tone protection toggle disablement (CAS-07), selection mask protection barrier (CAS-08), Amount slider ratio blending between uniform and content-aware (CAS-09), simultaneous 2D retargeting (CAS-10), reference point positioning offsets (CAS-11), non-destructive output layer preservation (CAS-12), energy map preview procedure (CAS-13), undo group encapsulation (CAS-14), active undo stack maintenance (CAS-15), and base canvas artwork preservation (`diff == 0.000000`, CAS-16).
+- **Verification evidence** (Iteration 78):
+  1. `verify_config.py`: Section 6 passed with 70 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions CAS-01 through CAS-16 passing in Test Suite 71 (872/872 total assertions passing across 71 test suites in 158.60s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 78).
+
 ---
 
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)

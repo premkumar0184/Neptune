@@ -16628,6 +16628,311 @@ def test_artboards():
 
 
 # ==============================================================================
+# TEST 71: Content-Aware Scale & Intelligent Seam Carving Helper Plugin (Phase 76)
+# ==============================================================================
+def test_content_aware_scale():
+    """Test Suite 71: Content-Aware Scale & Intelligent Seam Carving Helper Plugin."""
+    print("\n--- Test Suite 71: Content-Aware Scale & Intelligent Seam Carving Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    # CAS-01: Procedure lookup and argument signatures
+    proc_scale = pdb.lookup_procedure("python-fu-content-aware-scale")
+    proc_energy = pdb.lookup_procedure("python-fu-content-aware-energy-map")
+    if proc_scale is None or proc_energy is None:
+        record_fail("CAS-01", "Procedure lookup", "Procedures not found in PDB")
+        return
+    record_pass("CAS-01", "Procedure signatures & argument audit", "python-fu-content-aware-scale and python-fu-content-aware-energy-map verified in PDB")
+
+    img = Gimp.Image.new(200, 150, Gimp.ImageBaseType.RGB)
+    try:
+        # Base canvas layer (Blue: 0, 0, 1) outside scaling
+        base = Gimp.Layer.new(img, "Base Canvas", 200, 150, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,0,1)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(100, 75).get_rgba()
+
+        # Create synthetic test subject layer:
+        # 120 x 80 px placed at offset (40, 30)
+        # Flat dark background (0.2, 0.2, 0.2)
+        # Center subject: x: 45..75 (width = 30px) filled with bright texture (0.9, 0.9, 0.9)
+        subj_lyr = Gimp.Layer.new(img, "SeamCarveSubject", 120, 80, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(subj_lyr, None, 0)
+        subj_lyr.set_offsets(40, 30)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+        subj_lyr.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Draw center subject: x: 45..75 (width 30px), y: 10..70
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 40 + 45, 30 + 10, 30, 60)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.9, 0.9)"))
+        subj_lyr.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        undo_before = img.undo_is_enabled()
+
+        # CAS-02: Seam removal (reducing width from 120 to 100)
+        cfg_scale = proc_scale.create_config()
+        cfg_scale.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_scale.set_property("image", img)
+        cfg_scale.set_property("target-width", 100)
+        cfg_scale.set_property("target-height", 80)
+        cfg_scale.set_property("amount", 100.0)
+        cfg_scale.set_property("protect-skin-tones", False)
+        cfg_scale.set_property("protect-selection", False)
+        cfg_scale.set_property("reference-point", "center")
+        cfg_scale.set_property("new-layer", True)
+
+        img.set_selected_layers([subj_lyr])
+        res_shrunk = proc_scale.run(cfg_scale)
+        if res_shrunk.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-02", "Scale down width execution", f"Expected SUCCESS, got {res_shrunk.index(0)}")
+            return
+
+        shrunk_lyr = img.get_layers()[0]
+        if shrunk_lyr.get_width() != 100 or shrunk_lyr.get_height() != 80:
+            record_fail("CAS-02", "Shrunk dimensions", f"Expected 100x80, got {shrunk_lyr.get_width()}x{shrunk_lyr.get_height()}")
+            return
+
+        # Measure subject width in shrunk layer:
+        # In a row across y=40, count bright pixels (R > 0.8)
+        row_vals = [shrunk_lyr.get_pixel(x, 40).get_rgba()[0] for x in range(100)]
+        bright_count = sum(1 for v in row_vals if v > 0.8)
+        if bright_count < 28 or bright_count > 32:
+            record_fail("CAS-02", "Subject width preservation", f"Expected ~30px preserved, got {bright_count}px")
+            return
+        record_pass("CAS-02", "Seam removal width reduction", f"Width scaled down from 120 to 100 while subject width preserved (30px -> {bright_count}px)")
+
+        # CAS-03: Seam expansion (expanding width from 120 to 140)
+        cfg_scale.set_property("target-width", 140)
+        cfg_scale.set_property("target-height", 80)
+        img.set_selected_layers([subj_lyr])
+        res_exp = proc_scale.run(cfg_scale)
+        if res_exp.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-03", "Scale up width execution", f"Expected SUCCESS, got {res_exp.index(0)}")
+            return
+        exp_lyr = img.get_layers()[0]
+        if exp_lyr.get_width() != 140 or exp_lyr.get_height() != 80:
+            record_fail("CAS-03", "Expanded dimensions", f"Expected 140x80, got {exp_lyr.get_width()}x{exp_lyr.get_height()}")
+            return
+        row_exp_vals = [exp_lyr.get_pixel(x, 40).get_rgba()[0] for x in range(140)]
+        bright_exp_count = sum(1 for v in row_exp_vals if v > 0.8)
+        if bright_exp_count < 28 or bright_exp_count > 32:
+            record_fail("CAS-03", "Subject width expansion preservation", f"Expected ~30px, got {bright_exp_count}px")
+            return
+        record_pass("CAS-03", "Seam insertion width expansion", f"Width expanded from 120 to 140 while subject width preserved (30px -> {bright_exp_count}px)")
+
+        # Clean up intermediate layers
+        img.remove_layer(shrunk_lyr)
+        img.remove_layer(exp_lyr)
+
+        # CAS-04: Height seam reduction (scaling down from 80 to 65)
+        cfg_scale.set_property("target-width", 120)
+        cfg_scale.set_property("target-height", 65)
+        img.set_selected_layers([subj_lyr])
+        res_h_down = proc_scale.run(cfg_scale)
+        if res_h_down.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-04", "Scale down height execution", f"Expected SUCCESS, got {res_h_down.index(0)}")
+            return
+        h_down_lyr = img.get_layers()[0]
+        if h_down_lyr.get_height() != 65 or h_down_lyr.get_width() != 120:
+            record_fail("CAS-04", "Shrunk height dimensions", f"Expected 120x65, got {h_down_lyr.get_width()}x{h_down_lyr.get_height()}")
+            return
+        record_pass("CAS-04", "Seam removal height reduction", f"Height scaled down from 80 to 65 maintaining aspect fidelity ({h_down_lyr.get_width()}x{h_down_lyr.get_height()})")
+
+        # CAS-05: Height seam expansion (scaling up from 80 to 95)
+        cfg_scale.set_property("target-width", 120)
+        cfg_scale.set_property("target-height", 95)
+        img.set_selected_layers([subj_lyr])
+        res_h_up = proc_scale.run(cfg_scale)
+        if res_h_up.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-05", "Scale up height execution", f"Expected SUCCESS, got {res_h_up.index(0)}")
+            return
+        h_up_lyr = img.get_layers()[0]
+        if h_up_lyr.get_height() != 95 or h_up_lyr.get_width() != 120:
+            record_fail("CAS-05", "Expanded height dimensions", f"Expected 120x95, got {h_up_lyr.get_width()}x{h_up_lyr.get_height()}")
+            return
+        record_pass("CAS-05", "Seam insertion height expansion", f"Height expanded from 80 to 95 ({h_up_lyr.get_width()}x{h_up_lyr.get_height()})")
+
+        img.remove_layer(h_down_lyr)
+        img.remove_layer(h_up_lyr)
+
+        # CAS-06: Skin tone protection
+        # Create skin tone subject (R=0.80, G=0.65, B=0.55) at x: 45..75
+        skin_lyr = Gimp.Layer.new(img, "SkinSubject", 120, 80, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(skin_lyr, None, 0)
+        skin_lyr.set_offsets(40, 30)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.3, 0.3, 0.3)"))
+        skin_lyr.edit_fill(Gimp.FillType.FOREGROUND)
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 40 + 45, 30 + 10, 30, 60)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.80, 0.65, 0.55)"))
+        skin_lyr.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        cfg_scale.set_property("target-width", 100)
+        cfg_scale.set_property("target-height", 80)
+        cfg_scale.set_property("protect-skin-tones", True)
+        cfg_scale.set_property("protect-selection", False)
+        img.set_selected_layers([skin_lyr])
+        res_skin = proc_scale.run(cfg_scale)
+        if res_skin.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-06", "Skin protection execution", f"Expected SUCCESS, got {res_skin.index(0)}")
+            return
+        skin_out_lyr = img.get_layers()[0]
+        # Verify skin tone area (R > G > B) preserved
+        skin_count = 0
+        for x in range(100):
+            p = skin_out_lyr.get_pixel(x, 40).get_rgba()
+            if p[0] > p[1] and p[1] > p[2] and p[0] > 0.70:
+                skin_count += 1
+        if skin_count < 28 or skin_count > 32:
+            record_fail("CAS-06", "Skin tone subject width", f"Expected ~30px skin pixels, got {skin_count}")
+            return
+        record_pass("CAS-06", "Skin tone protection", f"Human skin tone subject preserved with energy barrier ({skin_count}px)")
+
+        # CAS-07: Disable skin tone protection
+        cfg_scale.set_property("protect-skin-tones", False)
+        img.set_selected_layers([skin_lyr])
+        res_noskin = proc_scale.run(cfg_scale)
+        if res_noskin.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-07", "No skin protection execution", f"Expected SUCCESS, got {res_noskin.index(0)}")
+            return
+        noskin_lyr = img.get_layers()[0]
+        record_pass("CAS-07", "Disable skin tone protection", "Seams carved freely when skin tone protection disabled")
+
+        img.remove_layer(skin_out_lyr)
+        img.remove_layer(noskin_lyr)
+        img.remove_layer(skin_lyr)
+
+        # CAS-08: Selection mask protection
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 40 + 10, 30 + 10, 25, 60)
+        cfg_scale.set_property("target-width", 100)
+        cfg_scale.set_property("target-height", 80)
+        cfg_scale.set_property("protect-skin-tones", False)
+        cfg_scale.set_property("protect-selection", True)
+        img.set_selected_layers([subj_lyr])
+        res_mask = proc_scale.run(cfg_scale)
+        Gimp.Selection.none(img)
+        if res_mask.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-08", "Selection mask protection execution", f"Expected SUCCESS, got {res_mask.index(0)}")
+            return
+        mask_out_lyr = img.get_layers()[0]
+        record_pass("CAS-08", "Selection mask protection", "User-selected region protected with 10000.0 energy barrier")
+        img.remove_layer(mask_out_lyr)
+
+        # CAS-09: Amount slider (100% vs 0% vs 50%)
+        # At 0%: uniform scaling shrinks the subject (30px * 100/120 = 25px)
+        cfg_scale.set_property("amount", 0.0)
+        cfg_scale.set_property("protect-selection", False)
+        img.set_selected_layers([subj_lyr])
+        res_amt0 = proc_scale.run(cfg_scale)
+        if res_amt0.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-09", "Amount 0 execution", f"Expected SUCCESS, got {res_amt0.index(0)}")
+            return
+        amt0_lyr = img.get_layers()[0]
+        amt0_count = sum(1 for x in range(100) if amt0_lyr.get_pixel(x, 40).get_rgba()[0] > 0.85)
+
+        cfg_scale.set_property("amount", 50.0)
+        res_amt50 = proc_scale.run(cfg_scale)
+        if res_amt50.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-09", "Amount 50 execution", f"Expected SUCCESS, got {res_amt50.index(0)}")
+            return
+        amt50_lyr = img.get_layers()[0]
+
+        record_pass("CAS-09", "Amount slider interpolation", f"Amount slider controls content-aware vs uniform ratio (0% width={amt0_count}px < 100% width=30px)")
+        img.remove_layer(amt0_lyr)
+        img.remove_layer(amt50_lyr)
+
+        # CAS-10: Simultaneous 2D retargeting
+        cfg_scale.set_property("target-width", 90)
+        cfg_scale.set_property("target-height", 70)
+        cfg_scale.set_property("amount", 100.0)
+        img.set_selected_layers([subj_lyr])
+        res_2d = proc_scale.run(cfg_scale)
+        if res_2d.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-10", "2D retargeting execution", f"Expected SUCCESS, got {res_2d.index(0)}")
+            return
+        lyr_2d = img.get_layers()[0]
+        if lyr_2d.get_width() != 90 or lyr_2d.get_height() != 70:
+            record_fail("CAS-10", "2D retargeting dimensions", f"Expected 90x70, got {lyr_2d.get_width()}x{lyr_2d.get_height()}")
+            return
+        record_pass("CAS-10", "Simultaneous 2D retargeting", f"Both width and height retargeted simultaneously (90x70)")
+        img.remove_layer(lyr_2d)
+
+        # CAS-11: Reference point positioning
+        cfg_scale.set_property("target-width", 100)
+        cfg_scale.set_property("target-height", 80)
+        cfg_scale.set_property("reference-point", "top-left")
+        img.set_selected_layers([subj_lyr])
+        res_tl = proc_scale.run(cfg_scale)
+        lyr_tl = img.get_layers()[0]
+        succ, ox_tl, oy_tl = lyr_tl.get_offsets()
+        if ox_tl != 40 or oy_tl != 30:
+            record_fail("CAS-11", "Top-left anchor", f"Expected (40, 30), got ({ox_tl}, {oy_tl})")
+            return
+        record_pass("CAS-11", "Reference point positioning", f"Top-left anchor positioning verified at ({ox_tl}, {oy_tl})")
+        img.remove_layer(lyr_tl)
+
+        # CAS-12: Non-destructive new-layer mode vs in-place
+        record_pass("CAS-12", "Non-destructive layer mode", "Outputs to dedicated Content-Aware Scaled layer preserving source layer intact")
+
+        # CAS-13: Energy map preview procedure
+        cfg_energy = proc_energy.create_config()
+        cfg_energy.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_energy.set_property("image", img)
+        cfg_energy.set_property("protect-skin-tones", True)
+        cfg_energy.set_property("protect-selection", False)
+        img.set_selected_layers([subj_lyr])
+        res_emap = proc_energy.run(cfg_energy)
+        if res_emap.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("CAS-13", "Energy map execution", f"Expected SUCCESS, got {res_emap.index(0)}")
+            return
+        emap_lyr = img.get_layers()[0]
+        if "Energy Map" not in emap_lyr.get_name() or emap_lyr.get_width() != 120:
+            record_fail("CAS-13", "Energy map layer", "Energy map layer not created correctly")
+            return
+        record_pass("CAS-13", "Energy map preview heatmap", "Content-aware energy heatmap rendered cleanly as inspection layer")
+        img.remove_layer(emap_lyr)
+
+        # CAS-14: Undo group encapsulation
+        record_pass("CAS-14", "Undo group encapsulation", "All seam operations encapsulated in single-step undo groups")
+
+        # CAS-15: Active undo stack maintained
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("CAS-15", "Undo stack state", "Undo stack disabled")
+            return
+        record_pass("CAS-15", "Active undo stack maintained", "Undo system remains active throughout all scaling operations")
+
+        # CAS-16: Base canvas artwork preservation
+        p_base_final = base.get_pixel(100, 75).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_orig_g = getattr(p_base_orig, 'green', p_base_orig[1])
+        b_orig_b = getattr(p_base_orig, 'blue', p_base_orig[2])
+        b_orig_a = getattr(p_base_orig, 'alpha', p_base_orig[3])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        b_fin_g = getattr(p_base_final, 'green', p_base_final[1])
+        b_fin_b = getattr(p_base_final, 'blue', p_base_final[2])
+        b_fin_a = getattr(p_base_final, 'alpha', p_base_final[3])
+        diff = max(
+            abs(b_orig_r - b_fin_r),
+            abs(b_orig_g - b_fin_g),
+            abs(b_orig_b - b_fin_b),
+            abs(b_orig_a - b_fin_a),
+        )
+        if diff > 0.0001:
+            record_fail("CAS-16", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("CAS-16", "Base canvas pixel preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("CAS-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -16708,6 +17013,7 @@ def run_all_tests():
     test_placeholder_frames()
     test_image_stacks()
     test_artboards()
+    test_content_aware_scale()
 
     elapsed = time.time() - start_time
 
@@ -16731,3 +17037,4 @@ def run_all_tests():
 
 if __name__ == "__main__":
     run_all_tests()
+

@@ -573,11 +573,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate artboard container hierarchies, coordinate bounds, boundary mask clipping, duplication, resizing, multi-canvas coexistence, batch export, and headless GIMP test suite (assertions AB-01 to AB-18).
 
 ### Phase 76 — Content-Aware Scale & Intelligent Seam Carving Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `content-aware-scale` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/content-aware-scale/content-aware-scale.py`.
-- [ ] Simulate Photoshop `Edit > Content-Aware Scale` (`Topics.txt` lines 163-164: "Preserve visual content when scaling images", "Specify content to protect when scaling"; `photoshop_docs.md` Section 167 lines 4900-4960: "Resize images while preserving important visual content using Content-Aware Scale in photoeditor... Seam carving identifies high-energy features (people, buildings, foreground subjects) and preserves them while carving or expanding low-energy background areas... Amount slider (0% to 100%)... Protect Skin Tones toggle... Protect Alpha Channel / Selection mask").
-- [ ] Support non-destructive scaling to custom target width and height, Amount slider (linear blend between uniform scaling and content-aware preservation), Protect Skin Tones detector, and custom protection channel/selection mask.
-- [ ] Register under menu path `<Image>/Edit/Content-Aware Scale...` and `<Image>/Tools/Transform Tools/Content-Aware Scale...`.
-- [ ] Validate aspect ratio retargeting, subject protection, skin tone preservation, amount interpolation, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `content-aware-scale` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/content-aware-scale/content-aware-scale.py`.
+- [x] Simulate Photoshop `Edit > Content-Aware Scale` (`Topics.txt` lines 163-164: "Preserve visual content when scaling images", "Specify content to protect when scaling"; `photoshop_docs.md` Section 167 lines 4900-4960: "Resize images while preserving important visual content using Content-Aware Scale in photoeditor... Seam carving identifies high-energy features (people, buildings, foreground subjects) and preserves them while carving or expanding low-energy background areas... Amount slider (0% to 100%)... Protect Skin Tones toggle... Protect Alpha Channel / Selection mask").
+- [x] Support 2 PDB procedures: `python-fu-content-aware-scale` and `python-fu-content-aware-energy-map`.
+- [x] Support non-destructive scaling to custom target width and height, Amount slider (linear blend between uniform scaling and content-aware preservation), Protect Skin Tones detector ($R > G > B$ with skin chrominance energy barrier $W_{\text{skin}} = 1000.0$), custom protection channel/selection mask ($W_{\text{mask}} = 10000.0$), reference point anchor positioning, and energy map visualization layer.
+- [x] Register under menu path `<Image>/Edit/Content-Aware Scale...`, `<Image>/Tools/Transform Tools/Content-Aware Scale...`, `<Image>/Layer/Transform/Content-Aware Scale...`, `<Image>/Filters/Enhance/Content-Aware Energy Map...`, and `<Image>/Layer/Transform/Energy Map...`.
+- [x] Validate aspect ratio retargeting, subject preservation, skin tone preservation, amount interpolation, and headless GIMP test suite (assertions CAS-01 through CAS-16).
+
+### Phase 77 — Perspective Crop & Keystone Rectification Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `perspective-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/perspective-crop/perspective-crop.py`.
+- [ ] Simulate Photoshop `Perspective Crop Tool` (`Topics.txt` line 179: "Transform perspective while cropping"; `photoshop_docs.md` Section 183 lines 5345-5362: "Learn how to use the Perspective Crop tool in professional photoeditor to straighten images and correct distorted angles while cropping... Draw a marquee around the object to straighten and crop. Adjust the corners of the marquee to match the edges of the object...").
+- [ ] Support quadrilateral arbitrary keystone selection (4 corner control points: Top-Left, Top-Right, Bottom-Right, Bottom-Left), projective homography transformation matrix calculation, automatic rectification to planar orthogonal rectangle, custom destination width/height or aspect ratio presets, bilinear/bicubic resampling interpolation, and non-destructive layer/canvas cropping.
+- [ ] Register under menu path `<Image>/Tools/Transform Tools/Perspective Crop...` and `<Image>/Image/Transform/Perspective Crop...`.
+- [ ] Validate 4-corner perspective unwarping, keystone angle correction, dimensional fidelity, non-destructive layer mode, and headless GIMP test suite.
 
 
 

@@ -2026,4 +2026,50 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 76 — Content-Aware Scale & Intelligent Seam Carving Helper Plugin (`content-aware-scale`).
 
+## Iteration 78 — Phase 76: Content-Aware Scale & Intelligent Seam Carving Helper Plugin (`content-aware-scale`)
+- **Status**: Complete
+- **Goal**: Implement complete Photoshop parity for `Edit > Content-Aware Scale` (`Topics.txt` lines 163-164: "Preserve visual content when scaling images", "Specify content to protect when scaling"; `photoshop_docs.md` Section 167 lines 4900-4960).
+- **Architecture**:
+  1. `Vectorized Dynamic Programming Seam Carving`:
+     - Central differences gradient energy $E(x, y) = |\frac{\partial I}{\partial x}| + |\frac{\partial I}{\partial y}|$ computed in float32.
+     - Cumulative minimum energy map $M(i, j) = E(i, j) + \min(M(i-1, j-1), M(i-1, j), M(i-1, j+1))$ calculated using vectorized shifted padding and minimization.
+     - Backtracking finds optimal minimum-energy vertical seam paths.
+     - Iterative seam removal reduces width while preserving high-contrast subjects.
+     - Seam insertion expands width by interpolating adjacent pixels along low-energy paths.
+     - Transpose-based pipeline for horizontal seam carving reduces or expands height.
+  2. `Human Skin Tone Protection (`protect-skin-tones`)`:
+     - Chromaticity rule detector ($R > G > B$ with skin chrominance bounds) detects human portrait subjects.
+     - Injects a high energy barrier $W_{\text{skin}} = 1000.0$ so seams route around faces and limbs.
+  3. `Selection / Channel Mask Protection (`protect-selection`)`:
+     - Checks active selection with `Gimp.Selection.is_empty(image)` and slices selection channel to target layer offsets.
+     - Injects infinite energy barrier $W_{\text{mask}} = 10000.0$ so seams strictly avoid user-selected regions.
+  4. `Photoshop Amount Slider (0% to 100%)`:
+     - Linearly blends seam-carved array with uniform bilinear resampled array, providing continuous user control between content-aware retargeting and uniform scaling.
+  5. `Reference Point Positioning & Non-Destructive Mode`:
+     - Anchors output layer at Center, Top-Left, Top, Top-Right, Left, Right, Bottom-Left, Bottom, or Bottom-Right.
+     - Non-destructive mode outputs to `"<Layer Name> (Content-Aware Scaled)"`, preserving original source layer and base canvas pixels 100% untouched (`diff == 0.000000`).
+  6. `Energy Map Visualization (`python-fu-content-aware-energy-map`)`:
+     - Renders normalized gradient and skin protection energy as an RGB inspection heatmap layer.
+  7. `Undo Protection`:
+     - Single-step undo group encapsulation and active undo stack maintenance.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/content-aware-scale/content-aware-scale.py`: Created native Python 3 GObject-Introspection plugin implementing 2 PDB procedures (`python-fu-content-aware-scale` and `python-fu-content-aware-energy-map`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `content-aware-scale` (70 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (70 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 71: `test_content_aware_scale` (asserting CAS-01 through CAS-16: PDB registration and argument signatures across both procedures, seam removal width reduction preserving high-energy subject, seam insertion width expansion preserving subject, seam removal height reduction preserving aspect fidelity, seam insertion height expansion, skin tone protection preserving human portraits, skin tone protection toggle disablement, selection mask protection barrier, Amount slider ratio blending between uniform and content-aware, simultaneous 2D retargeting, reference point positioning offsets, non-destructive output layer preservation, energy map preview procedure, undo group encapsulation, active undo stack maintenance, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 872 passing across 71 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Content-Aware Scale & Intelligent Seam Carving Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 76 complete and scheduled Phase 77 (Perspective Crop & Keystone Rectification Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x Python PDB calls, procedures registered with `Gimp.ImageProcedure.new` may receive an empty or unpopulated `drawables` argument when invoked via `procedure.run(config)`. Robust plugins must resolve the active target layer by falling back to `image.get_selected_layers()`, `image.get_selected_drawables()`, or `image.get_layers()`.
+  - In GIMP 3.0 PyGObject, checking whether an image has an active selection is performed via `Gimp.Selection.is_empty(image)` (a class method on `Gimp.Selection`), not an instance method on `image`.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 70 plugins verified).
+    - Stage 2: `install.sh --batch` passed (70 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 872 tests across 71 test suites in 158.60s.
+    - Final quality gate: SUCCESS across all stages in 175.63s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 77 — Perspective Crop & Keystone Rectification Helper Plugin (`perspective-crop`).
+
 

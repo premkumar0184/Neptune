@@ -715,6 +715,25 @@ def check_theme_no_flatpak_paths(theme_path):
         len(flatpak_paths))
 
 
+def check_theme_photocraft_tokens(theme_path):
+    """Verify theme.css incorporates PhotoCraft Pro design tokens (Spectrum Dark, Blue accent, Pill buttons, precision sliders)."""
+    with open(theme_path, "r", encoding="utf-8", errors="replace") as f:
+        content = f.read()
+    required_elements = [
+        ("@define-color fg-color", "foreground color token"),
+        ("@define-color bg-color", "background color token"),
+        ("@define-color selected-color", "selected highlight token"),
+        ("#378ef0", "PhotoCraft Spectrum blue accent"),
+        ("notebook header tabs tab", "modern tab strip styling"),
+        ("button.suggested-action", "pill action button styling"),
+        ("scale contents trough", "precision slider styling"),
+    ]
+    missing = [desc for pattern, desc in required_elements if pattern not in content]
+    if not missing:
+        return True, "theme.css: PhotoCraft Pro design tokens and modern styling verified"
+    return False, "theme.css: Missing PhotoCraft design tokens: {}".format(", ".join(missing))
+
+
 def main():
     print("PhotoGIMP Configuration Audit and Syntax Verification")
     print("======================================================")
@@ -769,6 +788,7 @@ def main():
         (check_gimprc_clean, os.path.join(CONFIG_DIR, "gimprc")),
         (check_sessionrc_undo_history, os.path.join(CONFIG_DIR, "sessionrc")),
         (check_theme_no_flatpak_paths, os.path.join(CONFIG_DIR, "theme.css")),
+        (check_theme_photocraft_tokens, os.path.join(CONFIG_DIR, "theme.css")),
     ]
 
     for check_fn, path in workspace_checks:

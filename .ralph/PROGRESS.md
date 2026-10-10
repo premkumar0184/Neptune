@@ -2275,7 +2275,36 @@ This is a concise handoff log, not a transcript of every shell command.
     - Final quality gate: SUCCESS across all stages in 185.79s. Exit code 0.
 - **Commit**: PhotoGIMP sub-repo `274f036`. Outer repo `d18a4a7`.
 - **Result**: Success.
+- **Next**: Iteration 84 — UI Modernization: PhotoCraft Pro / Studio Theme & Styling.
+
+## Iteration 84 — UI Modernization: PhotoCraft Pro / Studio Theme & Styling
+- **Status**: Complete
+- **Goal**: Redesign PhotoGIMP's UI shell to adopt PhotoCraft's modern, dark, premium visual and interaction language per `AGENTS.md` and user request while preserving 100% of the Photoshop features and 75 plugins.
+- **Architecture**:
+  1. `PhotoCraft Pro GTK3 Design System Tokens`:
+     - Applied PhotoCraft color tokens (`photocraft/crates/ui-egui/src/theme.rs` Pro / Studio dark theme):
+       - Surfaces: `#242426` window chrome, `#28282b` dockables/cards, `#1a1a1c` canvas surround, `#1c1c1e` borders.
+       - Foregrounds: `#dedee2` primary text, `#96969e` dimmed text, `#686870` disabled text.
+       - Accents: `#378ef0` PhotoCraft Spectrum blue accent with `#2680eb` hover and `#1a6edb` active states.
+       - Inputs & Fields: `#1c1c1e` text input background, `1px solid #3c3c42` border, `#378ef0` focus outline, `#dedee2` text.
+  2. `Modernized Component Hierarchy`:
+     - Flat, sleek notebook tab strips (`notebook header tabs tab`) with subtle padding, `#378ef0` active indicator, and clean hover states.
+     - PhotoCraft pill buttons: `button.suggested-action` and `button.default` styled as Spectrum blue pill buttons (`border-radius: 14px`), and `.text-button` styled as secondary dark pill buttons.
+     - Sleek precision sliders (`scale contents trough`, `scale slider`) and `GimpSpinScale` compound controls with accent progress fills and clean white/light circular thumbs matching PhotoCraft's Curves/Levels inspectors.
+     - Clean dropdown menus, popovers with subtle box shadows (`0 8px 24px rgba(0,0,0,0.5)`), modern compact statusbar, and slim scrollbars.
+  3. `Quality Gate & Verification Audit`:
+     - Extended `PhotoGIMP/scripts/verify_config.py` with `check_theme_photocraft_tokens` to audit token adherence.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/theme.css`: Comprehensive GTK3 stylesheet implementing PhotoCraft Pro/Studio theme.
+  - `PhotoGIMP/scripts/verify_config.py`: Added `check_theme_photocraft_tokens` to Workspace Configuration Audit (Section 3).
+  - `PhotoGIMP/install.sh`: Deployed modern theme to `~/.config/GIMP/3.2/`.
+- **Verification**:
+  - `python3 PhotoGIMP/scripts/verify_config.py`: Passed (all 6 sections clean).
+  - `bash PhotoGIMP/install.sh --batch`: Passed (theme deployed, 75 plugins verified).
+  - `python3 tests/run_all_tests.py`: Passed all 3 stages (952/952 tests pass in 206.78s).
+- **Result**: Success.
 - **Next**: Phase 82 — Paste Special: Paste Into & Paste Outside Selection Helper Plugin (`paste-special`).
+
 
 
 

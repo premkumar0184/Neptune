@@ -631,6 +631,16 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Register under menu path `<Image>/Layer/Matting/Defringe...`, `<Image>/Layer/Matting/Remove Black Matte`, `<Image>/Layer/Matting/Remove White Matte`, and `<Image>/Layer/Matting/Color Decontaminate...`.
 - [x] Validate edge halo stripping, alpha channel preservation, color decontamination, non-destructive output, and headless GIMP test suite (assertions LM-01 through LM-16).
 
+### UI Modernization — PhotoCraft Pro / Studio Theme & Styling (Iteration 84)
+- [x] Modernize `PhotoGIMP/.config/GIMP/3.0/theme.css` adopting PhotoCraft's Pro / Studio dark design system tokens (`photocraft/crates/ui-egui/src/theme.rs`).
+- [x] Apply Spectrum Dark surfaces (`#242426`), charcoal card panels (`#28282b`), dark canvas background (`#1a1a1c`), and Spectrum Blue accent (`#378ef0` with hover `#2680eb` and active `#1a6edb`).
+- [x] Implement PhotoCraft pill action buttons (`button.suggested-action`, `button.default` in `#378ef0` and `.text-button` in `#343438`).
+- [x] Implement modern flat notebook tab strips (`notebook header tabs tab`) with active accent underline and close hover states.
+- [x] Implement sleek precision sliders (`scale contents trough`, `scale slider`) and `GimpSpinScale` compound controls with accent progress fills.
+- [x] Implement modern dropdowns, popovers with subtle elevation shadows (`0 8px 24px rgba(0,0,0,0.5)`), slim scrollbars, and compact statusbar.
+- [x] Add automated token audit `check_theme_photocraft_tokens` to `PhotoGIMP/scripts/verify_config.py` Section 3.
+- [x] Validate with batch installer deployment and 3-stage quality gate (`python3 tests/run_all_tests.py` 952/952 tests pass).
+
 ### Phase 82 — Paste Special: Paste Into & Paste Outside Selection Helper Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `paste-special` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/paste-special/paste-special.py`.
 - [ ] Simulate Photoshop `Edit > Paste Special > Paste Into` (`Alt+Shift+Ctrl+V`) and `Paste Outside` (`Topics.txt` line 212: "Paste one selection into or outside another"; `photoshop_docs.md` Section 216 lines 6220-6235: "Learn how to paste one selection into or outside another using layer masks in professional photoeditor... Cut or copy the part of the image you want to paste... Select Edit>Paste Special>Paste Into to place the source selection within the destination selection, or Edit>Paste Special>Paste Outside to place it around the destination selection... Automatically creates a new layer with the clipboard contents and attaches an editable layer mask derived from the active selection").

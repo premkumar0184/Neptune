@@ -1,22 +1,670 @@
-/* PhotoGIMP GTK3 theme.css */
+/* ==========================================================================
+   PhotoGIMP Modern UI Theme — PhotoCraft Pro / Studio Design Language
+   Inspired by PhotoCraft (photocraft/crates/ui-egui/src/theme.rs)
+   Spectrum Dark Charcoal surfaces, Spectrum Blue accents, Inter typography,
+   Pill buttons, Flat tab strips, and Sleek precision controls for GIMP 3.x
+   ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   1. GTK3 Color Tokens (PhotoCraft Pro / Studio Dark Palette)
+   -------------------------------------------------------------------------- */
+@define-color fg-color               #dedee2;
+@define-color bg-color               #28282b;
+@define-color border-color           #1c1c1e;
+
+/* Foreground variants */
+@define-color dimmed-fg-color        #96969e;
+@define-color disabled-fg-color      #686870;
+@define-color disabled-button-color  #4c4c52;
+
+/* Background variants */
+@define-color hover-color            #38383e;
+@define-color widget-bg-color        #222225;
+@define-color selected-color         #378ef0;
+@define-color extreme-bg-color       #18181a;
+@define-color extreme-selected-color #2a3a52;
+
+/* Border variants */
+@define-color strong-border-color    #34343a;
+@define-color stronger-border-color  #44444c;
+@define-color edge-border-color      #1c1c1e;
+
+/* Accent & Status colors */
+@define-color accent-blue            #378ef0;
+@define-color accent-blue-hover      #2680eb;
+@define-color accent-blue-active     #1a6edb;
+@define-color accent-violet          #8b7cf6;
+@define-color danger-color           #ec5b62;
+@define-color warning-color          #e8b046;
+
+/* Special widget colors */
+@define-color scrollbar-slider-color #55555c;
+@define-color scrollbar-trough-color #18181a;
+@define-color ruler-color            rgba(24, 24, 26, 0.7);
+
+/* --------------------------------------------------------------------------
+   2. Global Typography & Core Overrides
+   -------------------------------------------------------------------------- */
 * {
   -gtk-icon-style: symbolic;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Ubuntu", "Cantarell", sans-serif;
+  font-size: 11.5px;
+  color: @fg-color;
 }
 
-/* Base Dark Theme Overrides for Photoshop UX */
-window {
-  background-color: #282828;
-  color: #dbdbdb;
+*:disabled {
+  color: @disabled-fg-color;
 }
 
-/* Tool options & dockable headers styling */
+/* --------------------------------------------------------------------------
+   3. Window Chrome & Canvas Area
+   -------------------------------------------------------------------------- */
+window,
+window.background,
+.background {
+  background-color: #242426;
+  color: @fg-color;
+}
+
+/* Main image display canvas surround */
+#gimp-canvas,
+GimpDisplayShell {
+  background-color: #1a1a1c;
+  color: @dimmed-fg-color;
+}
+
+/* --------------------------------------------------------------------------
+   4. Docks, Dockables & Panel Shells (PhotoCraft Cards)
+   -------------------------------------------------------------------------- */
+GimpDock,
 .gimp-dockable {
-  background-color: #323232;
+  background-color: #28282b;
+  border-color: @edge-border-color;
 }
 
-/* Button & Tool Icon highlights */
+GimpDockbook {
+  background-color: #28282b;
+}
+
+/* Panel headers */
+.gimp-dockable header,
+.gimp-dockable-title {
+  background-color: #242426;
+  color: @fg-color;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+/* --------------------------------------------------------------------------
+   5. Menubar & Dropdown Menus
+   -------------------------------------------------------------------------- */
+#image-menubar,
+menubar {
+  background-color: #242426;
+  border-bottom: 1px solid #1a1a1c;
+  box-shadow: none;
+  min-height: 28px;
+  padding: 0 4px;
+}
+
+menubar > menuitem {
+  color: @fg-color;
+  min-height: 20px;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+menubar > menuitem:hover {
+  background-color: #38383e;
+  color: #ffffff;
+}
+
+/* Dropdown & Context Menus */
+menu {
+  background-color: #232326;
+  border: 1px solid #38383e;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+}
+
+menu menuitem {
+  background-color: transparent;
+  border-radius: 3px;
+  color: @fg-color;
+  min-height: 22px;
+  padding: 4px 8px;
+}
+
+menu menuitem:hover {
+  background-color: @accent-blue;
+  color: #ffffff;
+}
+
+menu menuitem *:hover {
+  background-color: transparent;
+  color: #ffffff;
+}
+
+menu separator {
+  background-color: #34343a;
+  margin: 3px 2px;
+  min-height: 1px;
+}
+
+/* Accelerator shortcuts in menus */
+menuitem accelerator {
+  color: @dimmed-fg-color;
+  font-size: 11px;
+  padding-left: 12px;
+}
+
+menuitem:hover accelerator {
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   6. Notebooks & Modern Flat Tab Strips
+   -------------------------------------------------------------------------- */
+notebook header {
+  background-color: #202022;
+  border-bottom: 1px solid #1a1a1c;
+  box-shadow: none;
+  padding: 0 2px;
+}
+
+notebook header tabs {
+  background-color: transparent;
+}
+
+notebook header tabs tab {
+  background-color: #202022;
+  background-image: none;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  box-shadow: none;
+  color: @dimmed-fg-color;
+  margin: 0 2px;
+  min-height: 26px;
+  min-width: 28px;
+  padding: 4px 10px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+notebook header tabs tab:hover {
+  background-color: #28282b;
+  color: @fg-color;
+}
+
+/* Active tab: PhotoCraft Spectrum highlight */
+notebook header tabs tab:checked {
+  background-color: #28282b;
+  color: #ffffff;
+  font-weight: 500;
+  box-shadow: 0 -2px @accent-blue inset;
+}
+
+/* Tab close button */
+notebook header tabs tab > box > button {
+  background-color: transparent;
+  border: none;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin-left: 4px;
+}
+
+notebook header tabs tab > box > button:hover {
+  background-color: @danger-color;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   7. Buttons (PhotoCraft Flat, Pill & Suggested Action Styles)
+   -------------------------------------------------------------------------- */
+button {
+  background-color: #303034;
+  background-image: none;
+  border: 1px solid #3c3c42;
+  border-radius: 4px;
+  color: @fg-color;
+  padding: 4px 10px;
+  text-shadow: none;
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+
+button:hover {
+  background-color: #3c3c42;
+  border-color: #4c4c54;
+  color: #ffffff;
+}
+
+button:active {
+  background-color: #222225;
+  border-color: #34343a;
+}
+
 button:checked {
-  background-color: #464646;
-  border-color: #5a5a5a;
+  background-color: #35353c;
+  border-color: @accent-blue;
+  color: #ffffff;
+}
+
+button:disabled {
+  background-color: #242426;
+  border-color: #2e2e32;
+  color: @disabled-fg-color;
+}
+
+/* Primary Suggested Action: PhotoCraft Blue Pill Button */
+button.suggested-action,
+button.default {
+  background-color: @accent-blue;
+  border: 1px solid @accent-blue-hover;
+  border-radius: 14px;
+  color: #ffffff;
+  font-weight: 500;
+  padding: 4px 16px;
+}
+
+button.suggested-action:hover,
+button.default:hover {
+  background-color: @accent-blue-hover;
+  border-color: @accent-blue-active;
+  color: #ffffff;
+}
+
+button.suggested-action:active,
+button.default:active {
+  background-color: @accent-blue-active;
+}
+
+/* Secondary Dialog / Pill Buttons ("Reset to defaults", "Cancel") */
+.text-button {
+  background-color: #323236;
+  border: 1px solid #424248;
+  border-radius: 14px;
+  color: @fg-color;
+  padding: 4px 14px;
+}
+
+.text-button:hover {
+  background-color: #3e3e44;
+  border-color: #505058;
+  color: #ffffff;
+}
+
+/* Destructive actions ("Delete Layer", etc.) */
+button.destructive-action {
+  background-color: #3a2224;
+  border: 1px solid @danger-color;
+  color: @danger-color;
+  border-radius: 14px;
+}
+
+button.destructive-action:hover {
+  background-color: @danger-color;
+  color: #ffffff;
+}
+
+/* Title / Dock Footer Buttons */
+button.titlebutton {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 3px 5px;
+}
+
+button.titlebutton:hover {
+  background-color: #38383e;
+  border-radius: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   8. Toolbar & Tool Buttons (PhotoCraft Icon Grid)
+   -------------------------------------------------------------------------- */
+toolbar,
+toolbar.flat {
+  background-color: #242426;
+  border: none;
+  padding: 2px;
+}
+
+toolbutton button,
+toolbutton button.flat {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin: 1px;
+  padding: 4px;
+}
+
+toolbutton button:hover,
+toolbutton button.flat:hover {
+  background-color: #35353c;
+  border-color: #44444c;
+}
+
+/* Active tool: Spectrum blue highlight like PhotoCraft */
+toolbutton button.flat:checked,
+toolbutton button.flat:checked:hover {
+  background-color: @accent-blue;
+  border-color: @accent-blue-hover;
+  color: #ffffff;
+}
+
+toolbutton button.flat:checked image {
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   9. Text Inputs & Numeric Fields
+   -------------------------------------------------------------------------- */
+entry {
+  background-color: #1c1c1e;
+  background-image: none;
+  border: 1px solid #3c3c42;
+  border-radius: 4px;
+  caret-color: #ffffff;
+  color: @fg-color;
+  padding: 4px 6px;
+  box-shadow: none;
+  transition: border-color 100ms ease;
+}
+
+entry:focus,
+entry:focus-within {
+  border-color: @accent-blue;
+  box-shadow: 0 0 0 1px @accent-blue inset;
+}
+
+entry selection {
+  background-color: @accent-blue;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   10. Precision Sliders & GimpSpinScale (PhotoCraft Tone Controls)
+   -------------------------------------------------------------------------- */
+scale contents trough {
+  background-color: #222225;
+  border: 1px solid #34343a;
+  border-radius: 2px;
+  min-height: 4px;
+}
+
+scale contents trough highlight {
+  background-color: @accent-blue;
+  border-radius: 2px;
+}
+
+scale slider {
+  background-color: #f0f0f4;
+  border: 1px solid #c0c0c8;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  min-height: 12px;
+  min-width: 12px;
+}
+
+scale slider:hover {
+  background-color: #ffffff;
+  border-color: @accent-blue;
+}
+
+/* GimpSpinScale custom compound widget */
+GimpSpinScale {
+  background-color: #1c1c1e;
+  border: 1px solid #3c3c42;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+GimpSpinScale entry {
+  background-color: #1c1c1e;
+  border: none;
+  color: @fg-color;
+  padding: 2px 4px;
+}
+
+GimpSpinScale entry progress {
+  background-color: rgba(55, 142, 240, 0.32);
+  border-radius: 3px 0 0 3px;
+  margin: 0;
+}
+
+GimpSpinScale button {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+GimpSpinScale button:hover {
+  background-color: #35353c;
+}
+
+/* Standard Spinbuttons */
+spinbutton {
+  background-color: #1c1c1e;
+  border: 1px solid #3c3c42;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+spinbutton button.up,
+spinbutton button.down {
+  background-color: #242428;
+  border: none;
+}
+
+spinbutton button:hover {
+  background-color: #383840;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   11. Checkboxes & Radio Buttons (PhotoCraft Spectrum Controls)
+   -------------------------------------------------------------------------- */
+checkbutton,
+checkbutton.text-button,
+radiobutton,
+radiobutton.text-button {
+  background-color: transparent;
+  color: @fg-color;
+  outline-style: none;
+}
+
+checkbutton:hover,
+radiobutton:hover {
+  color: #ffffff;
+}
+
+checkbutton check,
+treeview.view check {
+  background-color: #1c1c1e;
+  background-image: none;
+  border: 1px solid #484850;
+  border-radius: 3px;
+  min-height: 14px;
+  min-width: 14px;
+  margin: 0 4px;
+}
+
+checkbutton check:checked,
+treeview.view check:checked {
+  background-color: @accent-blue;
+  border-color: @accent-blue;
+  color: #ffffff;
+}
+
+checkbutton check:hover {
+  border-color: #707078;
+}
+
+radiobutton radio {
+  background-color: #1c1c1e;
+  background-image: none;
+  border: 1px solid #484850;
+  border-radius: 100%;
+  min-height: 14px;
+  min-width: 14px;
+}
+
+radiobutton radio:checked {
+  background-color: @accent-blue;
+  border-color: @accent-blue;
+}
+
+/* --------------------------------------------------------------------------
+   12. Dropdowns & Combo Boxes
+   -------------------------------------------------------------------------- */
+combobox button {
+  background-color: #222225;
+  border: 1px solid #3c3c42;
+  border-radius: 4px;
+  color: @fg-color;
+  padding: 3px 8px;
+}
+
+combobox button:hover {
+  background-color: #303034;
+  border-color: #4c4c54;
+}
+
+combobox window.popup,
+#gtk-combobox-popup-menu {
+  background-color: #232326;
+  border: 1px solid #38383e;
+  border-radius: 6px;
+  color: @fg-color;
+}
+
+/* --------------------------------------------------------------------------
+   13. TreeViews & Layer / Channel / Path Lists
+   -------------------------------------------------------------------------- */
+treeview.view,
+.view {
+  background-color: #202022;
+  color: @fg-color;
+}
+
+.view row {
+  background-color: #202022;
+  color: @fg-color;
+}
+
+.view row:hover,
+treeview.view row:hover {
+  background-color: #28282c;
+}
+
+/* Selected layer / channel row: PhotoCraft Pro dark slate highlight */
+.view:selected,
+.view row:selected,
+treeview.view:selected {
+  background-color: #2a3a52;
+  color: #ffffff;
+}
+
+.view header button {
+  background-color: #242426;
+  border: 1px solid #34343a;
+  color: @dimmed-fg-color;
+  font-weight: 500;
+  padding: 3px 6px;
+}
+
+/* --------------------------------------------------------------------------
+   14. Modern Slim Scrollbars
+   -------------------------------------------------------------------------- */
+scrollbar {
+  background-color: transparent;
+  border: none;
+}
+
+scrollbar trough {
+  background-color: transparent;
+}
+
+scrollbar slider {
+  background-color: #484850;
+  border: none;
+  border-radius: 4px;
+  min-height: 6px;
+  min-width: 6px;
+  margin: 2px;
+  transition: background-color 150ms ease;
+}
+
+scrollbar slider:hover {
+  background-color: #686872;
+}
+
+/* --------------------------------------------------------------------------
+   15. Statusbar & Document Footer
+   -------------------------------------------------------------------------- */
+statusbar {
+  background-color: #1a1a1c;
+  border-top: 1px solid #161618;
+  color: @dimmed-fg-color;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+statusbar progressbar trough {
+  background-color: #242428;
+  border-radius: 2px;
+  min-height: 6px;
+}
+
+statusbar progressbar progress {
+  background-color: @accent-blue;
+  border-radius: 2px;
+  min-height: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   16. Popovers, Tooltips & Dialog Headers
+   -------------------------------------------------------------------------- */
+popover {
+  background-color: #28282c;
+  border: 1px solid #3a3a42;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+}
+
+tooltip {
+  background-color: #1e1e22;
+  border: 1px solid #38383e;
+  border-radius: 4px;
+  color: @fg-color;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+headerbar {
+  background-color: #202022;
+  border-bottom: 1px solid #1a1a1c;
+  min-height: 34px;
+}
+
+headerbar button.titlebutton.close:hover {
+  background-color: #c42b1c;
+  color: #ffffff;
+}
+
+/* Switch widgets */
+switch {
+  background-color: #1c1c1e;
+  border: 1px solid #3c3c42;
+  border-radius: 12px;
+}
+
+switch:checked {
+  background-color: @accent-blue;
+}
+
+switch slider {
+  background-color: #ffffff;
+  border-radius: 10px;
 }

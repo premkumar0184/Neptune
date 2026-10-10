@@ -1,62 +1,69 @@
-# Current Task — Iteration 81
+# Current Task — Iteration 82
 
 ## Task
-**Phase 79 — Free Transform & Repeat Transform (Transform Again) Helper Plugin (`transform-again`)**
+**Phase 80 — Delete and Fill Selection Helper Plugin (`delete-fill-selection`)**
 
 ## Status
 **COMPLETED**
 
 ## Rationale
-In Adobe Photoshop (`Topics.txt` lines 180-187: "Transformation options in Photoshop", "Rotate or flip images", "Adjust scale, rotation, and perspective", "Duplicate objects as you transform", "Apply transformations", "Move reference point for transformations", "Rotate objects"; `photoshop_docs.md` Section 184-189 lines 5365-5499: "In complex photoeditor designs, you often need duplicate objects in varying sizes, angles, or positions. Instead of replicating and transforming separately, use a shortcut to do both simultaneously... Press Ctrl+Alt+T to create a duplicate and enter Free Transform mode... Select Edit > Transform > Again to repeat a transformation... Shift+Ctrl+T / Shift+Ctrl+Alt+T... Move reference point for transformations: 9-point anchor or custom origin"):
-1. **Free Transform with Duplicate (`Ctrl+Alt+T`)**:
-   - Replicates active layer/object and simultaneously applies affine transformations (Scale, Rotation, Translation offset, Skew) while preserving original source layer intact (`diff == 0.000000`).
-   - Supports 9-point reference point anchor positioning (Top-Left, Top, Top-Right, Left, Center, Right, Bottom-Left, Bottom, Bottom-Right) or arbitrary custom coordinate origin $(x_0, y_0)$.
-2. **Transform Again (`Shift+Ctrl+T`)**:
-   - Reapplies the exact remembered affine transformation parameters or composite matrix from the previous transform operation to the active layer directly in-place.
-3. **Transform Again with Duplicate (`Shift+Ctrl+Alt+T`)**:
-   - Replicates the active layer and applies the remembered transformation to the duplicate. When executed repeatedly (or with a `count` parameter), produces compounded geometric step-and-repeat arrays, radial bursts/starbursts, spiral cascades, and isometric progressions.
-4. **Parasite Persistence (`photogimp/last-transform`)**:
-   - Persists transformation parameters (`scale_x`, `scale_y`, `link_scale`, `angle`, `offset_x`, `offset_y`, `skew_x`, `skew_y`, `reference_point`, `custom_origin_x`, `custom_origin_y`, `interpolation`, `resize_mode`, `matrix`) in image parasite for cross-operation continuity.
-5. **Undo Group Encapsulation**:
-   - Encapsulates entire multi-step or looping operations in single-step undo groups with active undo stack maintenance.
+In Adobe Photoshop (`Topics.txt` line 195: "Remove objects with Delete and Fill Selection"; `photoshop_docs.md` Section 199 lines 5841-5852: "Learn how to remove unwanted objects from your image using the Delete and Fill Selection tool... Control+click or right-click the selected object. Then, select Delete and Fill Selection. photoeditor will automatically remove the selected object and fill the area with content that matches the surrounding image"):
+1. **Delete and Fill Selection (`Shift+Backspace` / Right-click on selection)**:
+   - Removes selected unwanted objects/elements with a single click or shortcut.
+   - Synthesizes replacement background texture, colors, and tonal gradients sampled from surrounding unselected pixels (Content-Aware Inpainting).
+   - Automatically deselects upon completion for an instant clean viewing experience.
+2. **Advanced Inpainting & Infill Architecture**:
+   - Boundary dilation/expansion (default 2px) to eliminate object edge halos and fringing.
+   - Smooth harmonic Poisson/Laplace diffusion solving $\nabla^2 I = 0$ with boundary Dirichlet conditions to match ambient lighting gradients.
+   - Texture synthesis & grain preservation from surrounding sampling radius to avoid artificial flat blurring.
+   - Edge feathering (default 2px) for seamless alpha blending into the surrounding canvas.
+3. **Delete and Fill Options Dialog (`python-fu-delete-fill-options`)**:
+   - Allows fine-tuning sampling margin/radius, edge feathering, selection expansion, inpainting method, and non-destructive output mode.
+4. **Non-Destructive vs In-Place Execution**:
+   - In-place mode (`new_layer=False`) seamlessly patches active layer in a single undo step.
+   - Non-destructive mode (`new_layer=True`) writes inpainted result to `"<Layer Name> (Object Removed)"`, preserving original source layer and base canvas pixels 100% untouched (`diff == 0.000000`).
+5. **Parasite Persistence (`photogimp/delete-fill`)**:
+   - Records metadata, bounding box coordinates, and fill parameters in document parasite.
+6. **Undo Group Encapsulation & Active Undo Stack Preservation**:
+   - Encapsulates entire multi-stage inpainting pipeline in single-step undo groups with active undo stack maintenance.
 
-GIMP 3.x has individual transform tools, but lacks automated duplicate-and-transform (`Ctrl+Alt+T`), repeat transform again (`Shift+Ctrl+T`), step-and-repeat arrays (`Shift+Ctrl+Alt+T`), and 9-point reference anchor positioning. Implementing `transform-again` closes this vital Photoshop workflow gap.
+Stock GIMP 3.x only provides standard Clear (`Delete` key, leaving transparent holes or solid background color) and lacks a native one-click Content-Aware Delete and Fill Selection tool. Implementing `delete-fill-selection` fulfills this essential Photoshop workflow.
 
 ## Affected Code
-- `PhotoGIMP/.config/GIMP/3.0/plug-ins/transform-again/transform-again.py` (New plugin implementing 3 PDB procedures: `python-fu-free-transform-duplicate`, `python-fu-transform-again`, and `python-fu-transform-again-duplicate`)
-- `PhotoGIMP/scripts/verify_config.py` (Register `transform-again` in `REQUIRED_PLUGINS`, updating audit inventory to 73 plugins)
+- `PhotoGIMP/.config/GIMP/3.0/plug-ins/delete-fill-selection/delete-fill-selection.py` (New plugin implementing 2 PDB procedures: `python-fu-delete-fill-selection` and `python-fu-delete-fill-options`)
+- `PhotoGIMP/.config/GIMP/3.0/shortcutsrc` (Map `<Shift>BackSpace` to `python-fu-delete-fill-selection`)
+- `PhotoGIMP/scripts/verify_config.py` (Register `delete-fill-selection` in `REQUIRED_PLUGINS`, updating audit inventory to 74 plugins)
 - `PhotoGIMP/install.sh` (Batch deployment deploys all plug-ins to `~/.config/GIMP/3.2/plug-ins`)
-- `tests/gimp_e2e_suite.py` (Extend with Test Suite 74: `test_transform_again`, assertions TA-01 through TA-16)
-- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Free Transform & Repeat Transform entry)
-- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 79 status)
-- `.ralph/PROGRESS.md` (Log Iteration 81 progress)
-- `.ralph/RUN_STATE.json` (Track Iteration 81 state)
+- `tests/gimp_e2e_suite.py` (Extend with Test Suite 75: `test_delete_fill_selection`, assertions DFS-01 through DFS-16)
+- `.ralph/PHOTOSHOP_FEATURE_MATRIX.md` (Add Delete and Fill Selection entry)
+- `.ralph/IMPLEMENTATION_PLAN.md` (Update Phase 80 status)
+- `.ralph/PROGRESS.md` (Log Iteration 82 progress)
+- `.ralph/RUN_STATE.json` (Track Iteration 82 state)
 
 ## Acceptance Criteria
-1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/transform-again/` created with `transform-again.py`.
+1. [x] Plugin directory `PhotoGIMP/.config/GIMP/3.0/plug-ins/delete-fill-selection/` created with `delete-fill-selection.py`.
 2. [x] Plugin has executable permissions (`chmod +x`) and passes bytecode compilation (`py_compile`).
-3. [x] 3 PDB procedures registered in GIMP PDB:
-   - `python-fu-free-transform-duplicate` under `<Image>/Edit/Free Transform with Duplicate...`, `<Image>/Layer/Transform/Free Transform with Duplicate...`, and `<Image>/Tools/Transform Tools/Free Transform with Duplicate...`
-   - `python-fu-transform-again` under `<Image>/Edit/Transform/Again` and `<Image>/Layer/Transform/Transform Again`
-   - `python-fu-transform-again-duplicate` under `<Image>/Edit/Transform/Again and Duplicate` and `<Image>/Layer/Transform/Transform Again and Duplicate`
-4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 74):
-   - TA-01: Procedure signatures and argument audit across all 3 procedures.
-   - TA-02: Free Transform with Duplicate execution: creates duplicate layer preserving original intact.
-   - TA-03: Center anchor rotation and scaling: transforms around center reference point.
-   - TA-04: Top-Left anchor rotation: corner remains stationary while rest of layer rotates.
-   - TA-05: 9-point reference anchor resolution across all positions (Top-Left, Top, Top-Right, Left, Center, Right, Bottom-Left, Bottom, Bottom-Right).
-   - TA-06: Custom origin coordinate anchor positioning.
-   - TA-07: In-place transformation mode (`duplicate_layer=False`): transforms target layer directly.
-   - TA-08: Transform Again (`python-fu-transform-again`): reapplies remembered transformation parameters in-place.
-   - TA-09: Transform Again with Duplicate (`python-fu-transform-again-duplicate`): duplicates and applies transform.
-   - TA-10: Compounded step-and-repeat arrays (`count > 1`): generates cascading multi-layer transformations.
-   - TA-11: Horizontal and vertical skewing fidelity.
-   - TA-12: Parasite persistence and deserialization (`photogimp/last-transform`).
-   - TA-13: Interpolation modes (Cubic, Linear, None).
-   - TA-14: Undo group encapsulation: single-step undo group across single and multi-count transforms.
-   - TA-15: Active undo stack maintained throughout execution.
-   - TA-16: Target & base canvas artwork preservation (`diff == 0.000000`).
-5. [x] `verify_config.py` Section 6 passes with all 73 required plugins audited.
+3. [x] 2 PDB procedures registered in GIMP PDB:
+   - `python-fu-delete-fill-selection` under `<Image>/Edit/Delete and Fill Selection`, `<Image>/Select/Delete and Fill Selection`, and `<Image>/Layer/Delete and Fill Selection`
+   - `python-fu-delete-fill-options` under `<Image>/Edit/Delete and Fill Options...` and `<Image>/Select/Delete and Fill Options...`
+4. [x] In headless GIMP tests (`tests/gimp_e2e_suite.py` Test Suite 75):
+   - DFS-01: Procedure signatures and argument audit across both procedures.
+   - DFS-02: One-click Delete and Fill Selection execution on active rectangular selection.
+   - DFS-03: Complete object removal: selected red object replaced with ambient background color.
+   - DFS-04: Seamless harmonic gradient continuation: luminance smoothly interpolated across filled region.
+   - DFS-05: Boundary dilation / expansion: eliminates edge halos and perimeter artifacts.
+   - DFS-06: Edge feathering radius control: smooth alpha transition at boundaries.
+   - DFS-07: Sampling radius configuration: samples source textures within specified margin.
+   - DFS-08: Automatic deselection post-fill: selection cleared upon completion for instant clean view.
+   - DFS-09: Arbitrary polygon / elliptical selection support.
+   - DFS-10: In-place layer modification mode (`new_layer=False`).
+   - DFS-11: Non-destructive layer mode (`new_layer=True`): creates `"<Name> (Object Removed)"` preserving source layer.
+   - DFS-12: Empty selection safety: returns clean execution status without crashing when selection is empty.
+   - DFS-13: Parasite persistence and deserialization (`photogimp/delete-fill`).
+   - DFS-14: Undo group encapsulation: single-step undo group across entire inpainting pipeline.
+   - DFS-15: Active undo stack maintained throughout execution.
+   - DFS-16: Target & base canvas artwork preservation outside selection bounds (`diff == 0.000000`).
+5. [x] `verify_config.py` Section 6 passes with all 74 required plugins audited.
 6. [x] Unified quality gate `python3 tests/run_all_tests.py` passes all 3 stages cleanly with exit code 0.
 
 ## Verification Commands
@@ -67,5 +74,5 @@ python3 tests/run_all_tests.py
 ```
 
 ## Checkpoint
-- PhotoGIMP submodule commit: `feat(plugins): implement free transform with duplicate and transform again helper plugin`
-- Outer repository commit: `feat(ralph): complete iteration 81 - free transform with duplicate and transform again helper plugin`
+- PhotoGIMP submodule commit: `feat(plugins): implement delete and fill selection helper plugin`
+- Outer repository commit: `feat(ralph): complete iteration 82 - delete and fill selection helper plugin`

@@ -1279,6 +1279,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Delete and Fill Selection (Content-Aware Object Removal)
+- **Source topic**: Automatic and color-based selections - Remove objects with Delete and Fill Selection (`Topics.txt` line 195; `photoshop_docs.md` Section 199 lines 5841-5852: "Learn how to remove unwanted objects from your image using the Delete and Fill Selection tool... Control+click or right-click the selected object. Then, select Delete and Fill Selection. photoeditor will automatically remove the selected object and fill the area with content that matches the surrounding image").
+- **Photoshop behavior**: Removes selected unwanted elements and synthesizes replacement background pixels sampled from surrounding unselected imagery with a single keystroke (`Shift+Backspace` or context menu). Automatically clears active selection post-fill for instant inspection.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `delete-fill-selection` with 2 PDB procedures: `python-fu-delete-fill-selection` (`Shift+Backspace`) and `python-fu-delete-fill-options`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/delete-fill-selection/delete-fill-selection.py`.
+- **Current capability**: Multi-stage seamless content-aware inpainting pipeline: boundary dilation/expansion envelope (default 2px) to eliminate object edge halos and fringing; 2-pass Voronoi boundary projection; 15-iteration Jacobi Poisson/Laplace harmonic relaxation solving $\nabla^2 I = 0$ with Dirichlet boundary constraints to match ambient illumination gradients; ambient boundary texture variance sampling; feathered edge alpha blending into surrounding canvas; layer geometry handling projecting selection mask to layer offsets; in-place patch mode or non-destructive layer mode `"<Name> (Object Removed)"` preserving source layer intact (`diff == 0.000000`); automatic selection clearance (`Gimp.Selection.none(image)`); empty selection safety bypass; parasite persistence (`photogimp/delete-fill`); single-step undo group encapsulation; and active undo stack maintenance.
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 80).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across both procedures (DFS-01), one-click execution (DFS-02), complete object removal and color synthesis (DFS-03), harmonic gradient continuation (DFS-04), boundary dilation envelope (DFS-05), edge feathering radius control (DFS-06), sampling margin configuration (DFS-07), automatic deselection post-fill (DFS-08), arbitrary elliptical selection support (DFS-09), in-place layer modification mode (DFS-10), non-destructive layer mode (DFS-11), empty selection safety (DFS-12), parasite persistence and deserialization (DFS-13), undo group encapsulation (DFS-14), active undo stack maintenance (DFS-15), and base canvas pixel preservation (`diff == 0.000000`, DFS-16).
+- **Verification evidence** (Iteration 82):
+  1. `verify_config.py`: Section 6 passed with 74 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions DFS-01 through DFS-16 passing in Test Suite 75 (936/936 total assertions passing across 75 test suites in 166.23s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 82).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

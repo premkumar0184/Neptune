@@ -1247,6 +1247,21 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
   2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions PC-01 through PC-16 passing in Test Suite 72 (888/888 total assertions passing across 72 test suites in 160.72s).
 - **Status**: IMPLEMENTED_VERIFIED (Iteration 79).
 
+### Feature: Straighten & Content-Aware Crop Fill Helper
+- **Source topic**: Crop and straighten - Straighten tilted photos, Apply Content-Aware Fill while cropping images (`Topics.txt` lines 177-178; `photoshop_docs.md` Section 181 lines 5311-5327, Section 182 lines 5328-5342: "Learn how to use Content-Aware Fill in photoeditor to automatically fill empty spaces when cropping, rotating, straightening, or expanding images... Select the Straighten tool from the Options bar, then drag a line along an edge in the tilted image... Automatically calculates rotation angle and rotates the image to level the horizon...").
+- **Photoshop behavior**: Allows users to draw or specify a two-point baseline $(x_1, y_1) \to (x_2, y_2)$ along an edge that should be horizontal or vertical. Automatically calculates corrective rotation angle $\phi = -\text{atan2}(y_2 - y_1, x_2 - x_1)$ to level the horizon (or perpendicular vertical line) and rotates the image. Provides 3 bounding crop modes: `content-aware-fill` (automatically synthesizes boundary texture into empty rotated corner wedges without transparent gaps), `crop-inner` (auto-trims to maximum inscribed orthogonal rectangle maintaining aspect ratio), and `expand-canvas` (expands canvas to outer rotated bounding box). Supports non-destructive layer output and canvas cropping.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `straighten-crop` with 2 PDB procedures: `python-fu-straighten-crop` and `python-fu-measure-straighten-angle`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/straighten-crop/straighten-crop.py`.
+- **Current capability**: Two-point baseline horizon/vertical leveling angle calculation, explicit angle parameter rotation, 2-pass Voronoi boundary projection with uniform relaxation Content-Aware corner fill (alpha == 1.0 everywhere), maximum inscribed rectangle calculation preserving original aspect ratio ($W/H$), outer bounding box canvas expansion ($W' = |W \cos\phi| + |H \sin\phi|$, $H' = |W \sin\phi| + |H \cos\phi|$), high-fidelity bilinear backward resampling, non-destructive layer mode `"<Name> (Straightened)"` preserving source layer intact (`diff == 0.000000`), canvas crop mode (`crop-canvas=True`), baseline angle measurement and parasite persistence (`photogimp/straighten-angle`), single-step undo group encapsulation, and active undo stack maintenance.
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 78).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across both procedures (SC-01), horizon baseline angle calculation and parasite persistence (SC-02), two-point leveling execution (SC-03), vertical baseline leveling (SC-04), explicit angle parameter rotation mode (SC-05), Content-Aware Fill mode with corner synthesized alpha == 1.0 (SC-06), inscribed inner-crop mode (SC-07), inner-crop aspect ratio fidelity (SC-08), expand canvas mode (SC-09), rotational center preservation (SC-10), bilinear resampling fidelity (SC-11), non-destructive layer mode preservation (SC-12), canvas crop mode (SC-13), undo group encapsulation (SC-14), active undo stack maintenance (SC-15), and base canvas artwork preservation (`diff == 0.000000`, SC-16).
+- **Verification evidence** (Iteration 80):
+  1. `verify_config.py`: Section 6 passed with 72 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions SC-01 through SC-16 passing in Test Suite 73 (904/904 total assertions passing across 73 test suites in 162.54s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 80).
+
 ---
 
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)

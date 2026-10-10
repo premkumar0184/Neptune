@@ -589,11 +589,26 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate 4-corner perspective unwarping, keystone angle correction, dimensional fidelity, non-destructive layer mode, and headless GIMP test suite (assertions PC-01 through PC-16).
 
 ### Phase 78 — Straighten & Content-Aware Crop Fill Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `straighten-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/straighten-crop/straighten-crop.py`.
-- [ ] Simulate Photoshop `Straighten Tool` and Crop Content-Aware Fill (`Topics.txt` lines 177-178: "Straighten tilted photos", "Apply Content-Aware Fill while cropping images"; `photoshop_docs.md` Section 181 lines 5311-5327, Section 182 lines 5328-5342: "Learn how to use Content-Aware Fill in photoeditor to automatically fill empty spaces when cropping, rotating, straightening, or expanding images... Select the Straighten tool from the Options bar, then drag a line along an edge in the tilted image...").
-- [ ] Support two-point angle measurement / horizon baseline drag line, automatic arbitrary rotation to level horizon, automatic bounding-box crop modes (unconstrained crop, expand canvas, or auto-fit inner bounding rectangle), and Content-Aware Fill of outer boundary wedges/corners via texture synthesis and harmonic inpainting.
-- [ ] Register under menu path `<Image>/Tools/Transform Tools/Straighten...` and `<Image>/Image/Transform/Straighten & Crop...`.
-- [ ] Validate horizon angle calculation, automatic straightening rotation, bounding-box geometry, content-aware boundary filling, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `straighten-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/straighten-crop/straighten-crop.py`.
+- [x] Simulate Photoshop `Straighten Tool` and Crop Content-Aware Fill (`Topics.txt` lines 177-178: "Straighten tilted photos", "Apply Content-Aware Fill while cropping images"; `photoshop_docs.md` Section 181 lines 5311-5327, Section 182 lines 5328-5342: "Learn how to use Content-Aware Fill in photoeditor to automatically fill empty spaces when cropping, rotating, straightening, or expanding images... Select the Straighten tool from the Options bar, then drag a line along an edge in the tilted image... Automatically calculates rotation angle and rotates the image to level the horizon...").
+- [x] Support 2 PDB procedures: `python-fu-straighten-crop` and `python-fu-measure-straighten-angle`.
+- [x] Support two-point baseline horizon/vertical leveling angle calculation ($\theta = \text{atan2}(y_2 - y_1, x_2 - x_1)$) and explicit angle parameter ($-180.0^\circ \dots 180.0^\circ$).
+- [x] Support 3 bounding crop modes:
+  - `content-aware-fill`: Automatically fills rotated corner wedges via boundary Voronoi projection and 3x3 uniform relaxation synthesis without transparent pixels (alpha == 1.0).
+  - `crop-inner`: Automatically computes maximum inscribed orthogonal rectangle inside rotated boundary maintaining original document aspect ratio.
+  - `expand-canvas`: Expands dimensions to outer rotated bounding box ($W' = |W \cos\phi| + |H \sin\phi|$, $H' = |W \sin\phi| + |H \cos\phi|$).
+- [x] Support non-destructive layer mode `"<Name> (Straightened)"` preserving source layer intact (`diff == 0.000000`), canvas crop mode (`crop-canvas`), and parasite persistence (`photogimp/straighten-angle`).
+- [x] Register under menu path `<Image>/Tools/Transform Tools/Straighten...`, `<Image>/Image/Transform/Straighten & Crop...`, `<Image>/Layer/Transform/Straighten & Crop...`, and `<Image>/Tools/Transform Tools/Measure Straighten Angle...`.
+- [x] Validate horizon baseline calculation, vertical leveling, Content-Aware Fill corner inpainting, inscribed inner-crop aspect ratio, canvas expansion, and headless GIMP test suite (assertions SC-01 through SC-16).
+
+### Phase 79 — Free Transform & Repeat Transform (Transform Again) Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `transform-again` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/transform-again/transform-again.py`.
+- [ ] Simulate Photoshop Free Transform with Duplicate and Transform Again (`Topics.txt` lines 180-187: "Transformation options in Photoshop", "Rotate or flip images", "Adjust scale, rotation, and perspective", "Duplicate objects as you transform", "Apply transformations", "Move reference point for transformations", "Rotate objects"; `photoshop_docs.md` Section 184-189 lines 5365-5499: "In complex photoeditor designs, you often need duplicate objects in varying sizes, angles, or positions. Instead of replicating and transforming separately, use a shortcut to do both simultaneously... Press Ctrl+Alt+T to create a duplicate and enter Free Transform mode... Select Edit > Transform > Again to repeat a transformation... Shift+Ctrl+T / Shift+Ctrl+Alt+T... Move reference point for transformations: 9-point anchor or custom origin").
+- [ ] Support 3 PDB procedures: `python-fu-free-transform-duplicate` (`Ctrl+Alt+T`), `python-fu-transform-again` (`Shift+Ctrl+T`), and `python-fu-transform-again-duplicate` (`Shift+Ctrl+Alt+T`).
+- [ ] Support cumulative affine transformations (Scale $S_x, S_y$, Rotation $\theta$, Translation $\Delta x, \Delta y$, Skew $k_x, k_y$), 9-point reference point anchor positioning (Top-Left, Center, Bottom-Right, etc.) and custom origin $(x_0, y_0)$, layer duplication on transform, parasite persistence (`photogimp/last-transform`), and non-destructive execution.
+- [ ] Register under menu path `<Image>/Edit/Free Transform with Duplicate...`, `<Image>/Edit/Transform/Again`, `<Image>/Edit/Transform/Again and Duplicate`, `<Image>/Layer/Transform/Free Transform with Duplicate...`, and `<Image>/Layer/Transform/Transform Again`.
+- [ ] Validate affine matrix compounding, reference anchor alignment, layer replication, repeat transform sequence, and headless GIMP test suite.
+
 
 
 

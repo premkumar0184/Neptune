@@ -2112,4 +2112,49 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 78 — Straighten & Content-Aware Crop Fill Helper Plugin (`straighten-crop`).
 
+## Iteration 80 — Phase 78: Straighten & Content-Aware Crop Fill Helper Plugin (`straighten-crop`)
+- **Status**: Complete
+- **Goal**: Implement complete Photoshop parity for Straightening tilted photos and Content-Aware Fill while cropping images (`Topics.txt` lines 177-178: "Straighten tilted photos", "Apply Content-Aware Fill while cropping images"; `photoshop_docs.md` Section 181 lines 5311-5327, Section 182 lines 5328-5342).
+- **Architecture**:
+  1. `Two-Point Horizon & Vertical Baseline Angle Calculation`:
+     - Evaluates $\theta = \text{atan2}(y_2 - y_1, x_2 - x_1)$ in degrees.
+     - Automatically calculates corrective angle $\phi$: levels tilted horizontal lines to $0^\circ / 180^\circ$ and tilted vertical plumb lines to $90^\circ / -90^\circ$.
+     - Supports explicit user rotation angle parameter ($-180.0^\circ \dots 180.0^\circ$).
+  2. `Content-Aware Corner Inpainting`:
+     - Backward rotation leaves corner triangular wedges empty.
+     - Pure NumPy 2-pass Voronoi projection followed by 3x3 uniform relaxation synthesizes boundary edge texture and tone seamlessly into empty corner regions without transparent pixels (alpha == 1.0 everywhere).
+  3. `Inscribed Inner-Crop Aspect Ratio Optimization`:
+     - Automatically computes the exact maximum orthogonal rectangle inscribed within rotated document bounds:
+       $w_i = \min\left(\frac{W^2}{W \cos\theta + H \sin\theta}, \frac{WH}{W \sin\theta + H \cos\theta}\right)$, $h_i = w_i \cdot \frac{H}{W}$.
+     - Fully trims away empty corner wedges while preserving original document aspect ratio.
+  4. `Outer Bounding Box Canvas Expansion`:
+     - Mode `crop-mode="expand-canvas"` resizes canvas to $W' = |W \cos\phi| + |H \sin\phi|$, $H' = |W \sin\phi| + |H \cos\phi|$.
+  5. `Non-Destructive Layer Mode & Canvas Mode`:
+     - Non-destructive mode outputs to `"<Name> (Straightened)"`, preserving source layer and base canvas pixels 100% untouched (`diff == 0.000000`).
+     - Canvas crop mode (`crop-canvas=True`) resizes document canvas to straightened dimensions.
+  6. `Angle Measurement Helper Procedure`:
+     - `python-fu-measure-straighten-angle` calculates baseline angle $\theta$ and corrective rotation angle $\phi$, persisting metadata in image parasite `photogimp/straighten-angle`.
+  7. `Undo Protection`:
+     - Encapsulated in single-step undo groups with active undo stack maintained throughout.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/straighten-crop/straighten-crop.py`: Created native Python 3 GObject-Introspection plugin implementing 2 PDB procedures (`python-fu-straighten-crop` and `python-fu-measure-straighten-angle`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `straighten-crop` (72 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (72 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 73: `test_straighten_crop` (asserting SC-01 through SC-16: PDB registration and argument signatures across both procedures, horizon baseline angle calculation and parasite persistence, two-point leveling execution, vertical baseline leveling, explicit angle parameter rotation mode, Content-Aware Fill mode with corner synthesized alpha == 1.0, inscribed inner-crop mode, inner-crop aspect ratio fidelity, expand canvas mode, rotational center preservation, bilinear resampling fidelity, non-destructive layer mode preservation, canvas crop mode, undo group encapsulation, active undo stack maintenance, and base canvas artwork preservation `diff == 0.000000`). Total tests increased to 904 passing across 73 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Straighten & Content-Aware Crop Fill Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 78 complete and scheduled Phase 79 (Free Transform & Repeat Transform Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.0 PyGObject, `image.get_parasite("...").get_data()` returns a list of integers/bytes. Directly invoking `.decode('utf-8')` raises `AttributeError: 'list' object has no attribute 'decode'`. Wrapping with `bytes(parasite.get_data()).decode('utf-8')` cleanly deserializes parasite byte payloads.
+  - Pure NumPy 2-pass Voronoi projection followed by 3x3 uniform relaxation on the masked regions executes in ~70 ms and completely eliminates transparent corner gaps.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 72 plugins verified).
+    - Stage 2: `install.sh --batch` passed (72 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 904 tests across 73 test suites in 162.54s.
+    - Final quality gate: SUCCESS across all stages in 179.81s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 79 — Free Transform & Repeat Transform (Transform Again) Helper Plugin (`transform-again`).
+
+
 

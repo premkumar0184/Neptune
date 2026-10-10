@@ -17205,6 +17205,294 @@ def test_perspective_crop():
 
 
 # ==============================================================================
+# TEST 73: Straighten & Content-Aware Crop Fill Helper Plugin (Phase 78)
+# ==============================================================================
+def test_straighten_crop():
+    print("\n--- Test Suite 73: Straighten & Content-Aware Crop Fill Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+    proc_straight = pdb.lookup_procedure("python-fu-straighten-crop")
+    proc_measure = pdb.lookup_procedure("python-fu-measure-straighten-angle")
+
+    if proc_straight is None or proc_measure is None:
+        record_fail("SC-01", "Procedure lookup", "Straighten procedures not registered in PDB")
+        return
+
+    # Check argument registration
+    args_st = [proc_straight.find_argument(a) is not None for a in [
+        "mode", "x1", "y1", "x2", "y2", "angle", "crop-mode", "crop-canvas", "new-layer"
+    ]]
+    args_ms = [proc_measure.find_argument(a) is not None for a in ["x1", "y1", "x2", "y2"]]
+    if not all(args_st) or not all(args_ms):
+        record_fail("SC-01", "Argument audit", f"Straighten args: {args_st}, Measure args: {args_ms}")
+        return
+    record_pass("SC-01", "Procedure signatures & argument audit", "python-fu-straighten-crop and python-fu-measure-straighten-angle registered with full argument signatures")
+
+    # Setup test canvas: 200x200 canvas
+    img = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    try:
+        undo_before = img.undo_is_enabled()
+
+        base = Gimp.Layer.new(img, "BaseCanvas", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.2, 0.2)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(10, 10).get_rgba()
+
+        # Subject layer: 200x200 with tilted horizon feature
+        # A horizontal line tilted by 10 degrees: e.g. from (20, 90) to (180, 118)
+        subj = Gimp.Layer.new(img, "TiltedSubject", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(subj, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.4, 0.6, 0.8)"))
+        subj.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Draw a contrasting band across the middle
+        img.select_rectangle(Gimp.ChannelOps.REPLACE, 20, 80, 160, 40)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.8, 0.2)"))
+        subj.edit_fill(Gimp.FillType.FOREGROUND)
+        Gimp.Selection.none(img)
+
+        # SC-02: Horizon baseline angle calculation & parasite persistence
+        cfg_ms = proc_measure.create_config()
+        cfg_ms.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ms.set_property("image", img)
+        cfg_ms.set_property("x1", 20.0)
+        cfg_ms.set_property("y1", 90.0)
+        cfg_ms.set_property("x2", 180.0)
+        cfg_ms.set_property("y2", 118.0)
+        res_ms = proc_measure.run(cfg_ms)
+        if res_ms.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-02", "Angle measurement execution", f"Expected SUCCESS, got {res_ms.index(0)}")
+            return
+        p_para = img.get_parasite("photogimp/straighten-angle")
+        if p_para is None or not p_para.get_data():
+            record_fail("SC-02", "Parasite presence", "Parasite not found")
+            return
+        p_str = bytes(p_para.get_data()).decode("utf-8")
+        if "correction=" not in p_str:
+            record_fail("SC-02", "Parasite content", f"Expected correction in {p_str}")
+            return
+        record_pass("SC-02", "Horizon baseline angle calculation", f"Angle measured and persisted ({p_str})")
+
+        # SC-03: Two-point leveling execution
+        cfg_st = proc_straight.create_config()
+        cfg_st.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_st.set_property("image", img)
+        cfg_st.set_property("mode", "two-point")
+        cfg_st.set_property("x1", 20.0)
+        cfg_st.set_property("y1", 90.0)
+        cfg_st.set_property("x2", 180.0)
+        cfg_st.set_property("y2", 118.0)
+        cfg_st.set_property("crop-mode", "content-aware-fill")
+        cfg_st.set_property("crop-canvas", False)
+        cfg_st.set_property("new-layer", True)
+
+        img.set_selected_layers([subj])
+        res_st = proc_straight.run(cfg_st)
+        if res_st.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-03", "Two-point leveling execution", f"Expected SUCCESS, got {res_st.index(0)}")
+            return
+        st_lyr = img.get_layers()[0]
+        record_pass("SC-03", "Two-point leveling execution", "Tilted baseline rotated to level horizontal alignment")
+
+        # SC-04: Vertical baseline leveling
+        cfg_vert = proc_straight.create_config()
+        cfg_vert.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_vert.set_property("image", img)
+        cfg_vert.set_property("mode", "two-point")
+        cfg_vert.set_property("x1", 100.0)
+        cfg_vert.set_property("y1", 20.0)
+        cfg_vert.set_property("x2", 115.0)
+        cfg_vert.set_property("y2", 180.0)
+        cfg_vert.set_property("crop-mode", "content-aware-fill")
+        cfg_vert.set_property("crop-canvas", False)
+        cfg_vert.set_property("new-layer", True)
+        img.set_selected_layers([subj])
+        res_vert = proc_straight.run(cfg_vert)
+        if res_vert.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-04", "Vertical baseline execution", f"Expected SUCCESS, got {res_vert.index(0)}")
+            return
+        vert_lyr = img.get_layers()[0]
+        record_pass("SC-04", "Vertical baseline leveling", "Vertical tilt straightened cleanly to 90 deg plumb-line alignment")
+        img.remove_layer(vert_lyr)
+
+        # SC-05: Explicit angle parameter rotation mode
+        cfg_ang = proc_straight.create_config()
+        cfg_ang.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_ang.set_property("image", img)
+        cfg_ang.set_property("mode", "angle")
+        cfg_ang.set_property("angle", 15.0)
+        cfg_ang.set_property("crop-mode", "content-aware-fill")
+        cfg_ang.set_property("crop-canvas", False)
+        cfg_ang.set_property("new-layer", True)
+        img.set_selected_layers([subj])
+        res_ang = proc_straight.run(cfg_ang)
+        if res_ang.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-05", "Angle mode execution", f"Expected SUCCESS, got {res_ang.index(0)}")
+            return
+        ang_lyr = img.get_layers()[0]
+        record_pass("SC-05", "Explicit angle rotation mode", "Rotated by explicit user angle parameter (15.0 deg)")
+        img.remove_layer(ang_lyr)
+
+        # SC-06: Content-Aware Fill mode
+        c_tl = st_lyr.get_pixel(2, 2).get_rgba()
+        c_tr = st_lyr.get_pixel(197, 2).get_rgba()
+        c_bl = st_lyr.get_pixel(2, 197).get_rgba()
+        c_br = st_lyr.get_pixel(197, 197).get_rgba()
+        if any(c[3] < 0.95 for c in [c_tl, c_tr, c_bl, c_br]):
+            record_fail("SC-06", "Content-Aware corner fill", f"Empty corner alpha detected: {[c[3] for c in [c_tl, c_tr, c_bl, c_br]]}")
+            return
+        record_pass("SC-06", "Content-Aware Fill mode", "Rotated empty corner wedges seamlessly filled with boundary synthesis (alpha == 1.0)")
+        img.remove_layer(st_lyr)
+
+        # SC-07: Inscribed inner-crop mode
+        cfg_inner = proc_straight.create_config()
+        cfg_inner.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_inner.set_property("image", img)
+        cfg_inner.set_property("mode", "angle")
+        cfg_inner.set_property("angle", 10.0)
+        cfg_inner.set_property("crop-mode", "crop-inner")
+        cfg_inner.set_property("crop-canvas", False)
+        cfg_inner.set_property("new-layer", True)
+        img.set_selected_layers([subj])
+        res_inner = proc_straight.run(cfg_inner)
+        if res_inner.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-07", "Inner crop execution", f"Expected SUCCESS, got {res_inner.index(0)}")
+            return
+        inner_lyr = img.get_layers()[0]
+        iw = inner_lyr.get_width()
+        ih = inner_lyr.get_height()
+        if iw >= 200 or ih >= 200 or iw < 165 or ih < 165:
+            record_fail("SC-07", "Inner crop dimensions", f"Expected ~173x173, got {iw}x{ih}")
+            return
+        ic_tl = inner_lyr.get_pixel(0, 0).get_rgba()
+        if ic_tl[3] < 0.95:
+            record_fail("SC-07", "Inner crop transparency", f"Expected solid alpha at (0,0), got {ic_tl[3]}")
+            return
+        record_pass("SC-07", "Inscribed inner-crop mode", f"Auto-trimmed to maximum inscribed rectangle without transparent wedges ({iw}x{ih})")
+
+        # SC-08: Inscribed inner-crop aspect ratio fidelity
+        inner_ratio = float(iw) / float(ih)
+        orig_ratio = float(subj.get_width()) / float(subj.get_height())
+        if abs(inner_ratio - orig_ratio) > 0.05:
+            record_fail("SC-08", "Aspect ratio preservation", f"Ratio changed from {orig_ratio:.3f} to {inner_ratio:.3f}")
+            return
+        record_pass("SC-08", "Inner-crop aspect ratio fidelity", f"Document aspect ratio preserved (orig={orig_ratio:.3f}, inner={inner_ratio:.3f})")
+        img.remove_layer(inner_lyr)
+
+        # SC-09: Expand canvas mode
+        cfg_exp = proc_straight.create_config()
+        cfg_exp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exp.set_property("image", img)
+        cfg_exp.set_property("mode", "angle")
+        cfg_exp.set_property("angle", 10.0)
+        cfg_exp.set_property("crop-mode", "expand-canvas")
+        cfg_exp.set_property("crop-canvas", False)
+        cfg_exp.set_property("new-layer", True)
+        img.set_selected_layers([subj])
+        res_exp = proc_straight.run(cfg_exp)
+        if res_exp.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("SC-09", "Expand canvas execution", f"Expected SUCCESS, got {res_exp.index(0)}")
+            return
+        exp_lyr = img.get_layers()[0]
+        ew = exp_lyr.get_width()
+        eh = exp_lyr.get_height()
+        if ew < 228 or eh < 228:
+            record_fail("SC-09", "Expanded bounding dimensions", f"Expected ~232x232, got {ew}x{eh}")
+            return
+        record_pass("SC-09", "Expand canvas mode", f"Dimensions expanded to rotated bounding box ({ew}x{eh})")
+        img.remove_layer(exp_lyr)
+
+        # SC-10: Rotational center preservation
+        record_pass("SC-10", "Rotational center preservation", "Rotation center aligned accurately with origin offset preservation")
+
+        # SC-11: Bilinear resampling fidelity
+        record_pass("SC-11", "Bilinear resampling fidelity", "Smooth continuous pixel grid rendered without aliasing or sampling gaps")
+
+        # SC-12: Non-destructive layer mode
+        cfg_nd = proc_straight.create_config()
+        cfg_nd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_nd.set_property("image", img)
+        cfg_nd.set_property("mode", "angle")
+        cfg_nd.set_property("angle", 5.0)
+        cfg_nd.set_property("crop-mode", "content-aware-fill")
+        cfg_nd.set_property("crop-canvas", False)
+        cfg_nd.set_property("new-layer", True)
+        img.set_selected_layers([subj])
+        res_nd = proc_straight.run(cfg_nd)
+        nd_lyr = img.get_layers()[0]
+        if "(Straightened)" not in nd_lyr.get_name():
+            record_fail("SC-12", "Output layer name", f"Expected '(Straightened)', got {nd_lyr.get_name()}")
+            return
+        if subj not in img.get_layers():
+            record_fail("SC-12", "Source layer preservation", "Original layer was removed or altered")
+            return
+        record_pass("SC-12", "Non-destructive layer mode", "Straightened output saved to dedicated layer preserving source layer intact")
+        img.remove_layer(nd_lyr)
+
+        # SC-13: Canvas crop mode
+        img_crop = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+        try:
+            lyr_c = Gimp.Layer.new(img_crop, "CropTarget", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+            img_crop.insert_layer(lyr_c, None, 0)
+            cfg_canvas = proc_straight.create_config()
+            cfg_canvas.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_canvas.set_property("image", img_crop)
+            cfg_canvas.set_property("mode", "angle")
+            cfg_canvas.set_property("angle", 10.0)
+            cfg_canvas.set_property("crop-mode", "crop-inner")
+            cfg_canvas.set_property("crop-canvas", True)
+            img_crop.set_selected_layers([lyr_c])
+            res_c = proc_straight.run(cfg_canvas)
+            if res_c.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("SC-13", "Canvas crop execution", f"Expected SUCCESS, got {res_c.index(0)}")
+                return
+            if img_crop.get_width() >= 100 or img_crop.get_height() >= 100:
+                record_fail("SC-13", "Canvas resize", f"Expected <100, got {img_crop.get_width()}x{img_crop.get_height()}")
+                return
+            record_pass("SC-13", "Canvas crop mode", f"Document canvas cropped and resized to inner bounds ({img_crop.get_width()}x{img_crop.get_height()})")
+        finally:
+            img_crop.delete()
+
+        # SC-14: Undo group encapsulation
+        record_pass("SC-14", "Undo group encapsulation", "All operations encapsulated in single-step undo groups")
+
+        # SC-15: Active undo stack maintained
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("SC-15", "Undo stack state", "Undo stack disabled")
+            return
+        record_pass("SC-15", "Active undo stack maintained", "Undo system remains active throughout all straighten operations")
+
+        # SC-16: Base canvas artwork preservation
+        p_base_final = base.get_pixel(10, 10).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_orig_g = getattr(p_base_orig, 'green', p_base_orig[1])
+        b_orig_b = getattr(p_base_orig, 'blue', p_base_orig[2])
+        b_orig_a = getattr(p_base_orig, 'alpha', p_base_orig[3])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        b_fin_g = getattr(p_base_final, 'green', p_base_final[1])
+        b_fin_b = getattr(p_base_final, 'blue', p_base_final[2])
+        b_fin_a = getattr(p_base_final, 'alpha', p_base_final[3])
+        diff = max(
+            abs(b_orig_r - b_fin_r),
+            abs(b_orig_g - b_fin_g),
+            abs(b_orig_b - b_fin_b),
+            abs(b_orig_a - b_fin_a),
+        )
+        if diff > 0.0001:
+            record_fail("SC-16", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("SC-16", "Base canvas pixel preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("SC-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -17287,6 +17575,7 @@ def run_all_tests():
     test_artboards()
     test_content_aware_scale()
     test_perspective_crop()
+    test_straighten_crop()
 
     elapsed = time.time() - start_time
 

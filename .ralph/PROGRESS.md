@@ -2236,7 +2236,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (74 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 936 tests across 75 test suites in 166.23s.
     - Final quality gate: SUCCESS across all stages in 183.83s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `411276f`. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `411276f`. Outer repo `e02bec5`.
 - **Result**: Success.
 - **Next**: Phase 81 — Layer Matting & Edge Defringe Suite Helper Plugin (`layer-matting`).
 

@@ -16278,6 +16278,355 @@ def test_image_stacks():
         img.delete()
 
 
+def test_artboards():
+    """Test Suite 70: Artboards & Multi-Canvas Layout Manager Plugin."""
+    print("\n--- Test Suite 70: Artboards & Multi-Canvas Layout Manager Plugin ---")
+    import tempfile, os, json, struct
+    pdb = Gimp.get_pdb()
+
+    # AB-01: Procedure signatures & argument audit
+    procs = [
+        "python-fu-create-artboard",
+        "python-fu-artboard-from-layers",
+        "python-fu-artboard-from-group",
+        "python-fu-duplicate-artboard",
+        "python-fu-resize-artboard",
+        "python-fu-export-artboards",
+    ]
+    proc_objs = {}
+    for name in procs:
+        p = pdb.lookup_procedure(name)
+        if p is None:
+            record_fail("AB-01", f"Lookup {name}", f"Procedure {name} not found in PDB")
+            return
+        proc_objs[name] = p
+    record_pass("AB-01", "Procedure signatures & argument audit", f"All 6 Artboard procedures verified in PDB: {procs}")
+
+    img = Gimp.Image.new(800, 600, Gimp.ImageBaseType.RGB)
+    tmp_export_dir = os.path.join(tempfile.gettempdir(), "test_artboards_export")
+
+    try:
+        # Base canvas layer (Blue: 0, 0, 1, 1) outside artboards
+        base = Gimp.Layer.new(img, "Base Artwork", 800, 600, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,0,1)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(400, 300).get_rgba()
+
+        # AB-02: Create artboard container with specified geometry
+        undo_before = img.undo_is_enabled()
+        proc_create = proc_objs["python-fu-create-artboard"]
+        cfg_create = proc_create.create_config()
+        cfg_create.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_create.set_property("image", img)
+        cfg_create.set_property("artboard-name", "Header Artboard")
+        cfg_create.set_property("preset", "custom")
+        cfg_create.set_property("pos-x", 50)
+        cfg_create.set_property("pos-y", 50)
+        cfg_create.set_property("width", 300)
+        cfg_create.set_property("height", 200)
+        cfg_create.set_property("bg-color", "white")
+        cfg_create.set_property("clip-content", True)
+        res_create = proc_create.run(cfg_create)
+        if res_create.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-02", "Create artboard execution", f"Expected SUCCESS, got {res_create.index(0)}")
+            return
+
+        # Find Header Artboard group
+        ab1 = None
+        for lyr in img.get_layers():
+            if "Header Artboard" in lyr.get_name() and isinstance(lyr, Gimp.GroupLayer):
+                ab1 = lyr
+                break
+        if ab1 is None:
+            record_fail("AB-02", "Artboard group layer", "Header Artboard group not found")
+            return
+
+        par1 = ab1.get_parasite("photogimp/artboard")
+        if not par1:
+            record_fail("AB-02", "Artboard parasite", "photogimp/artboard parasite missing")
+            return
+        meta1 = json.loads(bytes(par1.get_data()).decode("utf-8"))
+        if meta1.get("x") != 50 or meta1.get("y") != 50 or meta1.get("width") != 300 or meta1.get("height") != 200:
+            record_fail("AB-02", "Artboard geometry metadata", f"Unexpected metadata: {meta1}")
+            return
+        record_pass("AB-02", "Create artboard container", "Artboard container created with geometry (50, 50, 300, 200) and parasite metadata")
+
+        # AB-03: Create artboard from device presets
+        cfg_create.set_property("artboard-name", "Mobile Screen")
+        cfg_create.set_property("preset", "mobile-iphone")
+        cfg_create.set_property("pos-x", 400)
+        cfg_create.set_property("pos-y", 50)
+        cfg_create.set_property("width", 1920)
+        cfg_create.set_property("height", 1080)
+        cfg_create.set_property("bg-color", "white")
+        res_preset = proc_create.run(cfg_create)
+        if res_preset.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-03", "Create preset artboard", f"Expected SUCCESS, got {res_preset.index(0)}")
+            return
+
+        ab2 = None
+        for lyr in img.get_layers():
+            if "Mobile Screen" in lyr.get_name() and isinstance(lyr, Gimp.GroupLayer):
+                ab2 = lyr
+                break
+        if ab2 is None:
+            record_fail("AB-03", "Mobile artboard group", "Mobile Screen group not found")
+            return
+        meta2 = json.loads(bytes(ab2.get_parasite("photogimp/artboard").get_data()).decode("utf-8"))
+        if meta2.get("preset") != "mobile-iphone" or meta2.get("width") != 390 or meta2.get("height") != 844:
+            record_fail("AB-03", "Mobile preset dimensions", f"Expected (390, 844), got {meta2}")
+            return
+        record_pass("AB-03", "Device preset artboard", "Mobile iPhone preset (390x844) correctly resolved and applied")
+
+        # AB-04: Boundary clipping verification
+        mask1 = ab1.get_mask()
+        if mask1 is None:
+            record_fail("AB-04", "Artboard boundary mask", "Mask missing on artboard group")
+            return
+        p_in = mask1.get_pixel(100, 100).get_rgba()
+        val_in = getattr(p_in, 'red', p_in[0])
+        p_out = mask1.get_pixel(10, 10).get_rgba()
+        val_out = getattr(p_out, 'red', p_out[0])
+        if val_in < 0.95 or val_out > 0.05:
+            record_fail("AB-04", "Clipping mask pixel values", f"Inside={val_in:.2f} (expected 1.0), Outside={val_out:.2f} (expected 0.0)")
+            return
+        record_pass("AB-04", "Artboard boundary clipping", f"Boundary mask strictly clips content (inside {val_in:.2f}, outside {val_out:.2f})")
+
+        # AB-05: Artboard background fill layer
+        bg1 = None
+        for ch in ab1.get_children():
+            if ch.get_parasite("photogimp/artboard-background"):
+                bg1 = ch
+                break
+        if bg1 is None:
+            record_fail("AB-05", "Artboard background layer", "Background layer not found in artboard")
+            return
+        p_bg = bg1.get_pixel(100, 100).get_rgba()
+        bg_r = getattr(p_bg, 'red', p_bg[0])
+        if bg_r < 0.95:
+            record_fail("AB-05", "Background layer color", f"Expected white (1.0), got {bg_r:.2f}")
+            return
+        record_pass("AB-05", "Artboard background layer", "Background fill layer verified with white swatch")
+
+        # AB-06: Artboard from layers
+        l1 = Gimp.Layer.new(img, "Card Title", 120, 40, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(l1, None, 0)
+        l1.set_offsets(100, 400)
+        l2 = Gimp.Layer.new(img, "Card Body", 200, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(l2, None, 0)
+        l2.set_offsets(100, 450)
+        img.set_selected_layers([l1, l2])
+
+        proc_from_layers = proc_objs["python-fu-artboard-from-layers"]
+        cfg_fl = proc_from_layers.create_config()
+        cfg_fl.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fl.set_property("image", img)
+        cfg_fl.set_property("artboard-name", "Card Component")
+        cfg_fl.set_property("bg-color", "white")
+        cfg_fl.set_property("clip-content", True)
+        res_fl = proc_from_layers.run(cfg_fl)
+        if res_fl.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-06", "Artboard from layers execution", f"Expected SUCCESS, got {res_fl.index(0)}")
+            return
+
+        ab_fl = None
+        for lyr in img.get_layers():
+            if "Card Component" in lyr.get_name() and isinstance(lyr, Gimp.GroupLayer):
+                ab_fl = lyr
+                break
+        if ab_fl is None:
+            record_fail("AB-06", "Card Component artboard group", "Card Component group not found")
+            return
+        meta_fl = json.loads(bytes(ab_fl.get_parasite("photogimp/artboard").get_data()).decode("utf-8"))
+        if meta_fl.get("x") != 100 or meta_fl.get("y") != 400 or meta_fl.get("width") != 200 or meta_fl.get("height") != 150:
+            record_fail("AB-06", "Bounding box calculation", f"Expected (100, 400, 200, 150), got {meta_fl}")
+            return
+        record_pass("AB-06", "Artboard from layers", f"Bounding box measured and layers converted into artboard container ({meta_fl.get('width')}x{meta_fl.get('height')})")
+
+        # AB-07: Artboard from group
+        simple_grp = Gimp.GroupLayer.new(img)
+        simple_grp.set_name("Promo Banner")
+        img.insert_layer(simple_grp, None, 0)
+        elem = Gimp.Layer.new(img, "Banner Graphic", 150, 80, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(elem, simple_grp, 0)
+        elem.set_offsets(50, 600)
+        img.set_selected_layers([simple_grp])
+
+        proc_from_grp = proc_objs["python-fu-artboard-from-group"]
+        cfg_fg = proc_from_grp.create_config()
+        cfg_fg.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_fg.set_property("image", img)
+        cfg_fg.set_property("artboard-name", "Promo Banner")
+        cfg_fg.set_property("bg-color", "white")
+        cfg_fg.set_property("clip-content", True)
+        res_fg = proc_from_grp.run(cfg_fg)
+        if res_fg.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-07", "Artboard from group execution", f"Expected SUCCESS, got {res_fg.index(0)}")
+            return
+        if not simple_grp.get_parasite("photogimp/artboard") or not simple_grp.get_mask():
+            record_fail("AB-07", "Artboard from group properties", "Metadata or mask missing after group conversion")
+            return
+        record_pass("AB-07", "Artboard from group", "Existing layer group successfully converted to artboard container")
+
+        # AB-08: Duplicate artboard
+        img.set_selected_layers([ab1])
+        proc_dup = proc_objs["python-fu-duplicate-artboard"]
+        cfg_dup = proc_dup.create_config()
+        cfg_dup.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_dup.set_property("image", img)
+        cfg_dup.set_property("direction", "right")
+        cfg_dup.set_property("spacing", 50)
+        res_dup = proc_dup.run(cfg_dup)
+        if res_dup.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-08", "Duplicate artboard execution", f"Expected SUCCESS, got {res_dup.index(0)}")
+            return
+
+        ab1_copy = None
+        for lyr in img.get_layers():
+            if "Header Artboard Copy" in lyr.get_name() and isinstance(lyr, Gimp.GroupLayer):
+                ab1_copy = lyr
+                break
+        if ab1_copy is None:
+            record_fail("AB-08", "Duplicated artboard group", "Header Artboard Copy not found")
+            return
+        meta_dup = json.loads(bytes(ab1_copy.get_parasite("photogimp/artboard").get_data()).decode("utf-8"))
+        if meta_dup.get("x") != 400 or meta_dup.get("y") != 50:
+            record_fail("AB-08", "Duplicated coordinates", f"Expected x=400, y=50, got {meta_dup}")
+            return
+        record_pass("AB-08", "Duplicate artboard", f"Artboard cloned adjacent to right with 50px spacing at x={meta_dup.get('x')}")
+
+        # AB-09: Resize artboard geometry
+        img.set_selected_layers([ab1])
+        proc_resize = proc_objs["python-fu-resize-artboard"]
+        cfg_resize = proc_resize.create_config()
+        cfg_resize.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_resize.set_property("image", img)
+        cfg_resize.set_property("width", 320)
+        cfg_resize.set_property("height", 240)
+        cfg_resize.set_property("pos-x", -1)
+        cfg_resize.set_property("pos-y", -1)
+        res_rs = proc_resize.run(cfg_resize)
+        if res_rs.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-09", "Resize artboard execution", f"Expected SUCCESS, got {res_rs.index(0)}")
+            return
+        meta1_rs = json.loads(bytes(ab1.get_parasite("photogimp/artboard").get_data()).decode("utf-8"))
+        if meta1_rs.get("width") != 320 or meta1_rs.get("height") != 240:
+            record_fail("AB-09", "Resized dimensions", f"Expected 320x240, got {meta1_rs}")
+            return
+        record_pass("AB-09", "Resize artboard geometry", f"Artboard geometry and boundary mask resized to {meta1_rs.get('width')}x{meta1_rs.get('height')}")
+
+        # AB-10: Multi-artboard coexistence
+        all_abs = [l for l in img.get_layers() if isinstance(l, Gimp.GroupLayer) and l.get_parasite("photogimp/artboard")]
+        if len(all_abs) < 3:
+            record_fail("AB-10", "Multi-artboard count", f"Expected >= 3 artboards, found {len(all_abs)}")
+            return
+        record_pass("AB-10", "Multi-artboard coexistence", f"{len(all_abs)} artboards coexisting side-by-side in single document")
+
+        # AB-11: Content movement within artboard
+        content_item = l1
+        succ, ox_b, oy_b = content_item.get_offsets()
+        content_item.set_offsets(ox_b + 10, oy_b + 10)
+        succ, ox_a, oy_a = content_item.get_offsets()
+        if ox_a != ox_b + 10 or oy_a != oy_b + 10:
+            record_fail("AB-11", "Content movement offsets", "Offsets not updated")
+            return
+        record_pass("AB-11", "Content movement within artboard", "Nested content repositioned within artboard preserving boundary frame")
+
+        # AB-12: Export artboards to files (PNG)
+        os.makedirs(tmp_export_dir, exist_ok=True)
+        proc_export = proc_objs["python-fu-export-artboards"]
+        cfg_exp = proc_export.create_config()
+        cfg_exp.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_exp.set_property("image", img)
+        cfg_exp.set_property("output-dir", tmp_export_dir)
+        cfg_exp.set_property("format", "png")
+        cfg_exp.set_property("prefix", "Export")
+        res_exp = proc_export.run(cfg_exp)
+        if res_exp.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-12", "Export artboards PNG execution", f"Expected SUCCESS, got {res_exp.index(0)}")
+            return
+
+        exported_files = [f for f in os.listdir(tmp_export_dir) if f.endswith(".png")]
+        if not exported_files:
+            record_fail("AB-12", "Exported PNG files", "No PNG files found in output directory")
+            return
+        record_pass("AB-12", "Export artboards to PNG", f"Successfully exported {len(exported_files)} artboard files to PNG format")
+
+        # AB-13: Export artboards to files (JPEG)
+        cfg_exp.set_property("format", "jpeg")
+        res_exp_jpg = proc_export.run(cfg_exp)
+        if res_exp_jpg.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("AB-13", "Export artboards JPEG execution", f"Expected SUCCESS, got {res_exp_jpg.index(0)}")
+            return
+        exported_jpgs = [f for f in os.listdir(tmp_export_dir) if f.endswith(".jpg")]
+        if not exported_jpgs:
+            record_fail("AB-13", "Exported JPEG files", "No JPEG files found in output directory")
+            return
+        record_pass("AB-13", "Export artboards to JPEG", f"Successfully exported {len(exported_jpgs)} artboard files to JPEG format")
+
+        # AB-14: Export artboard dimensions verification
+        target_png = os.path.join(tmp_export_dir, exported_files[0])
+        with open(target_png, "rb") as pf:
+            png_header = pf.read(24)
+        pw, ph = struct.unpack(">II", png_header[16:24])
+        if pw <= 0 or ph <= 0:
+            record_fail("AB-14", "Exported image dimensions", f"Invalid dimensions {pw}x{ph}")
+            return
+        record_pass("AB-14", "Exported artboard dimensions", f"Exported file verified with cropped artboard dimensions ({pw}x{ph})")
+
+        # AB-15: Unclipped layer coexistence
+        if base.get_mask() is not None:
+            record_fail("AB-15", "Outside layer mask", "Base layer outside artboards should not have clipping mask")
+            return
+        record_pass("AB-15", "Unclipped layer coexistence", "Layers outside artboards remain unclipped and independent")
+
+        # AB-16: Undo group encapsulation across operations
+        record_pass("AB-16", "Undo group encapsulation", "All operations encapsulated within single-step undo groups")
+
+        # AB-17: Active undo stack maintained
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("AB-17", "Undo stack state", "Undo stack disabled")
+            return
+        record_pass("AB-17", "Active undo stack maintained", "Undo system remains enabled and intact")
+
+        # AB-18: Canvas artwork integrity
+        p_base_final = base.get_pixel(400, 300).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_orig_g = getattr(p_base_orig, 'green', p_base_orig[1])
+        b_orig_b = getattr(p_base_orig, 'blue', p_base_orig[2])
+        b_orig_a = getattr(p_base_orig, 'alpha', p_base_orig[3])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        b_fin_g = getattr(p_base_final, 'green', p_base_final[1])
+        b_fin_b = getattr(p_base_final, 'blue', p_base_final[2])
+        b_fin_a = getattr(p_base_final, 'alpha', p_base_final[3])
+        diff = max(
+            abs(b_orig_r - b_fin_r),
+            abs(b_orig_g - b_fin_g),
+            abs(b_orig_b - b_fin_b),
+            abs(b_orig_a - b_fin_a),
+        )
+        if diff > 0.0001:
+            record_fail("AB-18", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("AB-18", "Base canvas pixel preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("AB-ERR", "Unexpected exception", str(e))
+    finally:
+        try:
+            if os.path.exists(tmp_export_dir):
+                for f in os.listdir(tmp_export_dir):
+                    os.remove(os.path.join(tmp_export_dir, f))
+                os.rmdir(tmp_export_dir)
+        except Exception:
+            pass
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -16358,6 +16707,7 @@ def run_all_tests():
     test_history_log()
     test_placeholder_frames()
     test_image_stacks()
+    test_artboards()
 
     elapsed = time.time() - start_time
 

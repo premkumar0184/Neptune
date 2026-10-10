@@ -565,11 +565,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate stack container hierarchy, statistical algorithms, dynamic mode switching, phase correlation alignment, multi-file import, and headless GIMP test suite (assertions IS-01 to IS-18).
 
 ### Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `artboards` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
-- [ ] Simulate Photoshop Artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document"; `photoshop_docs.md` Section 150-153 lines 4498-4595).
-- [ ] Support named artboard bounds, device presets (Desktop, Mobile, Social, Print), layout guidelines, and multi-artboard batch export.
-- [ ] Register under menu path `<Image>/Layer/Artboards` and `<Image>/File/Export/Export Artboards...`.
-- [ ] Validate artboard container hierarchies, coordinate bounds, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `artboards` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
+- [x] Simulate Photoshop Artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document"; `photoshop_docs.md` Section 150-153 lines 4498-4595: "Artboards are special layer groups that clip the contents of any contained elements to their boundaries... act as individual canvases within a document... Presets (Desktop, Mobile, Tablet, Social, Print)... Artboard from Layers... Artboard from Group... Duplicate Artboard... Export Artboards to Files").
+- [x] Support 6 PDB procedures: `python-fu-create-artboard`, `python-fu-artboard-from-layers`, `python-fu-artboard-from-group`, `python-fu-duplicate-artboard`, `python-fu-resize-artboard`, and `python-fu-export-artboards`.
+- [x] Support device presets (Desktop 1080p/1440p/4K, Mobile iPhone/Android, Tablet iPad, Social Square/Story, Print A4), non-destructive group boundary clipping masks, custom backgrounds, and standalone cropped batch export (PNG/JPEG).
+- [x] Register under menu path `<Image>/Layer/Artboards`, `<Image>/Tools/Transform Tools/Artboard`, and `<Image>/File/Export/Export Artboards to Files...`.
+- [x] Validate artboard container hierarchies, coordinate bounds, boundary mask clipping, duplication, resizing, multi-canvas coexistence, batch export, and headless GIMP test suite (assertions AB-01 to AB-18).
+
+### Phase 76 — Content-Aware Scale & Intelligent Seam Carving Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `content-aware-scale` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/content-aware-scale/content-aware-scale.py`.
+- [ ] Simulate Photoshop `Edit > Content-Aware Scale` (`Topics.txt` lines 163-164: "Preserve visual content when scaling images", "Specify content to protect when scaling"; `photoshop_docs.md` Section 167 lines 4900-4960: "Resize images while preserving important visual content using Content-Aware Scale in photoeditor... Seam carving identifies high-energy features (people, buildings, foreground subjects) and preserves them while carving or expanding low-energy background areas... Amount slider (0% to 100%)... Protect Skin Tones toggle... Protect Alpha Channel / Selection mask").
+- [ ] Support non-destructive scaling to custom target width and height, Amount slider (linear blend between uniform scaling and content-aware preservation), Protect Skin Tones detector, and custom protection channel/selection mask.
+- [ ] Register under menu path `<Image>/Edit/Content-Aware Scale...` and `<Image>/Tools/Transform Tools/Content-Aware Scale...`.
+- [ ] Validate aspect ratio retargeting, subject protection, skin tone preservation, amount interpolation, and headless GIMP test suite.
 
 
 

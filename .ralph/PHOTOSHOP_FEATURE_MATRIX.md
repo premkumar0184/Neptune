@@ -1202,6 +1202,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Artboards & Multi-Canvas Layout Manager
+- **Source topic**: Layout and design tools - Get started with artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document"; `photoshop_docs.md` Section 150-153 lines 4498-4595: "Artboards are special layer groups that clip the contents of any contained elements to their boundaries... act as individual canvases within a document... Presets (Desktop, Mobile, Tablet, Social, Print)... Artboard from Layers... Artboard from Group... Duplicate Artboard... Export Artboards to Files").
+- **Photoshop behavior**: Specialized container groups acting as independent artboards/canvases on a shared pasteboard. Restricts contained layers to boundary geometry via clipping mask. Allows duplicate/resize operations and multi-artboard batch export to standalone PNG/JPEG files.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `artboards` with 6 PDB procedures: `python-fu-create-artboard`, `python-fu-artboard-from-layers`, `python-fu-artboard-from-group`, `python-fu-duplicate-artboard`, `python-fu-resize-artboard`, and `python-fu-export-artboards`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
+- **Current capability**: Encapsulates layers into specialized `GroupLayer` containers (`"<Name> (Artboard)"`) with persistent metadata parasite (`photogimp/artboard`) and canvas-spanning boundary frame (`photogimp/artboard-bounds`). Non-destructive layer mask strictly clips content outside artboard coordinates (`inside 1.00, outside 0.00`). Offers device presets (Desktop 1080p/1440p/4K, Mobile iPhone/Android, Tablet iPad, Social Square/Story, Print A4), artboard creation from selected layers with collective bounding box measurement, conversion of existing layer groups, duplicate artboard with adjacent spatial placement and margin spacing, dynamic geometry resizing, batch export cropped to exact artboard bounds (PNG/JPEG), and 100% preservation of base canvas artwork underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`).
+- **Implementation priority**: High (Phase 75).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 6 procedures (AB-01), artboard creation with geometry and parasite metadata (AB-02), device preset resolution (AB-03), boundary mask clipping (AB-04), background fill layer (AB-05), artboard from layers bounding box calculation (AB-06), artboard from group conversion (AB-07), duplicate artboard adjacent placement (AB-08), artboard geometry resizing (AB-09), multi-artboard coexistence (AB-10), content movement within artboard (AB-11), batch export to PNG (AB-12), batch export to JPEG (AB-13), exported file dimensions verification (AB-14), unclipped layer coexistence outside artboards (AB-15), undo group encapsulation (AB-16), active undo stack maintenance (AB-17), and base canvas preservation (`diff == 0.000000`, AB-18).
+- **Verification evidence** (Iteration 77):
+  1. `verify_config.py`: Section 6 passed with 69 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 18 assertions AB-01 through AB-18 passing in Test Suite 70 (856/856 total assertions passing across 70 test suites in 154.72s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 77).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

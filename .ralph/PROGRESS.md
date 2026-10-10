@@ -1985,6 +1985,45 @@ This is a concise handoff log, not a transcript of every shell command.
     - Final quality gate: SUCCESS across all stages in 169.29s. Exit code 0.
 - **Commit**: PhotoGIMP sub-repo `637a6f0`. Outer repo `50d0b99`.
 - **Result**: Success.
-- **Next**: Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin (`artboards`).
+## Iteration 77 — Artboards & Multi-Canvas Layout Manager Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Artboards & Multi-Canvas Layout Manager Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document"; `photoshop_docs.md` Section 150-153 lines 4498-4595: "Learn about artboards in professional photoeditor, their structure, benefits, and customization for multi-screen design... Artboards are special layer groups that clip the contents of any contained elements to their boundaries... act as individual canvases within a document... Create new artboards from presets (Desktop, Mobile, Social, Print)... Artboard from Layers... Artboard from Group... Duplicate Artboard... Export Artboards to Files"). In Adobe Photoshop:
+  1. `Artboard Containerization`: Specialized GIMP `GroupLayer` (`"<Name> (Artboard)"`) acting as an isolated canvas within the document. Non-destructive boundary clipping: group layer mask strictly clips all children to the artboard's bounding box (`[x, y, width, height]`), with a canvas-spanning boundary frame (`photogimp/artboard-bounds`) ensuring complete canvas coverage. Persistent metadata parasite `photogimp/artboard` stores dimensions, coordinates, preset name, background mode, and clipping state.
+  2. `Creation & Conversion`:
+     - `python-fu-create-artboard`: Creates new artboard with specified geometry or industry standard device presets (Desktop 1080p/1440p/4K, Mobile iPhone/Android, Tablet iPad, Social Instagram Square/Story, Print A4) and optional background layer (White, Black, Transparent).
+     - `python-fu-artboard-from-layers`: Automatically measures collective bounding box of selected layers and wraps them into a new artboard container.
+     - `python-fu-artboard-from-group`: Converts an existing layer group into an artboard container with boundary mask and metadata.
+  3. `Duplication & Spatial Arrangement`:
+     - `python-fu-duplicate-artboard`: Clones an existing artboard with all nested content, placed adjacent in specified direction (`right`, `left`, `below`, `above`) with customizable margin spacing, expanding parent image canvas if necessary.
+     - `python-fu-resize-artboard`: Modifies artboard dimensions (width, height), updating boundary clipping mask and background layer.
+  4. `Multi-Artboard Batch Export`:
+     - `python-fu-export-artboards`: Iterates through all artboards in the document and exports each artboard cropped to its exact individual bounds as standalone PNG or JPEG files.
+  5. `Canvas Artwork Integrity & Undo Protection`:
+     - Target and base canvas artwork pixels remain 100% untouched (`diff == 0.000000`).
+     - Single-step undo group encapsulation across all operations.
+  Stock GIMP has no native multi-canvas or Artboards support. Implementing `artboards` provides complete Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`: Created native Python 3 GObject-Introspection plugin implementing 6 PDB procedures (`python-fu-create-artboard`, `python-fu-artboard-from-layers`, `python-fu-artboard-from-group`, `python-fu-duplicate-artboard`, `python-fu-resize-artboard`, `python-fu-export-artboards`) with group layer boundary clipping, canvas boundary frame layer (`photogimp/artboard-bounds`), device presets, background fill layers, spatial duplication, and isolated duplicate cropped batch exports.
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `artboards` (69 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (69 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 70: `test_artboards` (asserting AB-01 through AB-18: PDB registration and argument signatures across all 6 procedures, artboard container creation with parasite metadata, device preset resolution, boundary mask clipping, background fill layer, artboard from layers bounding box calculation, artboard from group conversion, duplicate artboard adjacent placement, artboard geometry resizing, multi-artboard coexistence, content movement within artboard, batch export to PNG, batch export to JPEG, exported file dimensions verification, unclipped layer coexistence outside artboards, undo group encapsulation, active undo stack maintenance, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 856 passing across 70 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Artboards & Multi-Canvas Layout Manager entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 75 complete and scheduled Phase 76 (Content-Aware Scale & Intelligent Seam Carving Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.x, an empty `Gimp.GroupLayer` has bounding box $1 \times 1$. Attaching a transparent canvas-spanning boundary frame (`ensure_artboard_bounds_layer`) ensures that the group layer and its attached layer mask cover the entire document canvas ($0, 0, W, H$). Filling the mask with white only inside $(x, y, w, h)$ and black outside guarantees strict non-destructive boundary clipping of any child elements extending outside the artboard.
+  - In GIMP 3.x PyGObject, `Gimp.FillType` does not possess a `BLACK` enum constant (`type object 'FillType' has no attribute 'BLACK'`); filling with black is achieved by setting foreground color to black via `Gimp.context_set_foreground(Gegl.Color.new("rgb(0,0,0)"))` and calling `mask.edit_fill(Gimp.FillType.FOREGROUND)`.
+  - For multi-artboard export, cloning the document via `image.duplicate()`, setting visibility to only the target artboard group, and cropping the duplicate via `dup.crop(aw, ah, ax, ay)` allows fast, pristine rendering cropped to each artboard's exact geometry without mutating the main canvas.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 69 plugins verified).
+    - Stage 2: `install.sh --batch` passed (69 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 856 tests across 70 test suites in 154.72s.
+    - Final quality gate: SUCCESS across all stages in 171.56s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `f62eccb`. Outer repo `pending`.
+- **Result**: Success.
+- **Next**: Phase 76 — Content-Aware Scale & Intelligent Seam Carving Helper Plugin (`content-aware-scale`).
 
 

@@ -6,7 +6,7 @@
   "current_task": "Phase 81 — Layer Matting & Edge Defringe Suite Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "e02bec5",
+  "last_commit": "d18a4a7",
   "last_verified_task": "Phase 81 — Layer Matting & Edge Defringe Suite Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",

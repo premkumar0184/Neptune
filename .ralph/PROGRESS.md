@@ -2273,7 +2273,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (75 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 952 tests across 76 test suites in 168.09s.
     - Final quality gate: SUCCESS across all stages in 185.79s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `274f036`. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `274f036`. Outer repo `d18a4a7`.
 - **Result**: Success.
 - **Next**: Phase 82 — Paste Special: Paste Into & Paste Outside Selection Helper Plugin (`paste-special`).
 

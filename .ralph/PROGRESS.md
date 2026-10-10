@@ -2108,7 +2108,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (71 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 888 tests across 72 test suites in 160.72s.
     - Final quality gate: SUCCESS across all stages in 177.92s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `f77997e`. Outer repo `23a7625`.
 - **Result**: Success.
 - **Next**: Phase 78 — Straighten & Content-Aware Crop Fill Helper Plugin (`straighten-crop`).
 

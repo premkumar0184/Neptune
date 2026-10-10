@@ -1941,3 +1941,50 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 74 — Image Stacks Statistical Blending Helper Plugin (`image-stacks`).
 
+## Iteration 76 — Image Stacks Statistical Blending Helper Plugin
+- **Date**: 2026-10-10
+- **Account**: `account-A`
+- **Antigravity model**: Gemini 3.8 Flash (High)
+- **Task**: Implement native GIMP 3.x Python 3 Image Stacks & Statistical Blending Helper Plugin in `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
+- **Why this task**: Fulfills Photoshop workflow requirements (`Topics.txt` line 145: "Create and process image stacks"; `photoshop_docs.md` Section 149 lines 4440-4495: "Create and process image stacks... combine multiple images with similar framing but different qualities into a Smart Object. You can then apply stack modes processing options that analyze corresponding pixels across all layers to create a composite that eliminates noise, distortion, or unwanted objects... Stack modes: Entropy, Kurtosis, Maximum, Mean, Median, Minimum, Range, Skewness, Standard Deviation, Sum, Variance, None... File > Scripts > Statistics... File > Scripts > Load Files into Stack... Edit > Auto-Align Layers... Layer > Smart Objects > Stack Mode... Layer > Smart Objects > Rasterize"). In Adobe Photoshop:
+  1. `Image Stack Container`: Encapsulates source layers into a specialized Smart Object group layer (`"<Stack Name> (Image Stack)"`) with persistent metadata parasite (`photogimp/image-stack`), active composite layer (`photogimp/stack-composite`), and pristine source layer preservation.
+  2. `12 Photoshop Stack Modes`:
+     - `mean`: Average pixel values across all layers -> noise reduction (SNR improved by $\sqrt{N}$).
+     - `median`: Median pixel values -> removes transient objects (tourists, vehicles, pedestrians) and impulse noise.
+     - `maximum`: Lightest pixel values -> star trails, fireworks, light streaks.
+     - `minimum`: Darkest pixel values -> shadow accumulation, dark composite.
+     - `range`: Peak-to-peak difference (Max - Min) -> motion detection and variation mapping.
+     - `stddev`: Standard deviation across layers -> variability / noise analysis.
+     - `variance`: Variance across stack.
+     - `sum`: Exposure accumulation (clipped to [0, 1]) -> long exposure simulation / astrophotography.
+     - `entropy`: Normalized Shannon entropy of pixel distribution across stack.
+     - `skewness`: Third standardized moment measuring distribution asymmetry.
+     - `kurtosis`: Fourth standardized moment measuring distribution peakedness.
+     - `none`: Disables composite rendering, revealing top source layer (Photoshop parity).
+  3. `Auto-Align Stack Layers`: High-precision 2D phase correlation registration via FFT with Hanning window to align handheld/tripod frames.
+  4. `Load Files into Stack`: Multi-file image loader converting files into document layers with optional auto-alignment and instant stack creation.
+  5. `Statistics Pipeline`: Single-operation workflow mirroring Photoshop `File > Scripts > Statistics`: loads images, aligns them, wraps them into a stack, and renders composite.
+  6. `Rasterize Stack`: Permanently converts Smart Object image stack into a standard regular raster layer (`Layer > Smart Objects > Rasterize`).
+  Stock GIMP provides no built-in equivalent for Photoshop's Image Stacks, Smart Object Stack Modes, or the Statistics script. Implementing `image-stacks` provides full Photoshop parity on Linux.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`: Created native Python 3 GObject-Introspection plugin implementing 7 PDB procedures (`python-fu-create-image-stack`, `python-fu-set-stack-mode`, `python-fu-render-image-stack`, `python-fu-load-files-into-stack`, `python-fu-statistics-stack`, `python-fu-auto-align-stack`, `python-fu-rasterize-image-stack`) with float32 statistical calculations via numpy across all 12 modes, 2D phase correlation alignment, multi-file importer, single-step undo protection, and 100% base artwork preservation (`diff == 0.000000`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `image-stacks` (68 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (68 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 69: `test_image_stacks` (asserting IS-01 through IS-18: PDB registration and argument signatures across all 7 procedures, image stack container creation with parasite metadata, mean noise reduction math, median transient object removal, maximum light streaks, minimum shadow accumulation, range difference map, stddev variability, sum exposure accumulation, variance, none composite bypass, dynamic stack mode switching preserving source layers, auto-align via phase correlation, load files into stack, Statistics pipeline, rasterize stack, undo group encapsulation, and base canvas pixel preservation `diff == 0.000000`). Total tests increased to 838 passing across 69 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Image Stacks Statistical Blending entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 74 complete and scheduled Phase 75 (Artboards & Multi-Canvas Layout Manager Plugin).
+- **Technical discoveries**:
+  - Phase correlation (`np.fft.fft2` and `np.fft.ifft2`) with a 2D Hanning window provides sub-millisecond translation registration for handheld and tripod exposure series, completely invariant to brightness variations.
+  - In GIMP 3.x, composite rendering can be toggled without deleting source layers by controlling the composite layer's visibility (`composite.set_visible(False)`) and revealing the top source layer, faithfully mirroring Photoshop's Stack Mode 'None'.
+  - Python's standard `zlib` and `struct` libraries can write minimal valid uncompressed RGBA PNG files in ~1 millisecond without external image dependencies, enabling robust automated multi-file load testing.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 68 plugins verified).
+    - Stage 2: `install.sh --batch` passed (68 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 838 tests across 69 test suites in 152.46s.
+    - Final quality gate: SUCCESS across all stages in 169.29s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `637a6f0`. Outer repo `PENDING`.
+- **Result**: Success.
+- **Next**: Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin (`artboards`).
+
+

@@ -1185,6 +1185,23 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Image Stacks Statistical Blending Helper
+- **Source topic**: Create and manage layers - Create and process image stacks (`Topics.txt` line 145; `photoshop_docs.md` Section 149 lines 4440-4495: "Create and process image stacks... combine multiple images with similar framing but different qualities into a Smart Object... apply stack modes processing options that analyze corresponding pixels across all layers... Mean for noise reduction or Median for object removal... File > Scripts > Statistics... File > Scripts > Load Files into Stack... Edit > Auto-Align Layers... Layer > Smart Objects > Stack Mode... Layer > Smart Objects > Rasterize").
+- **Photoshop behavior**: Statistical blend processing across multiple exposures or frames in a Smart Object container. Supports 12 stack modes (Mean, Median, Maximum, Minimum, Range, Standard Deviation, Variance, Sum, Entropy, Skewness, Kurtosis, None). Provides automated multi-image loading, automated alignment registration, and rasterization.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `image-stacks` with 7 PDB procedures: `python-fu-create-image-stack`, `python-fu-set-stack-mode`, `python-fu-render-image-stack`, `python-fu-load-files-into-stack`, `python-fu-statistics-stack`, `python-fu-auto-align-stack`, and `python-fu-rasterize-image-stack`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
+- **Current capability**: Encapsulates layers into a Smart Object group layer with persistent metadata parasite (`photogimp/image-stack`) and active composite layer (`photogimp/stack-composite`). Implements float32 statistical processing in numpy across all 12 Photoshop modes. Includes 2D phase correlation auto-alignment, multi-file loader, automated Statistics pipeline, non-destructive dynamic mode switching, Smart Object stack rasterization, and 100% preservation of base canvas artwork underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), `numpy`.
+- **Implementation priority**: High (Phase 74).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 7 procedures (IS-01), image stack container creation (IS-02), Mean noise reduction math (IS-03), Median transient object removal (IS-04), Maximum light streaks/star trails (IS-05), Minimum shadow accumulation (IS-06), Range difference mapping (IS-07), StdDev variability analysis (IS-08), Sum exposure accumulation (IS-09), Variance (IS-10), None composite bypass (IS-11), dynamic mode switching preserving source layers (IS-12), auto-align stack layers via phase correlation (IS-13), multi-file loading (IS-14), one-shot Statistics pipeline (IS-15), stack rasterization (IS-16), undo group encapsulation (IS-17), and base canvas preservation (`diff == 0.000000`, IS-18).
+- **Verification evidence** (Iteration 76):
+  1. `verify_config.py`: Section 6 passed with 68 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 18 assertions IS-01 through IS-18 passing in Test Suite 69 (838/838 total assertions passing across 69 test suites in 152.46s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 76).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

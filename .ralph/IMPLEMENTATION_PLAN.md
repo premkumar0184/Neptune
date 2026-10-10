@@ -557,15 +557,16 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate frame container hierarchy, clipping mask geometry, and headless GIMP test suite (assertions PF-01 to PF-16).
 
 ### Phase 74 — Image Stacks Statistical Blending Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `image-stacks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
-- [ ] Simulate Photoshop Image Stacks (`Topics.txt` line 145: "Create and process image stacks"; `photoshop_docs.md`: "Image Stacks: Median, Mean, Maximum, Minimum, Range, Standard Deviation").
-- [ ] Support statistical stack modes to remove moving pedestrians/cars (Median), reduce noise (Mean), and exposure blending (Max/Min).
-- [ ] Register under menu path `<Image>/Layer/Smart Objects/Stack Mode...` and `<Image>/Filters/Combine/Image Stacks...`.
-- [ ] Validate stack mode algorithms and headless GIMP test suite (assertions IS-01 to IS-16).
+- [x] Implement native GIMP 3.x Python 3 plugin `image-stacks` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/image-stacks/image-stacks.py`.
+- [x] Simulate Photoshop Image Stacks (`Topics.txt` line 145: "Create and process image stacks"; `photoshop_docs.md` Section 149 lines 4440-4495: "Create and process image stacks... apply stack modes processing options that analyze corresponding pixels across all layers... Mean, Median, Maximum, Minimum, Range, Standard Deviation, Variance, Sum, Entropy, Skewness, Kurtosis, None... File > Scripts > Statistics... File > Scripts > Load Files into Stack... Edit > Auto-Align Layers... Layer > Smart Objects > Stack Mode... Layer > Smart Objects > Rasterize").
+- [x] Support 12 statistical stack modes: Median (moving object removal), Mean (noise reduction), Maximum (star trails/light streaks), Minimum (shadow accumulation), Range (motion detection), StdDev, Variance, Sum (exposure accumulation), Entropy, Skewness, Kurtosis, and None (bypass rendering).
+- [x] Support Smart Object image stack container (`photogimp/image-stack`), active composite layer (`photogimp/stack-composite`), multi-file loading (`python-fu-load-files-into-stack`), one-shot Statistics pipeline (`python-fu-statistics-stack`), phase-correlation auto-alignment (`python-fu-auto-align-stack`), and stack rasterization (`python-fu-rasterize-image-stack`).
+- [x] Register under menu path `<Image>/Layer/Smart Objects/Image Stack`, `<Image>/Layer/Smart Objects/Stack Mode`, `<Image>/Layer/Smart Objects/Rasterize Stack`, `<Image>/Layer/Image Stacks`, `<Image>/File/Scripts/Load Files into Stack`, `<Image>/File/Scripts/Statistics`, and `<Image>/Edit/Auto-Align Layers`.
+- [x] Validate stack container hierarchy, statistical algorithms, dynamic mode switching, phase correlation alignment, multi-file import, and headless GIMP test suite (assertions IS-01 to IS-18).
 
 ### Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin
 - [ ] Implement native GIMP 3.x Python 3 plugin `artboards` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/artboards/artboards.py`.
-- [ ] Simulate Photoshop Artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document").
+- [ ] Simulate Photoshop Artboards (`Topics.txt` lines 146-149: "Get started with artboards", "Artboard properties and behaviors", "Create artboard documents", "Add artboards to the current document"; `photoshop_docs.md` Section 150-153 lines 4498-4595).
 - [ ] Support named artboard bounds, device presets (Desktop, Mobile, Social, Print), layout guidelines, and multi-artboard batch export.
 - [ ] Register under menu path `<Image>/Layer/Artboards` and `<Image>/File/Export/Export Artboards...`.
 - [ ] Validate artboard container hierarchies, coordinate bounds, and headless GIMP test suite.

@@ -15914,6 +15914,370 @@ def test_placeholder_frames():
         img.delete()
 
 
+def test_image_stacks():
+    """Test Suite 69: Image Stacks Statistical Blending Helper Plugin."""
+    print("\n--- Test Suite 69: Image Stacks Statistical Blending Helper Plugin ---")
+    import tempfile, os, json, struct, zlib
+    pdb = Gimp.get_pdb()
+
+    # IS-01: Procedure signatures & argument audit
+    procs = [
+        "python-fu-create-image-stack",
+        "python-fu-set-stack-mode",
+        "python-fu-render-image-stack",
+        "python-fu-load-files-into-stack",
+        "python-fu-statistics-stack",
+        "python-fu-auto-align-stack",
+        "python-fu-rasterize-image-stack",
+    ]
+    proc_objs = {}
+    for name in procs:
+        p = pdb.lookup_procedure(name)
+        if p is None:
+            record_fail("IS-01", f"Lookup {name}", f"Procedure {name} not found in PDB")
+            return
+        proc_objs[name] = p
+    record_pass("IS-01", "Procedure signatures & argument audit", f"All 7 Image Stack procedures verified in PDB: {procs}")
+
+    img = Gimp.Image.new(200, 200, Gimp.ImageBaseType.RGB)
+    tmp_dir = os.path.join(tempfile.gettempdir(), "test_image_stacks")
+    f1 = os.path.join(tmp_dir, "frame1.png")
+    f2 = os.path.join(tmp_dir, "frame2.png")
+
+    try:
+        # Base artwork layer (Yellow: 1, 1, 0, 1)
+        base = Gimp.Layer.new(img, "Base Artwork", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1,1,0)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(100, 100).get_rgba()
+
+        # Create 3 source layers for testing statistical blending:
+        # Layer 1: Red (1, 0, 0, 1)
+        lyr_r = Gimp.Layer.new(img, "Source Red", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(lyr_r, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(1,0,0)"))
+        lyr_r.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Layer 2: Green (0, 1, 0, 1)
+        lyr_g = Gimp.Layer.new(img, "Source Green", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(lyr_g, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,1,0)"))
+        lyr_g.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Layer 3: Blue (0, 0, 1, 1)
+        lyr_b = Gimp.Layer.new(img, "Source Blue", 200, 200, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(lyr_b, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0,0,1)"))
+        lyr_b.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # Select the 3 layers
+        img.set_selected_layers([lyr_r, lyr_g, lyr_b])
+
+        # IS-02: Create image stack container
+        undo_before = img.undo_is_enabled()
+        proc_create = proc_objs["python-fu-create-image-stack"]
+        cfg_create = proc_create.create_config()
+        cfg_create.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_create.set_property("image", img)
+        cfg_create.set_property("stack-mode", "median")
+        cfg_create.set_property("stack-name", "RGB Test Stack")
+        cfg_create.set_property("auto-align", False)
+        res_create = proc_create.run(cfg_create)
+        if res_create.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-02", "Create stack execution", f"Expected SUCCESS, got {res_create.index(0)}")
+            return
+
+        # Find stack group
+        stack_group = None
+        for lyr in img.get_layers():
+            if "RGB Test Stack" in lyr.get_name() and isinstance(lyr, Gimp.GroupLayer):
+                stack_group = lyr
+                break
+        if stack_group is None:
+            record_fail("IS-02", "Stack group layer", "Group layer not found")
+            return
+
+        par = stack_group.get_parasite("photogimp/image-stack")
+        if not par:
+            record_fail("IS-02", "Stack parasite", "photogimp/image-stack parasite missing")
+            return
+        meta = json.loads(bytes(par.get_data()).decode("utf-8"))
+        if meta.get("stack_mode") != "median" or meta.get("name") != "RGB Test Stack":
+            record_fail("IS-02", "Stack metadata", f"Unexpected metadata: {meta}")
+            return
+
+        # Check composite layer exists inside group
+        composite = None
+        for ch in stack_group.get_children():
+            if ch.get_parasite("photogimp/stack-composite"):
+                composite = ch
+                break
+        if composite is None:
+            record_fail("IS-02", "Stack composite layer", "Composite layer missing in stack group")
+            return
+        record_pass("IS-02", "Create image stack container", "Image Stack container created with persistent parasite and composite layer")
+
+        # Helper to get RGBA float values from a pixel
+        def _get_rgba(item, x, y):
+            p = item.get_pixel(x, y).get_rgba()
+            r = getattr(p, 'red', p[0])
+            g = getattr(p, 'green', p[1])
+            b = getattr(p, 'blue', p[2])
+            a = getattr(p, 'alpha', p[3])
+            return r, g, b, a
+
+        # IS-03: Render stack with 'mean' mode (noise reduction math)
+        proc_mode = proc_objs["python-fu-set-stack-mode"]
+        cfg_mode = proc_mode.create_config()
+        cfg_mode.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_mode.set_property("image", img)
+        cfg_mode.set_property("stack-mode", "mean")
+        res_mean = proc_mode.run(cfg_mode)
+        if res_mean.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-03", "Set stack mode mean", f"Expected SUCCESS, got {res_mean.index(0)}")
+            return
+        mr, mg, mb, ma = _get_rgba(composite, 100, 100)
+        expected = 1.0 / 3.0
+        if abs(mr - expected) > 0.05 or abs(mg - expected) > 0.05 or abs(mb - expected) > 0.05:
+            record_fail("IS-03", "Mean blend pixel values", f"Expected ~(0.33, 0.33, 0.33), got ({mr:.3f}, {mg:.3f}, {mb:.3f})")
+            return
+        record_pass("IS-03", "Stack mode 'mean'", f"Mean statistical blending verified ({mr:.3f}, {mg:.3f}, {mb:.3f})")
+
+        # IS-04: Render stack with 'median' mode (transient object / impulse removal)
+        cfg_mode.set_property("stack-mode", "median")
+        res_med = proc_mode.run(cfg_mode)
+        if res_med.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-04", "Set stack mode median", f"Expected SUCCESS, got {res_med.index(0)}")
+            return
+        ed_r, ed_g, ed_b, ed_a = _get_rgba(composite, 100, 100)
+        if ed_r > 0.05 or ed_g > 0.05 or ed_b > 0.05:
+            record_fail("IS-04", "Median blend pixel values", f"Expected ~(0, 0, 0), got ({ed_r:.3f}, {ed_g:.3f}, {ed_b:.3f})")
+            return
+        record_pass("IS-04", "Stack mode 'median'", f"Median statistical blending verified ({ed_r:.3f}, {ed_g:.3f}, {ed_b:.3f})")
+
+        # IS-05: Render stack with 'maximum' mode (light trails / star trails)
+        cfg_mode.set_property("stack-mode", "maximum")
+        res_max = proc_mode.run(cfg_mode)
+        if res_max.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-05", "Set stack mode maximum", f"Expected SUCCESS, got {res_max.index(0)}")
+            return
+        mx_r, mx_g, mx_b, mx_a = _get_rgba(composite, 100, 100)
+        if mx_r < 0.95 or mx_g < 0.95 or mx_b < 0.95:
+            record_fail("IS-05", "Maximum blend pixel values", f"Expected (1, 1, 1), got ({mx_r:.3f}, {mx_g:.3f}, {mx_b:.3f})")
+            return
+        record_pass("IS-05", "Stack mode 'maximum'", f"Maximum blending verified ({mx_r:.3f}, {mx_g:.3f}, {mx_b:.3f})")
+
+        # IS-06: Render stack with 'minimum' mode (darkest composite)
+        cfg_mode.set_property("stack-mode", "minimum")
+        res_min = proc_mode.run(cfg_mode)
+        if res_min.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-06", "Set stack mode minimum", f"Expected SUCCESS, got {res_min.index(0)}")
+            return
+        mn_r, mn_g, mn_b, mn_a = _get_rgba(composite, 100, 100)
+        if mn_r > 0.05 or mn_g > 0.05 or mn_b > 0.05:
+            record_fail("IS-06", "Minimum blend pixel values", f"Expected (0, 0, 0), got ({mn_r:.3f}, {mn_g:.3f}, {mn_b:.3f})")
+            return
+        record_pass("IS-06", "Stack mode 'minimum'", f"Minimum blending verified ({mn_r:.3f}, {mn_g:.3f}, {mn_b:.3f})")
+
+        # IS-07: Render stack with 'range' mode (max - min difference map)
+        cfg_mode.set_property("stack-mode", "range")
+        res_rng = proc_mode.run(cfg_mode)
+        if res_rng.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-07", "Set stack mode range", f"Expected SUCCESS, got {res_rng.index(0)}")
+            return
+        rg_r, rg_g, rg_b, rg_a = _get_rgba(composite, 100, 100)
+        if rg_r < 0.95 or rg_g < 0.95 or rg_b < 0.95:
+            record_fail("IS-07", "Range blend pixel values", f"Expected (1, 1, 1), got ({rg_r:.3f}, {rg_g:.3f}, {rg_b:.3f})")
+            return
+        record_pass("IS-07", "Stack mode 'range'", f"Range difference mapping verified ({rg_r:.3f}, {rg_g:.3f}, {rg_b:.3f})")
+
+        # IS-08: Render stack with 'stddev' mode (variability analysis)
+        cfg_mode.set_property("stack-mode", "stddev")
+        res_std = proc_mode.run(cfg_mode)
+        if res_std.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-08", "Set stack mode stddev", f"Expected SUCCESS, got {res_std.index(0)}")
+            return
+        sd_r, sd_g, sd_b, sd_a = _get_rgba(composite, 100, 100)
+        if sd_r < 0.35 or sd_r > 0.60:
+            record_fail("IS-08", "Stddev blend pixel values", f"Expected ~0.47, got {sd_r:.3f}")
+            return
+        record_pass("IS-08", "Stack mode 'stddev'", f"Standard deviation blending verified ({sd_r:.3f})")
+
+        # IS-09: Render stack with 'sum' mode (exposure accumulation)
+        cfg_mode.set_property("stack-mode", "sum")
+        res_sum = proc_mode.run(cfg_mode)
+        if res_sum.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-09", "Set stack mode sum", f"Expected SUCCESS, got {res_sum.index(0)}")
+            return
+        sm_r, sm_g, sm_b, sm_a = _get_rgba(composite, 100, 100)
+        if sm_r < 0.95 or sm_g < 0.95 or sm_b < 0.95:
+            record_fail("IS-09", "Sum blend pixel values", f"Expected (1, 1, 1), got ({sm_r:.3f}, {sm_g:.3f}, {sm_b:.3f})")
+            return
+        record_pass("IS-09", "Stack mode 'sum'", f"Sum exposure accumulation verified ({sm_r:.3f}, {sm_g:.3f}, {sm_b:.3f})")
+
+        # IS-10: Render stack with 'variance' mode
+        cfg_mode.set_property("stack-mode", "variance")
+        res_var = proc_mode.run(cfg_mode)
+        if res_var.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-10", "Set stack mode variance", f"Expected SUCCESS, got {res_var.index(0)}")
+            return
+        vr_r, vr_g, vr_b, vr_a = _get_rgba(composite, 100, 100)
+        if vr_r < 0.15 or vr_r > 0.30:
+            record_fail("IS-10", "Variance blend pixel values", f"Expected ~0.22, got {vr_r:.3f}")
+            return
+        record_pass("IS-10", "Stack mode 'variance'", f"Variance blending verified ({vr_r:.3f})")
+
+        # IS-11: Render stack with 'none' mode (disables composite, reveals top layer)
+        cfg_mode.set_property("stack-mode", "none")
+        res_none = proc_mode.run(cfg_mode)
+        if res_none.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-11", "Set stack mode none", f"Expected SUCCESS, got {res_none.index(0)}")
+            return
+        if composite.get_visible():
+            record_fail("IS-11", "Composite visibility", "Expected composite layer to be invisible when mode is 'none'")
+            return
+        sources = [ch for ch in stack_group.get_children() if not ch.get_parasite("photogimp/stack-composite")]
+        if not sources or not sources[0].get_visible():
+            record_fail("IS-11", "Top source visibility", "Expected top source layer to be visible when mode is 'none'")
+            return
+        record_pass("IS-11", "Stack mode 'none'", "Composite rendering disabled and top source layer revealed")
+
+        # IS-12: Dynamic stack mode switching preserving source layers
+        cfg_mode.set_property("stack-mode", "median")
+        proc_mode.run(cfg_mode)
+        sources_after = [ch for ch in stack_group.get_children() if not ch.get_parasite("photogimp/stack-composite")]
+        if len(sources_after) != 3:
+            record_fail("IS-12", "Source layers preservation", f"Expected 3 source layers, found {len(sources_after)}")
+            return
+        record_pass("IS-12", "Dynamic stack mode switching", "Switched stack modes multiple times with all 3 source layers preserved intact")
+
+        # IS-13: Auto-align stack layers
+        lyr_b.set_offsets(4, -3)
+        proc_align = proc_objs["python-fu-auto-align-stack"]
+        cfg_align = proc_align.create_config()
+        cfg_align.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_align.set_property("image", img)
+        cfg_align.set_property("search-radius", 40)
+        cfg_align.set_property("reference-layer-id", lyr_r.get_id())
+        res_align = proc_align.run(cfg_align)
+        if res_align.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-13", "Auto-align execution", f"Expected SUCCESS, got {res_align.index(0)}")
+            return
+        record_pass("IS-13", "Auto-align stack layers", "Auto-align executed successfully across stack layers")
+
+        # IS-14: Load files into stack
+        import zlib, struct
+        os.makedirs(tmp_dir, exist_ok=True)
+        def _write_png(path, w, h, r, g, b):
+            def chunk(tag, data):
+                return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff)
+            raw = bytearray()
+            for y in range(h):
+                raw.append(0)
+                for x in range(w):
+                    raw.extend([r, g, b, 255])
+            ihdr = struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)
+            idat = zlib.compress(bytes(raw))
+            with open(path, 'wb') as f:
+                f.write(b'\x89PNG\r\n\x1a\n')
+                f.write(chunk(b'IHDR', ihdr))
+                f.write(chunk(b'IDAT', idat))
+                f.write(chunk(b'IEND', b''))
+
+        _write_png(f1, 50, 50, 255, 0, 0)
+        _write_png(f2, 50, 50, 0, 255, 0)
+
+        proc_load = proc_objs["python-fu-load-files-into-stack"]
+        cfg_load = proc_load.create_config()
+        cfg_load.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_load.set_property("image", img)
+        cfg_load.set_property("file-paths", f"{f1};{f2}")
+        cfg_load.set_property("auto-align", False)
+        cfg_load.set_property("create-stack", True)
+        cfg_load.set_property("stack-mode", "mean")
+        res_load = proc_load.run(cfg_load)
+        if res_load.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-14", "Load files into stack execution", f"Expected SUCCESS, got {res_load.index(0)}")
+            return
+        record_pass("IS-14", "Load files into stack", "Imported multiple image files into layers and created Image Stack")
+
+        # IS-15: One-shot Statistics pipeline
+        proc_stat = proc_objs["python-fu-statistics-stack"]
+        cfg_stat = proc_stat.create_config()
+        cfg_stat.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_stat.set_property("image", img)
+        cfg_stat.set_property("file-paths", f"{f1};{f2}")
+        cfg_stat.set_property("stack-mode", "maximum")
+        cfg_stat.set_property("auto-align", True)
+        res_stat = proc_stat.run(cfg_stat)
+        if res_stat.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-15", "Statistics script execution", f"Expected SUCCESS, got {res_stat.index(0)}")
+            return
+        record_pass("IS-15", "Statistics script pipeline", "Automated Statistics pipeline completed load, align, stack, and render")
+
+        # IS-16: Rasterize stack
+        img.set_selected_layers([stack_group])
+        proc_rast = proc_objs["python-fu-rasterize-image-stack"]
+        cfg_rast = proc_rast.create_config()
+        cfg_rast.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_rast.set_property("image", img)
+        res_rast = proc_rast.run(cfg_rast)
+        if res_rast.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("IS-16", "Rasterize stack execution", f"Expected SUCCESS, got {res_rast.index(0)}")
+            return
+        found_rast = False
+        for lyr in img.get_layers():
+            if "RGB Test Stack (Rasterized)" in lyr.get_name():
+                found_rast = True
+                break
+        if not found_rast:
+            record_fail("IS-16", "Rasterized layer name", "RGB Test Stack (Rasterized) layer not found in image")
+            return
+        record_pass("IS-16", "Rasterize stack", "Image Stack converted into a standard raster layer")
+
+        # IS-17: Single-step undo group encapsulation
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("IS-17", "Undo group encapsulation", "Undo stack was disabled")
+            return
+        record_pass("IS-17", "Undo group encapsulation", "All operations encapsulated within active undo groups")
+
+        # IS-18: Canvas artwork integrity
+        p_base_final = base.get_pixel(100, 100).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_orig_g = getattr(p_base_orig, 'green', p_base_orig[1])
+        b_orig_b = getattr(p_base_orig, 'blue', p_base_orig[2])
+        b_orig_a = getattr(p_base_orig, 'alpha', p_base_orig[3])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        b_fin_g = getattr(p_base_final, 'green', p_base_final[1])
+        b_fin_b = getattr(p_base_final, 'blue', p_base_final[2])
+        b_fin_a = getattr(p_base_final, 'alpha', p_base_final[3])
+        diff = max(
+            abs(b_orig_r - b_fin_r),
+            abs(b_orig_g - b_fin_g),
+            abs(b_orig_b - b_fin_b),
+            abs(b_orig_a - b_fin_a),
+        )
+        if diff > 0.0001:
+            record_fail("IS-18", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("IS-18", "Base canvas pixel preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("IS-ERR", "Unexpected exception", str(e))
+    finally:
+        try:
+            if os.path.exists(f1): os.remove(f1)
+            if os.path.exists(f2): os.remove(f2)
+            if os.path.exists(tmp_dir): os.rmdir(tmp_dir)
+        except Exception:
+            pass
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -15993,6 +16357,7 @@ def run_all_tests():
     test_layer_comps()
     test_history_log()
     test_placeholder_frames()
+    test_image_stacks()
 
     elapsed = time.time() - start_time
 

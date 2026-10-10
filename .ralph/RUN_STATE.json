@@ -6,7 +6,7 @@
   "current_task": "Phase 74 — Image Stacks Statistical Blending Helper Plugin",
   "account_label": "account-A",
   "model": "Gemini 3.8 Flash (High)",
-  "last_commit": "6df9cd0",
+  "last_commit": "50d0b99",
   "last_verified_task": "Phase 74 — Image Stacks Statistical Blending Helper Plugin",
   "verification": {
     "command": "python3 tests/run_all_tests.py",

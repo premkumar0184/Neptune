@@ -1983,7 +1983,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (68 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 838 tests across 69 test suites in 152.46s.
     - Final quality gate: SUCCESS across all stages in 169.29s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `637a6f0`. Outer repo `PENDING`.
+- **Commit**: PhotoGIMP sub-repo `637a6f0`. Outer repo `50d0b99`.
 - **Result**: Success.
 - **Next**: Phase 75 — Artboards & Multi-Canvas Layout Manager Plugin (`artboards`).
 

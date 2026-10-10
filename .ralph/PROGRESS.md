@@ -2022,7 +2022,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (69 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 856 tests across 70 test suites in 154.72s.
     - Final quality gate: SUCCESS across all stages in 171.56s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo `f62eccb`. Outer repo `pending`.
+- **Commit**: PhotoGIMP sub-repo `f62eccb`. Outer repo `9a2290b`.
 - **Result**: Success.
 - **Next**: Phase 76 — Content-Aware Scale & Intelligent Seam Carving Helper Plugin (`content-aware-scale`).
 

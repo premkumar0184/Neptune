@@ -2068,7 +2068,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (70 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 872 tests across 71 test suites in 158.60s.
     - Final quality gate: SUCCESS across all stages in 175.63s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `9f241a3`. Outer repo `e4e6bc2`.
 - **Result**: Success.
 - **Next**: Phase 77 — Perspective Crop & Keystone Rectification Helper Plugin (`perspective-crop`).
 

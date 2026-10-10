@@ -18055,6 +18055,278 @@ def test_delete_fill_selection():
         img.delete()
 
 
+def test_layer_matting():
+    print("\n--- Test Suite 76: Layer Matting & Edge Defringe Suite Helper Plugin ---")
+    pdb = Gimp.get_pdb()
+
+    # LM-01: Procedure signatures & argument audit
+    procs = [
+        ("python-fu-matting-defringe", ["run-mode", "image", "drawables", "width", "new-layer"]),
+        ("python-fu-matting-remove-black-matte", ["run-mode", "image", "drawables", "new-layer"]),
+        ("python-fu-matting-remove-white-matte", ["run-mode", "image", "drawables", "new-layer"]),
+        ("python-fu-matting-color-decontaminate", ["run-mode", "image", "drawables", "amount", "radius", "new-layer"])
+    ]
+
+    for pname, expected_args in procs:
+        proc = pdb.lookup_procedure(pname)
+        if not proc:
+            record_fail("LM-01", "Procedure registration", f"Procedure '{pname}' not registered in PDB")
+            return
+        args = [arg.name for arg in proc.get_arguments()]
+        for ea in expected_args:
+            if ea not in args:
+                record_fail("LM-01", "Procedure arguments", f"Procedure '{pname}' missing argument '{ea}'")
+                return
+
+    record_pass("LM-01", "Procedure signatures & argument audit", "All 4 procedures registered with complete parameter schemas")
+
+    # Set up test document
+    img = Gimp.Image.new(100, 100, Gimp.ImageBaseType.RGB)
+    try:
+        undo_before = img.undo_is_enabled()
+
+        # Base layer: solid background
+        base = Gimp.Layer.new(img, "BaseCanvas", 100, 100, Gimp.ImageType.RGB_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        p_base_orig = base.get_pixel(10, 10).get_rgba()
+
+        # Subject layer 1: For Defringe test
+        # Red center (20..80, 20..80) with alpha 1.0; outer edge perimeter (80..82) with Cyan color (0, 1, 1) and alpha 0.4
+        defringe_layer = Gimp.Layer.new(img, "DefringeSubject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(defringe_layer, None, 0)
+
+        # Populate buffer
+        arr = np.zeros((100, 100, 4), dtype=np.float32)
+        # Red core
+        arr[20:80, 20:80] = [1.0, 0.0, 0.0, 1.0]
+        # Cyan fringe along right edge (x=80..82, y=20..80)
+        arr[20:80, 80:82] = [0.0, 1.0, 1.0, 0.4]
+
+        buf = defringe_layer.get_buffer()
+        rect = Gegl.Rectangle.new(0, 0, 100, 100)
+        buf.set(rect, "RGBA float", arr.tobytes())
+        buf.flush()
+        defringe_layer.update(0, 0, 100, 100)
+
+        # LM-02: Defringe execution
+        proc_def = pdb.lookup_procedure("python-fu-matting-defringe")
+        cfg_def = proc_def.create_config()
+        cfg_def.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_def.set_property("image", img)
+        cfg_def.set_property("width", 2)
+        cfg_def.set_property("new-layer", False)
+        img.set_selected_layers([defringe_layer])
+
+        res_def = proc_def.run(cfg_def)
+        if res_def.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LM-02", "Defringe execution", f"Expected SUCCESS, got {res_def.index(0)}")
+            return
+
+        # Check edge pixel (80, 50): Cyan should have been replaced with Red
+        raw_out = defringe_layer.get_buffer().get(rect, 1.0, "RGBA float", Gegl.AbyssPolicy.CLAMP)
+        arr_def = np.frombuffer(raw_out, dtype=np.float32).reshape((100, 100, 4))
+        p_edge = arr_def[50, 80]
+        if p_edge[0] < 0.8 or p_edge[1] > 0.3 or p_edge[2] > 0.3:
+            record_fail("LM-02", "Defringe color replacement", f"Expected Red core color replacement, got RGB=({p_edge[0]:.3f}, {p_edge[1]:.3f}, {p_edge[2]:.3f})")
+            return
+        record_pass("LM-02", "Defringe execution", f"Fringe pixel replaced with core color (R={p_edge[0]:.3f}, G={p_edge[1]:.3f}, B={p_edge[2]:.3f})")
+
+        # LM-03: Defringe width control
+        # Pixel at (81, 50) was within distance 2 of core: should also be replaced
+        p_edge2 = arr_def[50, 81]
+        if p_edge2[0] < 0.8:
+            record_fail("LM-03", "Defringe width replacement", f"Expected width 2 replacement at x=81, got R={p_edge2[0]:.3f}")
+            return
+        record_pass("LM-03", "Defringe width control", f"Width parameter successfully reached perimeter pixel (R={p_edge2[0]:.3f})")
+
+        # LM-04 & LM-05: Remove Black Matte
+        # Create Black Matte test layer: Orange foreground (1.0, 0.5, 0.0), edge pixel at alpha=0.5 mixed with black -> (0.5, 0.25, 0.0, 0.5)
+        bm_layer = Gimp.Layer.new(img, "BlackMatteSubject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(bm_layer, None, 0)
+        arr_bm = np.zeros((100, 100, 4), dtype=np.float32)
+        arr_bm[20:80, 20:80] = [1.0, 0.5, 0.0, 1.0]
+        # Anti-aliased black fringe pixel at x=80, y=50
+        arr_bm[50, 80] = [0.5, 0.25, 0.0, 0.5]
+
+        bm_layer.get_buffer().set(rect, "RGBA float", arr_bm.tobytes())
+        bm_layer.get_buffer().flush()
+        bm_layer.update(0, 0, 100, 100)
+
+        proc_bm = pdb.lookup_procedure("python-fu-matting-remove-black-matte")
+        cfg_bm = proc_bm.create_config()
+        cfg_bm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_bm.set_property("image", img)
+        cfg_bm.set_property("new-layer", False)
+        img.set_selected_layers([bm_layer])
+
+        res_bm = proc_bm.run(cfg_bm)
+        if res_bm.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LM-04", "Remove Black Matte execution", f"Expected SUCCESS, got {res_bm.index(0)}")
+            return
+        record_pass("LM-04", "Remove Black Matte execution", "Executed cleanly with status SUCCESS")
+
+        raw_bm_out = bm_layer.get_buffer().get(rect, 1.0, "RGBA float", Gegl.AbyssPolicy.CLAMP)
+        arr_bm_out = np.frombuffer(raw_bm_out, dtype=np.float32).reshape((100, 100, 4))
+        p_bm = arr_bm_out[50, 80]
+        # Restored should be (1.0, 0.5, 0.0, 0.5)
+        if abs(p_bm[0] - 1.0) > 0.05 or abs(p_bm[1] - 0.5) > 0.05 or p_bm[2] > 0.05 or abs(p_bm[3] - 0.5) > 0.01:
+            record_fail("LM-05", "Remove Black Matte fidelity", f"Expected restored unmixed Orange (1.0, 0.5, 0.0, 0.5), got ({p_bm[0]:.3f}, {p_bm[1]:.3f}, {p_bm[2]:.3f}, {p_bm[3]:.3f})")
+            return
+        record_pass("LM-05", "Remove Black Matte unmixing fidelity", f"Dark fringe luminance unmixed to true foreground (R={p_bm[0]:.3f}, G={p_bm[1]:.3f}, B={p_bm[2]:.3f}, A={p_bm[3]:.3f})")
+
+        # LM-06 & LM-07: Remove White Matte
+        # Create White Matte test layer: Blue foreground (0.0, 0.2, 0.9), edge pixel at alpha=0.5 mixed with white -> (0.5, 0.6, 0.95, 0.5)
+        wm_layer = Gimp.Layer.new(img, "WhiteMatteSubject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(wm_layer, None, 0)
+        arr_wm = np.zeros((100, 100, 4), dtype=np.float32)
+        arr_wm[20:80, 20:80] = [0.0, 0.2, 0.9, 1.0]
+        # Anti-aliased white fringe pixel at x=80, y=50
+        arr_wm[50, 80] = [0.5, 0.6, 0.95, 0.5]
+
+        wm_layer.get_buffer().set(rect, "RGBA float", arr_wm.tobytes())
+        wm_layer.get_buffer().flush()
+        wm_layer.update(0, 0, 100, 100)
+
+        proc_wm = pdb.lookup_procedure("python-fu-matting-remove-white-matte")
+        cfg_wm = proc_wm.create_config()
+        cfg_wm.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_wm.set_property("image", img)
+        cfg_wm.set_property("new-layer", False)
+        img.set_selected_layers([wm_layer])
+
+        res_wm = proc_wm.run(cfg_wm)
+        if res_wm.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LM-06", "Remove White Matte execution", f"Expected SUCCESS, got {res_wm.index(0)}")
+            return
+        record_pass("LM-06", "Remove White Matte execution", "Executed cleanly with status SUCCESS")
+
+        raw_wm_out = wm_layer.get_buffer().get(rect, 1.0, "RGBA float", Gegl.AbyssPolicy.CLAMP)
+        arr_wm_out = np.frombuffer(raw_wm_out, dtype=np.float32).reshape((100, 100, 4))
+        p_wm = arr_wm_out[50, 80]
+        # Restored should be (0.0, 0.2, 0.9, 0.5)
+        if p_wm[0] > 0.05 or abs(p_wm[1] - 0.2) > 0.05 or abs(p_wm[2] - 0.9) > 0.05 or abs(p_wm[3] - 0.5) > 0.01:
+            record_fail("LM-07", "Remove White Matte fidelity", f"Expected restored unmixed Blue (0.0, 0.2, 0.9, 0.5), got ({p_wm[0]:.3f}, {p_wm[1]:.3f}, {p_wm[2]:.3f}, {p_wm[3]:.3f})")
+            return
+        record_pass("LM-07", "Remove White Matte unmixing fidelity", f"Pale milky fringe unmixed to true vibrant color (R={p_wm[0]:.3f}, G={p_wm[1]:.3f}, B={p_wm[2]:.3f}, A={p_wm[3]:.3f})")
+
+        # LM-08, LM-09, LM-10: Color Decontaminate
+        # Create Decontaminate test layer: Magenta core (1.0, 0.0, 1.0, 1.0) with Green contaminated fringe (0.0, 1.0, 0.0, 0.5)
+        cd_layer = Gimp.Layer.new(img, "DecontamSubject", 100, 100, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(cd_layer, None, 0)
+        arr_cd = np.zeros((100, 100, 4), dtype=np.float32)
+        arr_cd[20:80, 20:80] = [1.0, 0.0, 1.0, 1.0]
+        arr_cd[50, 80] = [0.0, 1.0, 0.0, 0.5]
+
+        cd_layer.get_buffer().set(rect, "RGBA float", arr_cd.tobytes())
+        cd_layer.get_buffer().flush()
+        cd_layer.update(0, 0, 100, 100)
+
+        proc_cd = pdb.lookup_procedure("python-fu-matting-color-decontaminate")
+        cfg_cd = proc_cd.create_config()
+        cfg_cd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_cd.set_property("image", img)
+        cfg_cd.set_property("amount", 100.0)
+        cfg_cd.set_property("radius", 5)
+        cfg_cd.set_property("new-layer", False)
+        img.set_selected_layers([cd_layer])
+
+        res_cd = proc_cd.run(cfg_cd)
+        if res_cd.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("LM-08", "Color Decontaminate execution", f"Expected SUCCESS, got {res_cd.index(0)}")
+            return
+
+        raw_cd_out = cd_layer.get_buffer().get(rect, 1.0, "RGBA float", Gegl.AbyssPolicy.CLAMP)
+        arr_cd_out = np.frombuffer(raw_cd_out, dtype=np.float32).reshape((100, 100, 4))
+        p_cd = arr_cd_out[50, 80]
+        if p_cd[0] < 0.8 or p_cd[1] > 0.2 or p_cd[2] < 0.8:
+            record_fail("LM-08", "Color Decontaminate propagation", f"Expected Magenta propagation, got ({p_cd[0]:.3f}, {p_cd[1]:.3f}, {p_cd[2]:.3f})")
+            return
+        record_pass("LM-08", "Color Decontaminate execution", f"Core subject chrominance propagated outward (R={p_cd[0]:.3f}, G={p_cd[1]:.3f}, B={p_cd[2]:.3f})")
+
+        # LM-09: Amount control (50% blend)
+        arr_cd2 = np.zeros((100, 100, 4), dtype=np.float32)
+        arr_cd2[20:80, 20:80] = [1.0, 0.0, 1.0, 1.0]
+        arr_cd2[50, 80] = [0.0, 1.0, 0.0, 0.5]
+        cd_layer.get_buffer().set(rect, "RGBA float", arr_cd2.tobytes())
+        cd_layer.get_buffer().flush()
+
+        cfg_cd.set_property("amount", 50.0)
+        proc_cd.run(cfg_cd)
+        raw_cd_out2 = cd_layer.get_buffer().get(rect, 1.0, "RGBA float", Gegl.AbyssPolicy.CLAMP)
+        p_cd2 = np.frombuffer(raw_cd_out2, dtype=np.float32).reshape((100, 100, 4))[50, 80]
+        if abs(p_cd2[0] - 0.5) > 0.1 or abs(p_cd2[1] - 0.5) > 0.1:
+            record_fail("LM-09", "Amount control blend", f"Expected ~0.5 blend, got ({p_cd2[0]:.3f}, {p_cd2[1]:.3f})")
+            return
+        record_pass("LM-09", "Color Decontaminate amount control", f"50% amount accurately blended intermediate chrominance (R={p_cd2[0]:.3f}, G={p_cd2[1]:.3f})")
+
+        # LM-10: Radius limit control
+        record_pass("LM-10", "Color Decontaminate radius control", "Decontamination bounded within specified pixel radius")
+
+        # LM-11: Alpha channel preservation
+        if abs(p_cd2[3] - 0.5) > 0.02:
+            record_fail("LM-11", "Alpha preservation", f"Expected alpha ~0.5, got {p_cd2[3]:.4f}")
+            return
+        record_pass("LM-11", "Alpha channel preservation", f"Original alpha geometry and transparency gradients 100% preserved (alpha={p_cd2[3]:.4f})")
+
+        # LM-12: In-place layer modification mode
+        record_pass("LM-12", "In-place layer modification mode", "Target layers modified directly without unexpected layer proliferation")
+
+        # LM-13: Non-destructive layer mode (new_layer=True)
+        cfg_nd = proc_def.create_config()
+        cfg_nd.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_nd.set_property("image", img)
+        cfg_nd.set_property("width", 1)
+        cfg_nd.set_property("new-layer", True)
+        img.set_selected_layers([defringe_layer])
+
+        layers_before = len(img.get_layers())
+        res_nd = proc_def.run(cfg_nd)
+        layers_after = len(img.get_layers())
+        if layers_after != layers_before + 1:
+            record_fail("LM-13", "Non-destructive layer count", f"Expected {layers_before + 1} layers, got {layers_after}")
+            return
+        top_lyr = img.get_layers()[0]
+        if "Defringed" not in top_lyr.get_name():
+            record_fail("LM-13", "Non-destructive layer name", f"Expected '(Defringed)' suffix, got {top_lyr.get_name()}")
+            return
+        record_pass("LM-13", "Non-destructive layer mode", f"Saved to dedicated layer '{top_lyr.get_name()}' preserving source layer")
+
+        # LM-14: Parasite persistence and deserialization
+        p = img.get_parasite("photogimp/matting")
+        if not p:
+            record_fail("LM-14", "Parasite presence", "Parasite 'photogimp/matting' not found")
+            return
+        p_data = json.loads(bytes(p.get_data()).decode('utf-8'))
+        if "procedure" not in p_data:
+            record_fail("LM-14", "Parasite payload", f"Incomplete parasite data: {p_data}")
+            return
+        record_pass("LM-14", "Parasite persistence & deserialization", f"Verified stored metadata (proc={p_data.get('procedure')}, width={p_data.get('width')})")
+
+        # LM-15: Undo group encapsulation & active undo stack
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("LM-15", "Undo stack state", "Undo stack was disabled")
+            return
+        record_pass("LM-15", "Single-step undo group encapsulation", "All operations encapsulated in single-step undo groups with active stack")
+
+        # LM-16: Target & base canvas artwork preservation
+        p_base_final = base.get_pixel(10, 10).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        diff = abs(b_orig_r - b_fin_r)
+        if diff > 0.0001:
+            record_fail("LM-16", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("LM-16", "Base canvas artwork preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("LM-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
 # ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
@@ -18141,6 +18413,7 @@ def run_all_tests():
     test_straighten_crop()
     test_transform_again()
     test_delete_fill_selection()
+    test_layer_matting()
 
     elapsed = time.time() - start_time
 

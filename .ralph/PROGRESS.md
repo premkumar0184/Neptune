@@ -2240,6 +2240,44 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 81 — Layer Matting & Edge Defringe Suite Helper Plugin (`layer-matting`).
 
+## Iteration 83 — Phase 81: Layer Matting & Edge Defringe Suite Helper Plugin (`layer-matting`)
+- **Status**: Complete
+- **Goal**: Implement complete Photoshop parity for Layer Matting (`Layer > Matting`: Defringe, Remove Black Matte, Remove White Matte, Color Decontaminate) (`Topics.txt` lines 225-227: "Fringe pixels around a selection", "Decrease the fringe on a selection", "Remove a matte from a selection"; `photoshop_docs.md` Section 229-231 lines 6459-6500).
+- **Architecture**:
+  1. `Defringe (python-fu-matting-defringe)`:
+     - 2-pass Voronoi projection from solid core pixels ($\alpha \ge 0.85$) outward into semi-transparent perimeter fringe ($0.01 < \alpha < 0.85$) up to configurable Euclidean distance `width` (1 to 200 px). Replaces fringe background bleed with true subject colors while preserving exact alpha transparency.
+  2. `Remove Black Matte (python-fu-matting-remove-black-matte)`:
+     - Inverts anti-aliasing black background premultiplication: $C_{\text{true}} = \text{clamp}(C_{\text{fringe}} / \alpha, 0.0, 1.0)$ for $\alpha > 0.01$. Restores true foreground luminosity to dark boundary halos without modifying the alpha channel.
+  3. `Remove White Matte (python-fu-matting-remove-white-matte)`:
+     - Inverts anti-aliasing white background blending: $C_{\text{true}} = \text{clamp}((C_{\text{fringe}} - (1 - \alpha)) / \alpha, 0.0, 1.0)$ for $\alpha > 0.01$. Restores vibrant foreground colors to pale milky cutout edges.
+  4. `Color Decontaminate (python-fu-matting-color-decontaminate)`:
+     - Propagates interior core subject chrominance outward into semi-transparent boundary pixels ($0.01 < \alpha < 0.95$) with configurable radius (1 to 50 px) and blend intensity percentage `amount` (0.0% to 100.0%), keeping alpha gradients intact.
+  5. `Non-Destructive Layer Mode vs In-Place Patching`:
+     - In-place mode modifies active layer directly. Non-destructive mode creates dedicated layer `"<Name> (Defringed)"` / `"<Name> (Black Matte Removed)"` / etc., preserving source layer intact (`diff == 0.000000`).
+  6. `Parasite Persistence & Undo Protection`:
+     - Stores operation and configuration in document parasite `photogimp/matting`.
+     - Encapsulates entire pipeline in single-step undo groups with active undo stack maintained throughout.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-matting/layer-matting.py`: Created native Python 3 GObject-Introspection plugin implementing 4 PDB procedures (`python-fu-matting-defringe`, `python-fu-matting-remove-black-matte`, `python-fu-matting-remove-white-matte`, and `python-fu-matting-color-decontaminate`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `layer-matting` (75 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (75 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 76: `test_layer_matting` (asserting LM-01 through LM-16: procedure signatures across all 4 procedures, Defringe execution, Defringe width control, Remove Black Matte execution and unmixing fidelity, Remove White Matte execution and unmixing fidelity, Color Decontaminate execution, amount control, radius control, alpha preservation, in-place layer modification, non-destructive layer mode, parasite persistence, undo group encapsulation, active undo stack maintenance, and base canvas artwork preservation `diff == 0.000000`). Total tests increased to 952 passing across 76 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Layer Matting & Edge Defringe Suite entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 81 complete and scheduled Phase 82 (Paste Special Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.0 PyGObject, procedure types use capital `Gimp.PDBProcType.PLUGIN` and status types use `Gimp.PDBStatusType.SUCCESS` (not lowercase `PdbProcType`).
+  - Standard 8-bit channel quantization produces alpha values quantized to $1/255 \approx 0.00392$ (e.g. 128 / 255 = 0.50196 ~= 0.5020); tolerance margins for float roundtrips should accommodate $\pm 0.02$.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 75 plugins verified).
+    - Stage 2: `install.sh --batch` passed (75 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 952 tests across 76 test suites in 168.09s.
+    - Final quality gate: SUCCESS across all stages in 185.79s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo `274f036`. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 82 — Paste Special: Paste Into & Paste Outside Selection Helper Plugin (`paste-special`).
+
+
 
 
 

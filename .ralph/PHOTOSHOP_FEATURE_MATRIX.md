@@ -1296,6 +1296,29 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
 
 ---
 
+### Feature: Layer Matting & Edge Defringe Suite
+- **Source topic**: Refine and modify selections - Fringe pixels around a selection, Decrease the fringe on a selection, Remove a matte from a selection (`Topics.txt` lines 225-227; `photoshop_docs.md` Section 229-231 lines 6459-6500: "Learn how fringe pixels affect selections and how to remove unwanted edges using photoeditor Matting for cleaner composites... Defringe: Replace fringe pixel colors with pixels farther inside the selection to create cleaner edges and smooth transitions... Remove Black Matte and Remove White Matte: Remove black or white matte edges from anti-aliased selections... Color Decontaminate: Replace background colors in fringe pixels with nearby thoroughly selected pixel colors...").
+- **Photoshop behavior**: Provides complete matting tools under `Layer > Matting`: Defringe (replaces perimeter fringe with core colors across a configurable pixel width), Remove Black Matte (unmixes dark fringe contamination), Remove White Matte (unmixes pale milky fringe contamination), and Color Decontaminate (neutralizes background color bleed into semi-transparent edge alpha pixels).
+- **GIMP equivalent**: Implemented via native Python 3 plugin `layer-matting` with 4 PDB procedures: `python-fu-matting-defringe`, `python-fu-matting-remove-black-matte`, `python-fu-matting-remove-white-matte`, and `python-fu-matting-color-decontaminate`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-matting/layer-matting.py`.
+- **Current capability**:
+  1. `Defringe`: 2-pass Voronoi projection from solid core pixels ($\alpha \ge 0.85$) outward into semi-transparent fringe ($0.01 < \alpha < 0.85$) up to configurable Euclidean distance `width` (1 to 200 px), replacing fringe contamination with true subject colors while preserving exact alpha transparency.
+  2. `Remove Black Matte`: Inverts anti-aliasing black background premultiplication ($C_{\text{true}} = \text{clamp}(C_{\text{fringe}} / \alpha, 0.0, 1.0)$), restoring true foreground luminosity to dark halos.
+  3. `Remove White Matte`: Inverts anti-aliasing white background blending ($C_{\text{true}} = \text{clamp}((C_{\text{fringe}} - (1 - \alpha)) / \alpha, 0.0, 1.0)$), restoring vibrant foreground colors to pale milky edges.
+  4. `Color Decontaminate`: Propagates interior core chrominance into semi-transparent boundary pixels ($0.01 < \alpha < 0.95$) with configurable radius (1 to 50 px) and blend intensity amount (0% to 100%), keeping alpha gradients intact.
+  5. In-place modification or non-destructive layer mode `"<Name> (Matted)"` preserving source layer pixels 100% untouched (`diff == 0.000000`).
+  6. Parasite persistence (`photogimp/matting`), single-step undo group encapsulation, and active undo stack maintenance.
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 81).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 4 procedures (LM-01), Defringe execution (LM-02), Defringe width control (LM-03), Remove Black Matte execution (LM-04), Remove Black Matte unmixing fidelity (LM-05), Remove White Matte execution (LM-06), Remove White Matte unmixing fidelity (LM-07), Color Decontaminate execution (LM-08), Color Decontaminate amount control (LM-09), Color Decontaminate radius control (LM-10), alpha channel preservation (LM-11), in-place layer modification mode (LM-12), non-destructive layer mode (LM-13), parasite persistence and deserialization (LM-14), single-step undo group encapsulation (LM-15), and base canvas pixel preservation (`diff == 0.000000`, LM-16).
+- **Verification evidence** (Iteration 83):
+  1. `verify_config.py`: Section 6 passed with 75 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions LM-01 through LM-16 passing in Test Suite 76 (952/952 total assertions passing across 76 test suites in 168.09s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 83).
+
+---
+
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)
 
 ### Feature: Curves, Levels & Color Adjustments

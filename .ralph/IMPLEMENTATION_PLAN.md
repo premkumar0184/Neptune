@@ -620,16 +620,24 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate object removal math, boundary inpainting fidelity, feathering, non-destructive output, and headless GIMP test suite (assertions DFS-01 through DFS-16).
 
 ### Phase 81 — Layer Matting & Edge Defringe Suite Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `layer-matting` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-matting/layer-matting.py`.
-- [ ] Simulate Photoshop `Layer > Matting` suite (`Topics.txt` lines 225-227: "Fringe pixels around a selection", "Decrease the fringe on a selection", "Remove a matte from a selection"; `photoshop_docs.md` Section 229-231 lines 6459-6500: "Learn how fringe pixels affect selections and how to remove unwanted edges using photoeditor Matting for cleaner composites... Defringe: Replace fringe pixel colors with pixels farther inside the selection to create cleaner edges and smooth transitions... Remove Black Matte and Remove White Matte: Remove black or white matte edges from anti-aliased selections... Color Decontaminate: Replace background colors in fringe pixels with nearby thoroughly selected pixel colors...").
-- [ ] Support 4 PDB procedures:
+- [x] Implement native GIMP 3.x Python 3 plugin `layer-matting` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/layer-matting/layer-matting.py`.
+- [x] Simulate Photoshop `Layer > Matting` suite (`Topics.txt` lines 225-227: "Fringe pixels around a selection", "Decrease the fringe on a selection", "Remove a matte from a selection"; `photoshop_docs.md` Section 229-231 lines 6459-6500: "Learn how fringe pixels affect selections and how to remove unwanted edges using photoeditor Matting for cleaner composites... Defringe: Replace fringe pixel colors with pixels farther inside the selection to create cleaner edges and smooth transitions... Remove Black Matte and Remove White Matte: Remove black or white matte edges from anti-aliased selections... Color Decontaminate: Replace background colors in fringe pixels with nearby thoroughly selected pixel colors...").
+- [x] Support 4 PDB procedures:
   - `python-fu-matting-defringe`: Replace semi-transparent fringe edge pixels with interior pixel colors within configurable pixel width (1 to 200 px).
   - `python-fu-matting-remove-black-matte`: Automatically detects and strips pure black / dark matte fringing around anti-aliased layer boundaries.
   - `python-fu-matting-remove-white-matte`: Automatically detects and strips pure white / light matte fringing around anti-aliased layer boundaries.
   - `python-fu-matting-color-decontaminate`: Propagates interior core subject chrominance outward into semi-transparent edge pixels to neutralize color bleed / spill from original backgrounds.
-- [ ] Support non-destructive duplicate layer mode `"<Name> (Matted)"` preserving source layer intact (`diff == 0.000000`) or in-place modification.
-- [ ] Register under menu path `<Image>/Layer/Matting/Defringe...`, `<Image>/Layer/Matting/Remove Black Matte`, `<Image>/Layer/Matting/Remove White Matte`, and `<Image>/Layer/Matting/Color Decontaminate...`.
-- [ ] Validate edge halo stripping, alpha channel preservation, color decontamination, non-destructive output, and headless GIMP test suite.
+- [x] Support non-destructive duplicate layer mode `"<Name> (Matted)"` preserving source layer intact (`diff == 0.000000`) or in-place modification.
+- [x] Register under menu path `<Image>/Layer/Matting/Defringe...`, `<Image>/Layer/Matting/Remove Black Matte`, `<Image>/Layer/Matting/Remove White Matte`, and `<Image>/Layer/Matting/Color Decontaminate...`.
+- [x] Validate edge halo stripping, alpha channel preservation, color decontamination, non-destructive output, and headless GIMP test suite (assertions LM-01 through LM-16).
+
+### Phase 82 — Paste Special: Paste Into & Paste Outside Selection Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `paste-special` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/paste-special/paste-special.py`.
+- [ ] Simulate Photoshop `Edit > Paste Special > Paste Into` (`Alt+Shift+Ctrl+V`) and `Paste Outside` (`Topics.txt` line 212: "Paste one selection into or outside another"; `photoshop_docs.md` Section 216 lines 6220-6235: "Learn how to paste one selection into or outside another using layer masks in professional photoeditor... Cut or copy the part of the image you want to paste... Select Edit>Paste Special>Paste Into to place the source selection within the destination selection, or Edit>Paste Special>Paste Outside to place it around the destination selection... Automatically creates a new layer with the clipboard contents and attaches an editable layer mask derived from the active selection").
+- [ ] Support 2 PDB procedures: `python-fu-paste-into` (`<Image>/Edit/Paste Special/Paste Into`, mapped to `<Alt><Shift><Primary>v`) and `python-fu-paste-outside` (`<Image>/Edit/Paste Special/Paste Outside`).
+- [ ] Support non-destructive layer creation with clipboard pixel decoding, active selection bounding box positioning, auto-generated layer mask attachment (inverted for Paste Outside), and parasite persistence (`photogimp/paste-special`).
+- [ ] Register under menu path `<Image>/Edit/Paste Special/Paste Into` and `<Image>/Edit/Paste Special/Paste Outside`.
+- [ ] Validate clipboard decoding, selection-to-mask conversion, inverted mask geometry, layer positioning, and headless GIMP test suite.
 
 
 

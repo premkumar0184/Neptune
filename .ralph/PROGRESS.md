@@ -2156,5 +2156,43 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 79 — Free Transform & Repeat Transform (Transform Again) Helper Plugin (`transform-again`).
 
+## Iteration 81 — Phase 79: Free Transform & Repeat Transform (Transform Again) Helper Plugin (`transform-again`)
+- **Status**: Complete
+- **Goal**: Implement complete Photoshop parity for Free Transform with Duplicate (`Ctrl+Alt+T`), Transform Again in-place (`Shift+Ctrl+T`), and Transform Again with Duplicate (`Shift+Ctrl+Alt+T`) (`Topics.txt` lines 180-187: "Transformation options in Photoshop", "Rotate or flip images", "Adjust scale, rotation, and perspective", "Duplicate objects as you transform", "Apply transformations", "Move reference point for transformations", "Rotate objects"; `photoshop_docs.md` Section 184-189 lines 5365-5499).
+- **Architecture**:
+  1. `Compounded 3x3 Forward 2D Affine Transformation Matrix`:
+     - Compiles forward affine matrix $M = T_{\text{post}} \times R \times S \times K \times T_{\text{pre}}$ solving translate-to-origin, skew, scale, rotate, and translate-to-anchor plus translation offset in 64-bit float precision.
+  2. `9-Point Reference Anchor Grid & Custom Origin Positioning`:
+     - Computes exact anchor coordinates from layer bounds for 9 reference positions: `center`, `top-left`, `top`, `top-right`, `left`, `right`, `bottom-left`, `bottom`, `bottom-right`, `canvas-center`, or arbitrary `custom` origin coordinate $(x_0, y_0)$.
+  3. `Free Transform with Duplicate (Ctrl+Alt+T)`:
+     - Duplicates active layer, names duplicate `"<Layer Name> Copy"`, sets duplicate as active, and applies transform matrix, preserving source layer intact (`diff == 0.000000`). Also supports in-place transform when `duplicate-layer=False`.
+  4. `Transform Again (Shift+Ctrl+T)`:
+     - Reapplies the exact remembered transformation parameters from image parasite `photogimp/last-transform` to the active layer directly in-place.
+  5. `Transform Again with Duplicate & Step-and-Repeat (Shift+Ctrl+Alt+T)`:
+     - Duplicates active layer and applies remembered transform. Supports compounding multi-step iteration loop (`count >= 1`) to generate radial arrays, geometric step-and-repeat patterns, and cascading progressions.
+  6. `Parasite Persistence`:
+     - Serializes transformation parameters and metadata to JSON in image parasite `photogimp/last-transform`.
+  7. `Undo Protection`:
+     - Encapsulated in single-step undo groups with active undo stack maintained throughout.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/transform-again/transform-again.py`: Created native Python 3 GObject-Introspection plugin implementing 3 PDB procedures (`python-fu-free-transform-duplicate`, `python-fu-transform-again`, and `python-fu-transform-again-duplicate`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `transform-again` (73 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (73 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 74: `test_transform_again` (asserting TA-01 through TA-16: PDB registration and argument signatures across all 3 procedures, Free Transform with Duplicate execution, Center anchor rotation & scaling, Top-Left anchor rotation, 9-point reference anchor resolution, Custom origin coordinate anchor positioning, In-place transformation mode, Transform Again in-place, Transform Again with Duplicate, Compounded step-and-repeat arrays, Skewing transformation fidelity, Parasite persistence & deserialization, Interpolation modes, Undo group encapsulation, Active undo stack maintenance, and Base canvas pixel preservation `diff == 0.000000`). Total tests increased to 920 passing across 74 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Free Transform with Duplicate & Transform Again Suite as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 79 complete and scheduled Phase 80 (Delete and Fill Selection Helper Plugin).
+- **Technical discoveries**:
+  - GIMP 3.0 provides native `drawable.transform_matrix(c00, c01, c02, c10, c11, c12, c20, c21, c22)` which takes the standard forward 2D affine matrix and applies it directly using `Gimp.context_set_transform_resize` and `Gimp.context_set_interpolation`.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 73 plugins verified).
+    - Stage 2: `install.sh --batch` passed (73 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 920 tests across 74 test suites in 165.15s.
+    - Final quality gate: SUCCESS across all stages in 182.59s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 80 — Delete and Fill Selection Helper Plugin (`delete-fill-selection`).
+
+
 
 

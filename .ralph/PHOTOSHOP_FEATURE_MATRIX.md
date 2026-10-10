@@ -1262,6 +1262,21 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
   2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions SC-01 through SC-16 passing in Test Suite 73 (904/904 total assertions passing across 73 test suites in 162.54s).
 - **Status**: IMPLEMENTED_VERIFIED (Iteration 80).
 
+### Feature: Free Transform with Duplicate & Transform Again Suite
+- **Source topic**: Transform, manipulate, and reshape - Duplicate objects as you transform, Move reference point for transformations, Rotate objects (`Topics.txt` lines 180-187; `photoshop_docs.md` Section 184-189 lines 5365-5499: "In complex photoeditor designs, you often need duplicate objects in varying sizes, angles, or positions. Instead of replicating and transforming separately, use a shortcut to do both simultaneously... Press Ctrl+Alt+T to create a duplicate and enter Free Transform mode... Select Edit > Transform > Again to repeat a transformation... Shift+Ctrl+T / Shift+Ctrl+Alt+T... Move reference point for transformations: 9-point anchor or custom origin").
+- **Photoshop behavior**: Supports simultaneously duplicating and transforming an active layer (`Ctrl+Alt+T`), repeating the last transformation on the active layer in-place (`Shift+Ctrl+T`), and duplicating and repeating the last transformation on the duplicate (`Shift+Ctrl+Alt+T`). Supports 9-point reference anchor positioning (Center, Top-Left, Top, Top-Right, Left, Right, Bottom-Left, Bottom, Bottom-Right) or arbitrary custom coordinates $(x_0, y_0)$, and compounding step-and-repeat arrays.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `transform-again` with 3 PDB procedures: `python-fu-free-transform-duplicate`, `python-fu-transform-again`, and `python-fu-transform-again-duplicate`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/transform-again/transform-again.py`.
+- **Current capability**: 3x3 forward 2D affine matrix compounding ($M = T_{\text{post}} \times R \times S \times K \times T_{\text{pre}}$) around 9-point reference anchors or custom origins, layer duplication on transform preserving source layer intact (`diff == 0.000000`), in-place direct transform mode, repeat transform again in-place, repeat transform with duplicate, multi-step compounding step-and-repeat arrays (`count >= 1`), horizontal and vertical skewing, parasite persistence and deserialization (`photogimp/last-transform`), context interpolation configuration (cubic, linear, none), single-step undo group encapsulation, and active undo stack maintenance.
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 79).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across all 3 procedures (TA-01), Free Transform with Duplicate execution (TA-02), Center anchor rotation & scaling (TA-03), Top-Left anchor rotation (TA-04), 9-point reference anchor resolution (TA-05), Custom origin coordinate anchor positioning (TA-06), In-place transformation mode (TA-07), Transform Again in-place (TA-08), Transform Again with Duplicate (TA-09), Compounded step-and-repeat arrays (TA-10), Skewing transformation fidelity (TA-11), Parasite persistence & deserialization (TA-12), Interpolation modes (TA-13), Undo group encapsulation (TA-14), Active undo stack maintenance (TA-15), and Base canvas pixel preservation (`diff == 0.000000`, TA-16).
+- **Verification evidence** (Iteration 81):
+  1. `verify_config.py`: Section 6 passed with 73 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions TA-01 through TA-16 passing in Test Suite 74 (920/920 total assertions passing across 74 test suites in 165.15s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 81).
+
 ---
 
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)

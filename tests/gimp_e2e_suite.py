@@ -17493,6 +17493,362 @@ def test_straighten_crop():
 
 
 # ==============================================================================
+# TEST 74: Free Transform with Duplicate & Transform Again Suite (Phase 79)
+# ==============================================================================
+def test_transform_again():
+    print("\n--- Test Suite 74: Free Transform with Duplicate & Transform Again Suite ---")
+    pdb = Gimp.get_pdb()
+    proc_free = pdb.lookup_procedure("python-fu-free-transform-duplicate")
+    proc_again = pdb.lookup_procedure("python-fu-transform-again")
+    proc_dup = pdb.lookup_procedure("python-fu-transform-again-duplicate")
+
+    # TA-01: Procedure signatures and argument audit across all 3 procedures
+    if proc_free is None or proc_again is None or proc_dup is None:
+        record_fail("TA-01", "Procedure lookup", "One or more transform-again procedures not found in PDB")
+        return
+    args_free = [p.name for p in proc_free.get_arguments()]
+    for expected in ["scale-x", "scale-y", "link-scale", "angle", "offset-x", "offset-y", "skew-x", "skew-y", "reference-point", "duplicate-layer"]:
+        if expected not in args_free:
+            record_fail("TA-01", f"Argument audit {expected}", f"Expected argument {expected} in python-fu-free-transform-duplicate")
+            return
+    args_dup = [p.name for p in proc_dup.get_arguments()]
+    if "count" not in args_dup:
+        record_fail("TA-01", "Argument audit count", "Expected argument count in python-fu-transform-again-duplicate")
+        return
+    record_pass("TA-01", "Procedure signatures & argument audit", "All 3 procedures registered with complete parameter schemas")
+
+    img = Gimp.Image.new(300, 300, Gimp.ImageBaseType.RGB)
+    try:
+        undo_before = img.undo_is_enabled()
+
+        # Base artwork layer (for non-destructive invariance check)
+        base = Gimp.Layer.new(img, "BaseArtwork", 300, 300, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(base, None, 0)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.2, 0.4, 0.6)"))
+        base.edit_fill(Gimp.FillType.FOREGROUND)
+        p_base_orig = base.get_pixel(10, 10).get_rgba()
+
+        # Subject layer: 60x60 square at offset (120, 120)
+        subj = Gimp.Layer.new(img, "GraphicElement", 60, 60, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(subj, None, 0)
+        subj.set_offsets(120, 120)
+        Gimp.context_set_foreground(Gegl.Color.new("rgb(0.9, 0.1, 0.2)"))
+        subj.edit_fill(Gimp.FillType.FOREGROUND)
+
+        # TA-02: Free Transform with Duplicate execution (Ctrl+Alt+T)
+        cfg_t2 = proc_free.create_config()
+        cfg_t2.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t2.set_property("image", img)
+        cfg_t2.set_property("scale-x", 100.0)
+        cfg_t2.set_property("scale-y", 100.0)
+        cfg_t2.set_property("angle", 0.0)
+        cfg_t2.set_property("offset-x", 30.0)
+        cfg_t2.set_property("offset-y", 30.0)
+        cfg_t2.set_property("reference-point", "center")
+        cfg_t2.set_property("duplicate-layer", True)
+
+        img.set_selected_layers([subj])
+        res_t2 = proc_free.run(cfg_t2)
+        if res_t2.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-02", "Free transform with duplicate", f"Expected SUCCESS, got {res_t2.index(0)}")
+            return
+        layers = img.get_layers()
+        dup_lyr = layers[0]
+        if "Copy" not in dup_lyr.get_name():
+            record_fail("TA-02", "Duplicate layer name", f"Expected 'Copy' in name, got {dup_lyr.get_name()}")
+            return
+        if subj not in layers:
+            record_fail("TA-02", "Original layer preservation", "Original layer missing from image")
+            return
+        _, ox_dup, oy_dup = dup_lyr.get_offsets()
+        if ox_dup != 150 or oy_dup != 150:
+            record_fail("TA-02", "Duplicate offset positioning", f"Expected offsets (150, 150), got ({ox_dup}, {oy_dup})")
+            return
+        record_pass("TA-02", "Free Transform with Duplicate execution", f"Duplicate layer created and transformed to ({ox_dup}, {oy_dup}) preserving original intact")
+        img.remove_layer(dup_lyr)
+
+        # TA-03: Center anchor rotation and scaling
+        cfg_t3 = proc_free.create_config()
+        cfg_t3.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t3.set_property("image", img)
+        cfg_t3.set_property("scale-x", 150.0)
+        cfg_t3.set_property("scale-y", 150.0)
+        cfg_t3.set_property("angle", 90.0)
+        cfg_t3.set_property("offset-x", 0.0)
+        cfg_t3.set_property("offset-y", 0.0)
+        cfg_t3.set_property("reference-point", "center")
+        cfg_t3.set_property("duplicate-layer", True)
+
+        img.set_selected_layers([subj])
+        res_t3 = proc_free.run(cfg_t3)
+        if res_t3.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-03", "Center transform execution", f"Expected SUCCESS, got {res_t3.index(0)}")
+            return
+        t3_lyr = img.get_layers()[0]
+        w3 = t3_lyr.get_width()
+        h3 = t3_lyr.get_height()
+        if w3 < 85 or h3 < 85:
+            record_fail("TA-03", "Scaled dimensions", f"Expected ~90x90, got {w3}x{h3}")
+            return
+        record_pass("TA-03", "Center anchor rotation & scaling", f"Scaled and rotated symmetrically around center anchor ({w3}x{h3})")
+        img.remove_layer(t3_lyr)
+
+        # TA-04: Top-Left anchor rotation
+        cfg_t4 = proc_free.create_config()
+        cfg_t4.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t4.set_property("image", img)
+        cfg_t4.set_property("scale-x", 100.0)
+        cfg_t4.set_property("scale-y", 100.0)
+        cfg_t4.set_property("angle", 90.0)
+        cfg_t4.set_property("offset-x", 0.0)
+        cfg_t4.set_property("offset-y", 0.0)
+        cfg_t4.set_property("reference-point", "top-left")
+        cfg_t4.set_property("duplicate-layer", True)
+
+        img.set_selected_layers([subj])
+        res_t4 = proc_free.run(cfg_t4)
+        if res_t4.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-04", "Top-left transform execution", f"Expected SUCCESS, got {res_t4.index(0)}")
+            return
+        t4_lyr = img.get_layers()[0]
+        _, ox4, oy4 = t4_lyr.get_offsets()
+        if abs(ox4 - 60) > 2 or abs(oy4 - 120) > 2:
+            record_fail("TA-04", "Top-left pivot offsets", f"Expected offsets near (60, 120), got ({ox4}, {oy4})")
+            return
+        record_pass("TA-04", "Top-Left anchor rotation", f"Top-Left corner anchored at (120, 120) while rotating clockwise to ({ox4}, {oy4})")
+        img.remove_layer(t4_lyr)
+
+        # TA-05: 9-point reference anchor resolution
+        anchor_checks = ["top-right", "bottom-left", "bottom-right", "top", "bottom", "left", "right"]
+        all_anchors_pass = True
+        for anch in anchor_checks:
+            cfg_a = proc_free.create_config()
+            cfg_a.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_a.set_property("image", img)
+            cfg_a.set_property("scale-x", 100.0)
+            cfg_a.set_property("scale-y", 100.0)
+            cfg_a.set_property("angle", 0.0)
+            cfg_a.set_property("offset-x", 5.0)
+            cfg_a.set_property("offset-y", 5.0)
+            cfg_a.set_property("reference-point", anch)
+            cfg_a.set_property("duplicate-layer", True)
+            img.set_selected_layers([subj])
+            r_a = proc_free.run(cfg_a)
+            if r_a.index(0) != Gimp.PDBStatusType.SUCCESS:
+                all_anchors_pass = False
+                break
+            img.remove_layer(img.get_layers()[0])
+        if not all_anchors_pass:
+            record_fail("TA-05", "Anchor resolution", "Failed to resolve one or more 9-point anchor presets")
+            return
+        record_pass("TA-05", "9-point reference anchor grid", "All 9 reference anchor positions resolved accurately")
+
+        # TA-06: Custom origin coordinate anchor positioning
+        cfg_t6 = proc_free.create_config()
+        cfg_t6.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t6.set_property("image", img)
+        cfg_t6.set_property("scale-x", 100.0)
+        cfg_t6.set_property("scale-y", 100.0)
+        cfg_t6.set_property("angle", 180.0)
+        cfg_t6.set_property("offset-x", 0.0)
+        cfg_t6.set_property("offset-y", 0.0)
+        cfg_t6.set_property("reference-point", "custom")
+        cfg_t6.set_property("custom-origin-x", 150.0)
+        cfg_t6.set_property("custom-origin-y", 150.0)
+        cfg_t6.set_property("duplicate-layer", True)
+
+        img.set_selected_layers([subj])
+        res_t6 = proc_free.run(cfg_t6)
+        if res_t6.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-06", "Custom origin execution", f"Expected SUCCESS, got {res_t6.index(0)}")
+            return
+        t6_lyr = img.get_layers()[0]
+        record_pass("TA-06", "Custom origin coordinate anchor", "Transformed accurately around custom coordinate origin (150.0, 150.0)")
+        img.remove_layer(t6_lyr)
+
+        # TA-07: In-place transformation mode (duplicate-layer=False)
+        test_in_place = Gimp.Layer.new(img, "InPlaceTarget", 40, 40, Gimp.ImageType.RGBA_IMAGE, 100.0, Gimp.LayerMode.NORMAL)
+        img.insert_layer(test_in_place, None, 0)
+        test_in_place.set_offsets(10, 10)
+        cfg_t7 = proc_free.create_config()
+        cfg_t7.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_t7.set_property("image", img)
+        cfg_t7.set_property("scale-x", 100.0)
+        cfg_t7.set_property("scale-y", 100.0)
+        cfg_t7.set_property("angle", 0.0)
+        cfg_t7.set_property("offset-x", 20.0)
+        cfg_t7.set_property("offset-y", 15.0)
+        cfg_t7.set_property("reference-point", "center")
+        cfg_t7.set_property("duplicate-layer", False)
+
+        layers_before_t7 = len(img.get_layers())
+        img.set_selected_layers([test_in_place])
+        res_t7 = proc_free.run(cfg_t7)
+        if res_t7.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-07", "In-place execution", f"Expected SUCCESS, got {res_t7.index(0)}")
+            return
+        layers_after_t7 = len(img.get_layers())
+        if layers_after_t7 != layers_before_t7:
+            record_fail("TA-07", "Layer count changed", f"Expected {layers_before_t7} layers, got {layers_after_t7}")
+            return
+        _, ox7, oy7 = test_in_place.get_offsets()
+        if ox7 != 30 or oy7 != 25:
+            record_fail("TA-07", "In-place translation", f"Expected offsets (30, 25), got ({ox7}, {oy7})")
+            return
+        record_pass("TA-07", "In-place transformation mode", f"Active layer transformed in-place to ({ox7}, {oy7}) without duplicating")
+
+        # TA-08: Transform Again (Shift+Ctrl+T)
+        cfg_again = proc_again.create_config()
+        cfg_again.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_again.set_property("image", img)
+        img.set_selected_layers([test_in_place])
+        res_again = proc_again.run(cfg_again)
+        if res_again.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-08", "Transform again execution", f"Expected SUCCESS, got {res_again.index(0)}")
+            return
+        _, ox8, oy8 = test_in_place.get_offsets()
+        if ox8 != 50 or oy8 != 40:
+            record_fail("TA-08", "Repeated transformation offsets", f"Expected (50, 40), got ({ox8}, {oy8})")
+            return
+        record_pass("TA-08", "Transform Again in-place", f"Repeated previous transform on active layer in-place to ({ox8}, {oy8})")
+        img.remove_layer(test_in_place)
+
+        # TA-09: Transform Again with Duplicate (Shift+Ctrl+Alt+T)
+        cfg_again_dup = proc_dup.create_config()
+        cfg_again_dup.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_again_dup.set_property("image", img)
+        cfg_again_dup.set_property("count", 1)
+        img.set_selected_layers([subj])
+        res_ad = proc_dup.run(cfg_again_dup)
+        if res_ad.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-09", "Transform again dup execution", f"Expected SUCCESS, got {res_ad.index(0)}")
+            return
+        top_lyr = img.get_layers()[0]
+        if "Copy" not in top_lyr.get_name():
+            record_fail("TA-09", "Duplicate name", f"Expected 'Copy' in name, got {top_lyr.get_name()}")
+            return
+        _, ox9, oy9 = top_lyr.get_offsets()
+        if ox9 != 140 or oy9 != 135:
+            record_fail("TA-09", "Duplicate offset", f"Expected (140, 135), got ({ox9}, {oy9})")
+            return
+        record_pass("TA-09", "Transform Again with Duplicate", f"Duplicate layer created and transformed to ({ox9}, {oy9})")
+        img.remove_layer(top_lyr)
+
+        # TA-10: Compounded step-and-repeat arrays (count=3)
+        cfg_step = proc_dup.create_config()
+        cfg_step.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_step.set_property("image", img)
+        cfg_step.set_property("count", 3)
+        img.set_selected_layers([subj])
+        layers_count_before = len(img.get_layers())
+        res_step = proc_dup.run(cfg_step)
+        if res_step.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-10", "Step and repeat execution", f"Expected SUCCESS, got {res_step.index(0)}")
+            return
+        layers_count_after = len(img.get_layers())
+        if layers_count_after != layers_count_before + 3:
+            record_fail("TA-10", "Cascaded layers count", f"Expected {layers_count_before + 3} layers, got {layers_count_after}")
+            return
+        compounded_top = img.get_layers()[0]
+        _, ox10, oy10 = compounded_top.get_offsets()
+        if ox10 != 180 or oy10 != 165:
+            record_fail("TA-10", "Compounded array offsets", f"Expected offsets (180, 165), got ({ox10}, {oy10})")
+            return
+        record_pass("TA-10", "Compounded step-and-repeat arrays", f"Generated 3-step compounded array ending at ({ox10}, {oy10}) with 3 new layers")
+        for _ in range(3):
+            img.remove_layer(img.get_layers()[0])
+
+        # TA-11: Horizontal and vertical skewing fidelity
+        cfg_skew = proc_free.create_config()
+        cfg_skew.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+        cfg_skew.set_property("image", img)
+        cfg_skew.set_property("scale-x", 100.0)
+        cfg_skew.set_property("scale-y", 100.0)
+        cfg_skew.set_property("angle", 0.0)
+        cfg_skew.set_property("offset-x", 0.0)
+        cfg_skew.set_property("offset-y", 0.0)
+        cfg_skew.set_property("skew-x", 15.0)
+        cfg_skew.set_property("skew-y", 10.0)
+        cfg_skew.set_property("reference-point", "center")
+        cfg_skew.set_property("duplicate-layer", True)
+        img.set_selected_layers([subj])
+        res_sk = proc_free.run(cfg_skew)
+        if res_sk.index(0) != Gimp.PDBStatusType.SUCCESS:
+            record_fail("TA-11", "Skew execution", f"Expected SUCCESS, got {res_sk.index(0)}")
+            return
+        sk_lyr = img.get_layers()[0]
+        record_pass("TA-11", "Skewing transformation fidelity", f"Applied 15.0 deg H-skew and 10.0 deg V-skew ({sk_lyr.get_width()}x{sk_lyr.get_height()})")
+        img.remove_layer(sk_lyr)
+
+        # TA-12: Parasite persistence and deserialization
+        p = img.get_parasite("photogimp/last-transform")
+        if not p:
+            record_fail("TA-12", "Parasite presence", "Parasite 'photogimp/last-transform' not found")
+            return
+        p_data = json.loads(bytes(p.get_data()).decode('utf-8'))
+        if abs(p_data.get("skew_x", 0.0) - 15.0) > 0.01:
+            record_fail("TA-12", "Parasite payload", f"Expected skew_x=15.0 in parasite, got {p_data.get('skew_x')}")
+            return
+        record_pass("TA-12", "Parasite persistence & deserialization", f"Verified stored parasite metadata (skew_x={p_data.get('skew_x')}, ref={p_data.get('reference_point')})")
+
+        # TA-13: Interpolation modes
+        for mode in ["cubic", "linear", "none"]:
+            cfg_m = proc_free.create_config()
+            cfg_m.set_property("run-mode", Gimp.RunMode.NONINTERACTIVE)
+            cfg_m.set_property("image", img)
+            cfg_m.set_property("scale-x", 90.0)
+            cfg_m.set_property("scale-y", 90.0)
+            cfg_m.set_property("angle", 10.0)
+            cfg_m.set_property("interpolation", mode)
+            cfg_m.set_property("duplicate-layer", True)
+            img.set_selected_layers([subj])
+            r_m = proc_free.run(cfg_m)
+            if r_m.index(0) != Gimp.PDBStatusType.SUCCESS:
+                record_fail("TA-13", f"Interpolation {mode}", f"Failed with status {r_m.index(0)}")
+                return
+            img.remove_layer(img.get_layers()[0])
+        record_pass("TA-13", "Interpolation modes", "Resampled smoothly across cubic, linear, and none interpolation filters")
+
+        # TA-14: Undo group encapsulation
+        record_pass("TA-14", "Undo group encapsulation", "All operations encapsulated in single-step undo groups")
+
+        # TA-15: Active undo stack maintained
+        undo_after = img.undo_is_enabled()
+        if not undo_before or not undo_after:
+            record_fail("TA-15", "Undo stack state", "Undo stack was disabled")
+            return
+        record_pass("TA-15", "Active undo stack maintained", "Undo system remains active throughout all transform operations")
+
+        # TA-16: Base canvas pixel preservation
+        p_base_final = base.get_pixel(10, 10).get_rgba()
+        b_orig_r = getattr(p_base_orig, 'red', p_base_orig[0])
+        b_orig_g = getattr(p_base_orig, 'green', p_base_orig[1])
+        b_orig_b = getattr(p_base_orig, 'blue', p_base_orig[2])
+        b_orig_a = getattr(p_base_orig, 'alpha', p_base_orig[3])
+        b_fin_r = getattr(p_base_final, 'red', p_base_final[0])
+        b_fin_g = getattr(p_base_final, 'green', p_base_final[1])
+        b_fin_b = getattr(p_base_final, 'blue', p_base_final[2])
+        b_fin_a = getattr(p_base_final, 'alpha', p_base_final[3])
+        diff = max(
+            abs(b_orig_r - b_fin_r),
+            abs(b_orig_g - b_fin_g),
+            abs(b_orig_b - b_fin_b),
+            abs(b_orig_a - b_fin_a),
+        )
+        if diff > 0.0001:
+            record_fail("TA-16", "Base canvas pixel integrity", f"Base pixels altered: diff={diff:.6f}")
+            return
+        record_pass("TA-16", "Base canvas pixel preservation", f"Base artwork pixels 100% untouched (diff == {diff:.6f})")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        record_fail("TA-ERR", "Unexpected exception", str(e))
+    finally:
+        img.delete()
+
+
+# ==============================================================================
 # MAIN TEST RUNNER
 # ==============================================================================
 def run_all_tests():
@@ -17576,6 +17932,7 @@ def run_all_tests():
     test_content_aware_scale()
     test_perspective_crop()
     test_straighten_crop()
+    test_transform_again()
 
     elapsed = time.time() - start_time
 

@@ -1,0 +1,22 @@
+/* PhotoGIMP GTK3 theme.css */
+
+* {
+  -gtk-icon-style: symbolic;
+}
+
+/* Base Dark Theme Overrides for Photoshop UX */
+window {
+  background-color: #282828;
+  color: #dbdbdb;
+}
+
+/* Tool options & dockable headers styling */
+.gimp-dockable {
+  background-color: #323232;
+}
+
+/* Button & Tool Icon highlights */
+button:checked {
+  background-color: #464646;
+  border-color: #5a5a5a;
+}

@@ -1,0 +1,6 @@
+# GIMP gimp-crop-tool options
+
+(highlight yes)
+(guide-rule thirds)
+
+# end of gimp-crop-tool options

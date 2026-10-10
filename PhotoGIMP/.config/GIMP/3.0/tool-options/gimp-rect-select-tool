@@ -1,0 +1,8 @@
+# GIMP gimp-rect-select-tool options
+
+(antialias yes)
+(feather no)
+(feather-radius 10)
+(round-corners no)
+
+# end of gimp-rect-select-tool options

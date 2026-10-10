@@ -1,0 +1,11 @@
+# GIMP gimp-unified-transform-tool options
+
+(constrain-move yes)
+(constrain-scale no)
+(constrain-rotate no)
+(constrain-shear no)
+(constrain-perspective no)
+(frompivot no)
+(cornersnap no)
+
+# end of gimp-unified-transform-tool options

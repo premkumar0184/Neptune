@@ -1,0 +1,10 @@
+# GIMP gimp-by-color-select-tool options
+
+(antialias yes)
+(feather no)
+(feather-radius 10)
+(select-transparent yes)
+(sample-merged no)
+(threshold 32)
+
+# end of gimp-by-color-select-tool options

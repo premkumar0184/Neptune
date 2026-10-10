@@ -1,0 +1,10 @@
+# GIMP gimp-fuzzy-select-tool options
+
+(antialias yes)
+(feather no)
+(feather-radius 10)
+(select-transparent yes)
+(sample-merged no)
+(threshold 32)
+
+# end of gimp-fuzzy-select-tool options

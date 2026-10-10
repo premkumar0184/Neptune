@@ -1,16 +1,20 @@
 # Task Protocol
 
 ## Before coding
-- Read `AGENTS.md`.
-- Read the relevant `.ralph/` state.
+- Read `AGENTS.md` and the relevant `.ralph/` state.
+- Confirm the active project is PhotoGIMP, not the separate photocraft reference repository.
 - Run `git status`.
 - Inspect the existing implementation.
 - Define acceptance criteria.
 - Identify verification commands.
 
+## Product objective
+The active goal is to keep the existing Photoshop-style feature set intact while refining the PhotoGIMP UI toward a clean, premium PhotoCraft-inspired presentation.
+
 ## During coding
 - Keep the change scoped.
 - Preserve existing behavior outside the task.
+- Prefer UI/config improvements that increase polish without breaking core features.
 - Add/update tests when appropriate.
 - Avoid unrelated formatting churn.
 

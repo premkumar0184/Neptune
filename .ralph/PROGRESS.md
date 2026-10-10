@@ -2152,7 +2152,7 @@ This is a concise handoff log, not a transcript of every shell command.
     - Stage 2: `install.sh --batch` passed (72 plugins deployed with executable permissions).
     - Stage 3: `tests/gimp_e2e_suite.py` passed all 904 tests across 73 test suites in 162.54s.
     - Final quality gate: SUCCESS across all stages in 179.81s. Exit code 0.
-- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Commit**: PhotoGIMP sub-repo `28719ad`. Outer repo `b6c421e`.
 - **Result**: Success.
 - **Next**: Phase 79 — Free Transform & Repeat Transform (Transform Again) Helper Plugin (`transform-again`).
 

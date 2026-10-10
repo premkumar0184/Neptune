@@ -1232,6 +1232,21 @@ This document is the authoritative mapping between Adobe Photoshop features (fro
   2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions CAS-01 through CAS-16 passing in Test Suite 71 (872/872 total assertions passing across 71 test suites in 158.60s).
 - **Status**: IMPLEMENTED_VERIFIED (Iteration 78).
 
+### Feature: Perspective Crop & Keystone Rectification Helper
+- **Source topic**: Crop and straighten - Transform perspective while cropping (`Topics.txt` line 179; `photoshop_docs.md` Section 183 lines 5345-5362: "Learn how to use the Perspective Crop tool in professional photoeditor to straighten images and correct distorted angles while cropping... Draw a marquee around the object to straighten and crop. Adjust the corners of the marquee to match the edges of the object...").
+- **Photoshop behavior**: Rectifies and straightens converging keystone perspectives by selecting 4 arbitrary quadrilateral corner points $(x_0, y_0)$ Top-Left, $(x_1, y_1)$ Top-Right, $(x_2, y_2)$ Bottom-Right, $(x_3, y_3)$ Bottom-Left. Solves an $8 \times 8$ projective homography matrix to unwarp the distorted quad into an orthogonal planar rectangle. Supports custom or auto-calculated dimensions, smooth bilinear / nearest neighbor interpolation, non-destructive layer creation, canvas cropping, and auto quad detection.
+- **GIMP equivalent**: Implemented via native Python 3 plugin `perspective-crop` with 2 PDB procedures: `python-fu-perspective-crop` and `python-fu-perspective-auto-quad`.
+- **GIMP source locations**: `PhotoGIMP/.config/GIMP/3.0/plug-ins/perspective-crop/perspective-crop.py`.
+- **Current capability**: Computes inverse projective homography transformation matrix $M = H^{-1}$ solving $A m = b$, unwarps arbitrary quadrilaterals using vectorized bilinear sampling, auto-calculates dimensions from quad edge lengths ($\text{Width} = \frac{\|P_1 - P_0\| + \|P_2 - P_3\|}{2}$, $\text{Height} = \frac{\|P_3 - P_0\| + \|P_2 - P_1\|}{2}$), auto-detects default quad from layer / selection bounds (`python-fu-perspective-auto-quad`), supports whole canvas crop (`crop-canvas=True`) or non-destructive layer mode `"<Name> (Perspective Cropped)"`, stores last quad in image parasite (`photogimp/perspective-crop-quad`), maintains active undo stack, and preserves 100% of base canvas artwork underneath (`diff == 0.000000`).
+- **Gap**: None.
+- **Dependencies**: GEGL `0.4`, GIMP `3.0` PyGObject (`gi.repository.Gimp`, `gi.repository.Gegl`, `gi.repository.Gio`), NumPy.
+- **Implementation priority**: High (Phase 77).
+- **Verification strategy**: Automated headless GIMP test verifying PDB registration and argument signatures across both procedures (PC-01), auto quad detection and parasite persistence (PC-02), planar keystone rectification unwarping (PC-03), dimensional fidelity with exact width/height (PC-04), auto-calculated dimensions from quad edge lengths (PC-05), orthogonal corner alignment (PC-06), vertical line restoration to true perpendicularity (PC-07), horizontal baseline restoration (PC-08), centered feature fidelity projection (PC-09), resampling interpolation quality (PC-10), non-destructive layer mode preservation (PC-11), whole canvas crop mode (PC-12), nearest neighbor interpolation mode (PC-13), undo group encapsulation (PC-14), active undo stack maintenance (PC-15), and base canvas artwork preservation (`diff == 0.000000`, PC-16).
+- **Verification evidence** (Iteration 79):
+  1. `verify_config.py`: Section 6 passed with 71 active Python plugins audited and executable in live config.
+  2. Objective pixel behavioral test: `gimp --no-interface --batch-interpreter=python-fu-eval`: All 16 assertions PC-01 through PC-16 passing in Test Suite 72 (888/888 total assertions passing across 72 test suites in 160.72s).
+- **Status**: IMPLEMENTED_VERIFIED (Iteration 79).
+
 ---
 
 ## 2. Core Editing & Adjustment Infrastructure (Native GIMP 3.x Built-ins)

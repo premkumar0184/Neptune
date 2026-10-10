@@ -2072,4 +2072,44 @@ This is a concise handoff log, not a transcript of every shell command.
 - **Result**: Success.
 - **Next**: Phase 77 — Perspective Crop & Keystone Rectification Helper Plugin (`perspective-crop`).
 
+## Iteration 79 — Phase 77: Perspective Crop & Keystone Rectification Helper Plugin (`perspective-crop`)
+- **Status**: Complete
+- **Goal**: Implement complete Photoshop parity for the Perspective Crop Tool (`Topics.txt` line 179: "Transform perspective while cropping"; `photoshop_docs.md` Section 183 lines 5345-5362).
+- **Architecture**:
+  1. `Projective Homography Inverse Matrix Solve`:
+     - Solves $8 \times 8$ linear system $A m = b$ in float64 for inverse homography matrix $M = H^{-1}$ mapping destination orthogonal rectangle $(0, 0) \to (W-1, H-1)$ back to source quadrilateral $(x_0, y_0)$ to $(x_3, y_3)$.
+     - Handles arbitrary converging/skewed keystones with degenerate fallback protection.
+  2. `Vectorized Bilinear Backward Warping`:
+     - Evaluates $(X_s, Y_s) = \frac{M [U, V, 1]^T}{\text{denom}}$ on vectorized 2D destination coordinate meshgrids.
+     - Performs 4-point bilinear interpolation with boundary alpha masking for smooth continuous pixel grids without holes or aliasing.
+     - Supports discrete nearest-neighbor sampling (`interpolation="nearest"`).
+  3. `Dimension & Edge Calculations`:
+     - Auto-computes target dimensions from quad edge lengths ($\text{Width} = \frac{\|P_1 - P_0\| + \|P_2 - P_3\|}{2}$, $\text{Height} = \frac{\|P_3 - P_0\| + \|P_2 - P_1\|}{2}$) when width/height are set to 0.
+  4. `Crop & Layer Modes`:
+     - Non-destructive mode outputs to `"<Name> (Perspective Cropped)"` preserving source layer and base canvas pixels 100% untouched (`diff == 0.000000`).
+     - Canvas crop mode (`crop-canvas=True`) crops and resizes entire document canvas to the rectified crop bounds.
+  5. `Auto Quad Helper & Parasite Persistence`:
+     - `python-fu-perspective-auto-quad` calculates default quadrilateral control points from layer or active selection bounds with optional margin inset.
+     - Persists quad coordinates and dimensions in image parasite `photogimp/perspective-crop-quad`.
+  6. `Undo Protection`:
+     - Single-step undo group encapsulation and active undo stack maintenance.
+- **Changed**:
+  - `PhotoGIMP/.config/GIMP/3.0/plug-ins/perspective-crop/perspective-crop.py`: Created native Python 3 GObject-Introspection plugin implementing 2 PDB procedures (`python-fu-perspective-crop` and `python-fu-perspective-auto-quad`).
+  - `PhotoGIMP/scripts/verify_config.py`: Extended Section 6 `REQUIRED_PLUGINS` to audit `perspective-crop` (71 plugins total).
+  - `PhotoGIMP/install.sh`: Deployed to `~/.config/GIMP/3.2/plug-ins/` with executable permissions (71 plugins verified).
+  - `tests/gimp_e2e_suite.py`: Extended test suite with Test Suite 72: `test_perspective_crop` (asserting PC-01 through PC-16: PDB registration and argument signatures across both procedures, auto quad detection from layer / selection bounds, planar keystone rectification unwarping, dimensional fidelity, auto-calculated dimensions from quad edge lengths, orthogonal corner alignment, vertical line restoration to true perpendicularity, horizontal baseline restoration, centered feature fidelity projection, resampling interpolation quality, non-destructive layer mode preservation, whole canvas crop mode, nearest neighbor interpolation mode, undo group encapsulation, active undo stack maintenance, and base canvas artwork preservation `diff == 0.000000`). Total tests increased to 888 passing across 72 test suites.
+  - `.ralph/PHOTOSHOP_FEATURE_MATRIX.md`: Added Perspective Crop & Keystone Rectification Helper entry as `IMPLEMENTED_VERIFIED`.
+  - `.ralph/IMPLEMENTATION_PLAN.md`: Marked Phase 77 complete and scheduled Phase 78 (Straighten & Content-Aware Crop Fill Helper Plugin).
+- **Technical discoveries**:
+  - In GIMP 3.0 PyGObject, `image.get_parasite("...").get_data()` returns a list of integers/bytes. Directly invoking `.decode('utf-8')` on the list raises `AttributeError: 'list' object has no attribute 'decode'`. Wrapping with `bytes(parasite.get_data()).decode('utf-8')` cleanly deserializes parasite byte payloads.
+- **Verification**:
+  - `python3 tests/run_all_tests.py`:
+    - Stage 1: `verify_config.py` passed (6/6 sections pass, all 71 plugins verified).
+    - Stage 2: `install.sh --batch` passed (71 plugins deployed with executable permissions).
+    - Stage 3: `tests/gimp_e2e_suite.py` passed all 888 tests across 72 test suites in 160.72s.
+    - Final quality gate: SUCCESS across all stages in 177.92s. Exit code 0.
+- **Commit**: PhotoGIMP sub-repo pending. Outer repo pending.
+- **Result**: Success.
+- **Next**: Phase 78 — Straighten & Content-Aware Crop Fill Helper Plugin (`straighten-crop`).
+
 

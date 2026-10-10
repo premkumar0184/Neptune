@@ -581,11 +581,19 @@ This file is the authoritative roadmap of product-development work to transform 
 - [x] Validate aspect ratio retargeting, subject preservation, skin tone preservation, amount interpolation, and headless GIMP test suite (assertions CAS-01 through CAS-16).
 
 ### Phase 77 — Perspective Crop & Keystone Rectification Helper Plugin
-- [ ] Implement native GIMP 3.x Python 3 plugin `perspective-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/perspective-crop/perspective-crop.py`.
-- [ ] Simulate Photoshop `Perspective Crop Tool` (`Topics.txt` line 179: "Transform perspective while cropping"; `photoshop_docs.md` Section 183 lines 5345-5362: "Learn how to use the Perspective Crop tool in professional photoeditor to straighten images and correct distorted angles while cropping... Draw a marquee around the object to straighten and crop. Adjust the corners of the marquee to match the edges of the object...").
-- [ ] Support quadrilateral arbitrary keystone selection (4 corner control points: Top-Left, Top-Right, Bottom-Right, Bottom-Left), projective homography transformation matrix calculation, automatic rectification to planar orthogonal rectangle, custom destination width/height or aspect ratio presets, bilinear/bicubic resampling interpolation, and non-destructive layer/canvas cropping.
-- [ ] Register under menu path `<Image>/Tools/Transform Tools/Perspective Crop...` and `<Image>/Image/Transform/Perspective Crop...`.
-- [ ] Validate 4-corner perspective unwarping, keystone angle correction, dimensional fidelity, non-destructive layer mode, and headless GIMP test suite.
+- [x] Implement native GIMP 3.x Python 3 plugin `perspective-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/perspective-crop/perspective-crop.py`.
+- [x] Simulate Photoshop `Perspective Crop Tool` (`Topics.txt` line 179: "Transform perspective while cropping"; `photoshop_docs.md` Section 183 lines 5345-5362: "Learn how to use the Perspective Crop tool in professional photoeditor to straighten images and correct distorted angles while cropping... Draw a marquee around the object to straighten and crop. Adjust the corners of the marquee to match the edges of the object...").
+- [x] Support 2 PDB procedures: `python-fu-perspective-crop` and `python-fu-perspective-auto-quad`.
+- [x] Support quadrilateral arbitrary keystone selection (4 corner control points: Top-Left, Top-Right, Bottom-Right, Bottom-Left), projective homography transformation matrix calculation solving $8 \times 8$ linear inverse system, automatic rectification to planar orthogonal rectangle, custom destination width/height or auto-calculated dimensions from quad edge lengths, bilinear and nearest neighbor resampling interpolation, non-destructive layer mode `"<Name> (Perspective Cropped)"` preserving source layer intact, canvas crop mode (`crop-canvas`), and parasite persistence (`photogimp/perspective-crop-quad`).
+- [x] Register under menu path `<Image>/Tools/Transform Tools/Perspective Crop...`, `<Image>/Image/Transform/Perspective Crop...`, `<Image>/Layer/Transform/Perspective Crop...`, and `<Image>/Tools/Transform Tools/Perspective Auto Quad...`.
+- [x] Validate 4-corner perspective unwarping, keystone angle correction, dimensional fidelity, non-destructive layer mode, and headless GIMP test suite (assertions PC-01 through PC-16).
+
+### Phase 78 — Straighten & Content-Aware Crop Fill Helper Plugin
+- [ ] Implement native GIMP 3.x Python 3 plugin `straighten-crop` in `PhotoGIMP/.config/GIMP/3.0/plug-ins/straighten-crop/straighten-crop.py`.
+- [ ] Simulate Photoshop `Straighten Tool` and Crop Content-Aware Fill (`Topics.txt` lines 177-178: "Straighten tilted photos", "Apply Content-Aware Fill while cropping images"; `photoshop_docs.md` Section 181 lines 5311-5327, Section 182 lines 5328-5342: "Learn how to use Content-Aware Fill in photoeditor to automatically fill empty spaces when cropping, rotating, straightening, or expanding images... Select the Straighten tool from the Options bar, then drag a line along an edge in the tilted image...").
+- [ ] Support two-point angle measurement / horizon baseline drag line, automatic arbitrary rotation to level horizon, automatic bounding-box crop modes (unconstrained crop, expand canvas, or auto-fit inner bounding rectangle), and Content-Aware Fill of outer boundary wedges/corners via texture synthesis and harmonic inpainting.
+- [ ] Register under menu path `<Image>/Tools/Transform Tools/Straighten...` and `<Image>/Image/Transform/Straighten & Crop...`.
+- [ ] Validate horizon angle calculation, automatic straightening rotation, bounding-box geometry, content-aware boundary filling, and headless GIMP test suite.
 
 
 
